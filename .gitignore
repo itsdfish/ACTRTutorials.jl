@@ -1,0 +1,11 @@
+.DS_Store
+/Manifest.toml
+*.eps
+tmp
+Recovery_Data
+recovery_data
+.ipynb_checkpoints
+.Rhistory
+tmp
+temp.csv
+*.log

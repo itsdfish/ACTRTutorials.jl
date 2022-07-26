@@ -38,7 +38,7 @@ VisualSearchACTR = "ad0872d7-b137-4624-87af-d763ac8dea1a"
 [compat]
 ACTRModels = "0.10.0"
 AdaptiveDesignOptimization = "v0.1.0"
-CSV = "0.8.0,0.9.0"
+CSV = "0.8.0,0.9.0, 0.10"
 CmdStan = "v6.1.0"
 Colors = "v0.12.8"
 Combinatorics = "v1.0.2"

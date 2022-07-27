@@ -15,7 +15,7 @@ function logpdf(d::Grouped, Data::Array{<:T,1}) where {T<:Array{<:NamedTuple,1}}
     return LL
 end
 
-function simFun(actr, chunk; criteria...)
+function sim_fun(actr, chunk; criteria...)
     slots = chunk.slots
     p = 0.0; δ = actr.parms.δ
     for (c,v) in criteria

@@ -7,7 +7,7 @@ using SafeTestsets
     using ACTRModels, Test, Distributions, Random
     include("../Tutorial_Models/Unit8/Grouped_Recall_1/Grouped_Recall_1.jl")
     Random.seed!(5145)
-    parms = (s = .15,τ = -.5,noise = true,mmp = true,mmpFun = simFun)
+    parms = (s = .15,τ = -.5,noise = true,mmp = true,mmp_fun = sim_fun)
     δ = 1.0
     Data = map(x -> simulate(;δ, parms...), 1:500)
     x = .2:.01:1.8

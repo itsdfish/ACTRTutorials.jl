@@ -4,35 +4,54 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ c2e12ddc-0dbe-11ed-1996-efa44c3bcc59
+# ╔═╡ 6131e1aa-0e66-11ed-27bc-dfcf007f0250
 begin
 	# load the required packages
 	using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
+	using Combinatorics
 	# seed random number generator
-	Random.seed!(685);
+	Random.seed!(7851);
 	TableOfContents()
 end
 
-# ╔═╡ 1108e059-c7bf-473d-a89d-af3d466f602d
-md"""
-# Introduction
-In this tutorial, we develop a simplified version of the grouped recall model described in the original ACT-R tutorial. We will develop more complex models of grouped recall in subsequent tutorials based on alternative assumptions.
+# ╔═╡ 08956357-087f-46ef-92ef-15f9dd9d4398
+begin
 
-# Grouped Recall Task
-The group recall task is a variation of the serial recall task in which items are organized hierarchically into groups. In this version of the task, the goal is to retrieve nine items in the originally presented order, which are organized into three groups of three. For ease of presentation, the items are ascending integers: (1,2,3), (4,5,6), (7,8,9). Of course, in practice, the items would not follow a simple counting rule.
-
-# Grouped Recall Model 1
-The grouped recall model encodes items with a group and position id and uses the group and position id as retrieval cues for recalling the itmes. The strategy is quite simple: the model iterates through the group and position ids in ascending order, similar to a nested for loop:
-"""
-
-# ╔═╡ 4daaac5a-f4bf-4b8d-8872-87e1e697906b
-for group in 1:3
-    for position in 1:3
-        println("retrieval request: group $group position $position")
-    end
+path = joinpath(pwd(), "../Grouped_Recall_1/Grouped_Recall_1_Notebook.jl")
+nothing
 end
 
-# ╔═╡ 3982f6ff-9611-49a6-9026-c450f4fa9d1c
+# ╔═╡ 39bcd58d-77b6-4817-98ae-e44c83028621
+Markdown.parse("
+# Introduction
+
+Recall that the [Grouped Recall model 1](./open?path=$path) issued an explicit response for each outcome of a memory retrieval request, including a retrieval failure. Knowing all of this information made it relatively easy to recontruct the retrieval process from the data. In this tutorial, we will develop a variation of that model in which responses for retrieval failures are omitted. This minor change in the response rule leads to a more complex likelihood function because the position of retrieval failures within the sequence of retrieval attempts is no longer known. For example, if 8 out of 9 reponses were observed, a retrieval failure could have occured during any of the 9 retrieval attemps. As a reult, it is necessary to marginalize over the entire set of the possible orders in which the retrieval failures could have occured. Aside from this difference, many of the details about the task and model are the same as those for Grouped Recall 1.  
+
+# Grouped Recall Task
+
+The group recall task is a variation of the serial recall task in which items are organized hierarchically into groups. In this version of the task, the goal is to retrieve nine items in the originally presented order, which are organized into three groups of three. For ease of presentation, the items are ascending integers: (1,2,3), (4,5,6), (7,8,9). Of course, in practice, the items would not follow a simple counting rule. 
+
+
+# Grouped Recall Model 2
+
+The grouped recall model encodes items with a group and position id and uses the group and position id as retrieval cues for recalling the itmes. The strategy is quite simple: the model iterates through the group and position ids in ascending order, similar to a nested for loop:
+")
+
+# ╔═╡ f905e538-2b08-4d97-a325-b42cf3331c93
+let
+	for group in 1:3
+	    for position in 1:3
+	        println("retrieval request: group $group position $position")
+	    end
+	end
+end
+
+# ╔═╡ 36db6520-e916-4d0b-83de-3fc94c43a9d0
+md"""
+Upon retrieving a chunk, the model responds according to the value in the number slot. However, if a retrieval failure occurs, no response is recorded. The only indication that a retrieval failure occured is that the data will contain fewer than 9 responses. 
+"""
+
+# ╔═╡ ef6af056-9505-4e6a-8ba7-ad03dc2c11fe
 md"""
 ## Declarative memory
 
@@ -43,9 +62,9 @@ Declarative memory $M$ consists of a set of nine chunks, with slot set $Q = \{\t
 
 On trial $i$, the retrieval request is defined as 
 
-\begin{align}
+$\begin{align}
     \mathbf{r}_i = \rm \{(position,v_1),(group, v_2), (retrieved,false)\}
-\end{align}
+\end{align}$
 
 where the corresponding slot set for the retrieval request is $Q_r = \rm \{position,group, retrieved\}$. 
 
@@ -53,9 +72,9 @@ where the corresponding slot set for the retrieval request is $Q_r = \rm \{posit
 
 Inhibition of return functions the same as with  [Serial Recall Model 1](../../../Tutorial_Models/Unit3/Serial_Recall_1/Serial_Recall_Model_1.ipynb). Once any chunk $m$ is marked as $c_m(\rm retrieved) = \textrm{true}$, it cannot be retrieved again. The set of chunks eligible for retrieval is defined as:
 
-\begin{align}
+$\begin{align}
     R = \{\mathbf{c}_m \in M: c_m(\rm retrieved) = \textrm{false}\}
-\end{align}
+\end{align}$
 
 
 ## Activation
@@ -73,21 +92,75 @@ $\begin{equation}
 \rho_m  = -\delta \sum_{q \in Q_r}| c_m(q) - r_i(q) | 
 \end{equation}$
 
-In the partial matching function above, the penalty for mismatching slot values is a linear distance function. The distance gradient is modulated by mismatch penality parameter $\delta$. 
+In the partial matching function above, the penalty for mismatching is the absolute difference between the request and the chunk. The distance gradient is modulated by mismatch penality parameter $\delta$. 
 
 ## Response mapping
 
-Let $y_i \in \{1,2, \dots 9, \emptyset \}, \forall_i$ be the set possible responses, where $\emptyset$ represents the response for a retrieval failure (e.g. "stating I don't know"). Thus, the response for trial $i$ is $y_i  = c_r(\textrm{number})$ if not a retrieval failure and $y_i = \emptyset$ in the case of a retrieval failure. 
+Let $y_i \in \{1,2, \dots 9 \}, \forall_i$ be the set possible responses. Thus, the response for trial $i$ is $y_i  = c_r(\textrm{number})$.
 
 
 ## Response Probability
 
-Let chunk $r$ be the retrieved chunk. The probability of retrieving $\mathbf{c}_r$ is given by the soft max function:
+Let chunk $r$ be the retrieved chunk. The probability of $y_i$ is given by the soft max function:
 
 $\begin{align}
-     \Pr(Y_i = y_i \mid \delta ;\mathbf{r}_i) = \frac{e^{\frac{\mu_{r}}{\sigma}}}{\sum_{\mathbf{c}_k \in R} e^{\frac{\mu_k}{\sigma}} + e^{\frac{\mu_{m^\prime}}{\sigma}}}
+     \Pr(Y_i = y_i \mid \delta ;\mathbf{r}_i ) = \frac{e^{\frac{\mu_{r}}{\sigma}}}{\sum_{\mathbf{c}_k \in R} e^{\frac{\mu_k}{\sigma}} + e^{\frac{\mu_{m^\prime}}{\sigma}}}
 \end{align}$
 
+where $\mu_m$ is the expected activation of chunk $m$ and $\sigma$ governs the amount of activation noise. 
+
+### Marginalization
+
+As previously noted, the position of retrieval failures within a sequence of memory retrievals is a random variable because responses for retrieval failures are omitted. As a result, we must marginalize over all possible sequences of retrievals and retrieval failures. We will use a concept from combinatorics called multisets to enumerate all of the possible orders. A multiset is a special type of set that may contain duplicate elements. For example $\mathbf{a} = \{a,a,b,c,c\}$ is a multiset. Sometimes multisets are called stars and bars, owing to the fact that the sequences are often represented as a series of astriks and verticle lines: * * | *. We will load the required packages and provide an example of enumerating multisets.
+"""
+
+# ╔═╡ fba4dd77-1813-41c6-b99f-84e2f4cdfe4e
+md"""
+The following code block generates all possible multisets using a function named `multisets`. The first argument for `multisets` is the number of retrievials and the second argument is the number of retrieval failures. In the output below, "r" represents a retrieval and "f" reprsents a retrieval failure.
+"""
+
+# ╔═╡ 3905c3d8-2640-4e14-a270-5d3f555b3bc1
+function multisets(r, f)
+    x = [fill("r", r); fill("f", f)...]
+    return multiset_permutations(x, length(x))
+end
+
+# ╔═╡ 417f7816-9dd4-4423-8313-e67e8dddd1f6
+let
+	X = multisets(2, 2)
+	for (i,x) in enumerate(X)
+	    println(i, " ", x)
+	end
+end
+
+# ╔═╡ e5411ce4-bed9-46a0-b865-98e9cf625577
+md"""
+In total, there are $\binom{4}{2} = 6$ possibilities. In general, there are $\binom{n_r + n_f}{n_f}$ sequences of successful retrievals and retrieval failures where $n_r$ is the number of successful retrievals and $n_f$ is the number of retrieval failures. Notice that each "r" and "f" is indistinguishable. What matters is the order of r's and f's within the sequence. We will use these facts to our advantage in developing the likelihood function.
+"""
+
+# ╔═╡ 16b6d6f1-61e1-492a-91cc-467b505c8fed
+md"""
+Suppose 8 out of a maximum of 9 responses were given in a block of trials. This means that there was one retrieval failure somewhere in the sequence. Suppose further that sequence of responses was:
+
+1, 3, 4, 5, 6, 7, 9, 8
+
+It is clear that 2 was omitted and 8 and 9 were transposed. For the purpose of illustration, we will represent the multisets in a slightly different manner. Rather than writting retrievals as "r" and retrieval failures as "f", we will use the observed response and a blank. The reason for showing the observed respose is that it is important in terms of illustration and computing probabilities, which depends on the sequence. It is still possible to use multisets because the sequence of observed responses is fixed. The only unknown factor is the position of the retrieval failures within the sequence of retrieval attempts. The table below illustrates the most likely sequence: a retrieval failure on the second retrieval attempt and a mismatch on the eight attempt, which would leave the chunk for "8" as the only remaining chunk on the nineth retrieval attempt. 
+
+| Retrieval Attempt | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|------------------|---|---|---|---|---|---|---|---|---|
+| Group            | 1 | 1 | 1 | 2 | 2 | 2 | 3 | 3 | 3 |
+| Position         | 1 | 2 | 3 | 1 | 2 | 3 | 1 | 2 | 3 |
+| Response         | 1 |   | 3 | 4 | 5 | 6 | 7 | 9 | 8 |
+
+However, there are other ways the data could have been generated. In the following table, a retrievail failure occured on the first retrieval attempt and the second memory retrieval resulted in a mismatch (e.g. 2 was the most likely response, but 1 was retrieved instead). 
+
+| Retrieval Attemp | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|------------------|---|---|---|---|---|---|---|---|---|
+| Group            | 1 | 1 | 1 | 2 | 2 | 2 | 3 | 3 | 3 |
+| Position         | 1 | 2 | 3 | 1 | 2 | 3 | 1 | 2 | 3 |
+| Response         |   | 1 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+
+In total, there are $\binom{9}{1} = 9$ possible sequences. 
 
 ## Likelihood Function
 
@@ -98,11 +171,9 @@ $\begin{align}
 \end{align}$
 
 where $\mathbf{Y} = \{y_1,y_2, \dots y_N \}$ is the set of responses. 
-
-To begin, we will load the required files and libraries. 
 """
 
-# ╔═╡ f17b4732-a440-48bb-8d27-8dce3b92a9ff
+# ╔═╡ 7ac26860-e318-498c-a7ef-821c64ee79f6
 md"""
 # Generate Data
 
@@ -111,17 +182,17 @@ In the code block below,  we will define a function called `simulate` to generat
 - n_groups: the number of groups with a default value of 3
 - n_positions: the number of positions per group with a default value of 3
 -  $\delta$: the mismatch penalty parameter
--fixed_parms: a `NamedTuple` of fixed parameters and settings
+- fixed_parms: a `NamedTuple` of fixed parameters and settings
 
-`simulate` begins by initializing declarative memory and the model object. Next, begins a series of memory retrievals to retrieve the items in the correct order, using the group and position ids as retrieval cues. Implicitly, a set of production rules provide a control structure to perform this sequence of memory retrievals. The outer loop iterates through each group id in order. For each group id, the inner loop iterates through the position ids in order, starting with 1 and ending after 3. The `group` and `position` indices serve as a retrieval cue. If a chunk is retrieved, the value in the `number` slot is added to the data and the value in the `retrieved` slot is set to false to prevent duplicate responses. Retrieval failures are coded as -100.
-"""
+`simulate` begins by initializing declarative memory and the model object. Next, begins a series of memory retrievals to retrieve the items in the correct order, using the group and position ids as retrieval cues. Implicitly, a set of production rules provide a control structure to perform this sequence of memory retrievals. The outer loop iterates through each group id in order. For each group id, the inner loop iterates through the position ids in order, starting with 1 and ending after 3. The `group` and `position` indices serve as a retrieval cue. On each retrieval attempt, `retrieval_probs` generates a vector representing the probability of retrieving each eligible chunk, such that the last element represents the probability of a retrieval failure. An index form is sampled from the probability vector. If the sampled index corresponds to a retrieved chunk, the value in the `number` slot is added to the data and the value in the `retrieved` slot is set to false to prevent duplicate responses. No response is recorded in the event of a retrieval failure (i.e., `idx == n_probs`). 
+	"""
 
-# ╔═╡ e1867d03-b35e-45cc-93ac-db880b14467b
+# ╔═╡ 7f75f77d-8eef-45db-839a-203c380fce22
 md"""
-Reveal the cell below to see helper functions.
+Reveal the cell below to see utility functions
 """
 
-# ╔═╡ dd9f5d10-7e72-4bfb-9a85-498608c56cf7
+# ╔═╡ 32e83847-6841-4816-af84-0f3d15e882b9
 begin
 	function populate_memory(act=0.0, n_groups=3, n_positions=3)
 	    cnt = 0
@@ -129,7 +200,6 @@ begin
 	        for i in 1:n_groups for j in 1:n_positions]
 	    return chunks
 	end
-	
 	
 	function sim_fun(actr, chunk; criteria...)
 	    slots = chunk.slots
@@ -147,9 +217,15 @@ begin
 	function rel_diff(v1, v2)
 	    return abs(v1 - v2)/max(v1, v2)
 	end
+
+	function reset_memory!(actr)
+	    chunks = actr.declarative.memory
+	    map(x-> x.slots.retrieved[1]=false, chunks)
+	    return nothing
+	end			
 end
 
-# ╔═╡ 4adbc231-d72c-4b60-b82e-685f4fefa78d
+# ╔═╡ fd662274-6219-4045-9983-238c85cdc3e9
 function simulate(n_groups=3, n_positions=3; δ, fixed_parms...)
     # initialize memory with chunks representing all stimuli
     chunks = populate_memory()
@@ -157,43 +233,38 @@ function simulate(n_groups=3, n_positions=3; δ, fixed_parms...)
     memory = Declarative(;memory=chunks)
     # create ACT-R model object
     actr = ACTR(;declarative=memory, δ, fixed_parms...)
-    N = n_groups*n_positions
     # initialize data for all trials
-    data = Array{NamedTuple,1}(undef,N)
-    cnt = 0
+    data = Int[]
     # inhabition of return: exclude retrieved chunks
     retrieved=[false]
     # loop over all groups in asecnding order
     for group in 1:n_groups
         # loop over all positions within a group in ascending order
         for position in 1:n_positions
-            cnt += 1
             # retrieve chunk given group and position indices
             # exclude retrieved chunks
             probs,r_chunks = retrieval_probs(actr; group, position, retrieved)
             n_probs = length(probs)
             idx = sample(1:n_probs, Weights(probs))
-            if idx == n_probs
-                # code retrieval failure as -100
-                data[cnt] = (group=group,position=position,resp=-100)
-            else
+            # ommit response on retrieval failure
+            if idx < n_probs
                 # set chunk to retrieved = true for inhabition of return
                 chunk = r_chunks[idx] 
                 chunk.slots.retrieved[1] = true
                 # record the number value of the retrieved chunk
-                data[cnt] = (group=group,position=position,resp=chunk.slots.number)
+                push!(data, chunk.slots.number)
             end
         end
     end
-    return vcat(data...)
+    return data
 end
 
-# ╔═╡ 75a13bf2-a9a9-4576-a61e-31c181f999fa
+# ╔═╡ c9d75e54-f080-4faf-a719-e892fda58b1f
 md"""
 Now that our `simulate` function has been defined, we can now generate some data. The code block below generates data for 5 blocks, resulting in 45 responses. The data for each block is stored in an array of `NamedTuples` where the group id, position id and response are stored for each trial in a seperate `NamedTuple`. All blocks are nested within an array. The first block of simulated data is printed below. 
 """
 
-# ╔═╡ 89684bd5-21ce-4829-988e-8f3811dd1de7
+# ╔═╡ 97881862-2b17-40b8-a8e9-a4ec0ecc790c
 begin
 	# fixed parameters and settings
 	fixed_parms = (s = 0.15,τ = -0.5,noise = true,mmp = true,mmp_fun = sim_fun)
@@ -201,52 +272,71 @@ begin
 	δ = 1.0
 	# the number of blocks
 	n_blocks = 5
-	Data = map(x -> simulate(;δ, fixed_parms...), 1:n_blocks)
+	# the number of groups in the stimuli
+	n_groups = 3
+	# the number of positions within each stimulus
+	n_positions = 3 
+	Data = map(x -> simulate(n_groups, n_positions;δ, fixed_parms...), 1:n_blocks)
 	Data[1]
 end
 
-# ╔═╡ b16d3abc-d435-4014-a689-6bbd05cd1dc0
+# ╔═╡ 9a98a0af-8f01-4c23-95aa-6a4233d4a61a
 md"""
 ## Define Log Likelihood Function
 
 
-Two functions are used to compute the log likelihood. The function `computeLL` initializes the ACT-R model object and loops over the data for each block. It requires the following arguments:
+A total of three functions are used to compute the log likelihood. The function `computeLL` initializes the ACT-R model object and loops over the data for each block. It requires the following arguments:
 
-- Data: an array of arrays of `NamedTuples`. Each sub-array contains trials within a block and each trial contains the group id, position id and response
-
+- Data: an array of arrays of `NamedTuples`. Each sub-array contains trials within a block and each trial
+    contains the group id, position id and response
 - fixed_parms: a `NamedTuple` of fixed parameters and model settings
+- n_goups: the number of groups in the memory items. The default value is three.
+- n_positions: the number of positions within each group of memory items. The default value is three.
 -  $\delta$: a keyword argument for the mismatch penalty parameter
 
 Within the for loop, `computeLL` computes the log likelihood for a given block of data using the function `computeLLBlock`. Next, the value of the slot "retrieved" of each chunk is reset to false with the function `reset_memory!`. 
 
-The function `computeLLBlock` computes the log likelihood of each trial in a given block. `computeBlockLL` requires the following arguments:
+The function `computeLLMultisets` computes the marginal log likelihood of a block of trials across all possible multisets of retrievals and retrieval failures. `computeLLMultisets` requires the following arguments:
 
-- Data: an array of arrays of `NamedTuples`. Each sub-array contains trials within a block and each trial contains the group id, position id and response
 - actr: an ACT-R model object
+- data: an array of arrays of `NamedTuples`. Each sub-array contains trials within a block and each trial
+    contains the group id, position id and response
+- n_goups: the number of groups in the memory items. The default value is three.
+- n_positions: the number of positions within each group of memory items. The default value is three.
 -  $\delta$: a keyword argument for the mismatch penalty parameter
 
-Inside the for loop of `computeBlockLL`, the log probability of a retrieval failure is computed if the response is -100. Otherwise, the log probability of retrieving the chunk associated with the recorded response is computed and the value of the `retrieved` slot is set to false for inhibition of return. 
+In `computeLLMultisets`, the variable `orders` is a vector of multisets in which a value of "true" indicates the position of a retrieval failure and a value of "false" indicates the position of a retrieval. The basic logic underlying the code is that the multisets indicate where retrieval failures can be interpolated in the sequence of observed responses. For each possible multiset (i.e. `order`) within `orders`, the function `computeLLBlock` is called. 
+
+`computeLLBlock` returns the log likelihood of a block of trials for a given multiset and accepts the following arguments:
+
+- actr: an ACT-R model object
+- data: an array of arrays of `NamedTuples`. Each sub-array contains trials within a block and each trial
+    contains the group id, position id and response
+- n_goups: the number of groups in the memory items. The default value is three.
+- n_positions: the number of positions within each group of memory items. The default value is three.
 """
 
-# ╔═╡ 2fe40c79-0b9f-4ede-b8eb-25294e282f83
+# ╔═╡ b61335d4-6499-4bba-96f3-548b96ee2e5e
 begin
 	import Distributions: logpdf, rand, loglikelihood
 	
 	mutable struct Grouped{T1,T2} <: ContinuousUnivariateDistribution
 	    δ::T1
 	    fixed_parms::T2
+	    n_groups::Int
+	    n_positions::Int
 	end
 	
-	Grouped(;δ, fixed_parms) = Grouped(δ, fixed_parms)
+	Grouped(;δ, fixed_parms, n_groups=3, n_positions=3) = Grouped(δ, fixed_parms, n_groups, n_positions)
 	
-	loglikelihood(d::Grouped, Data::Array{<:T,1}) where {T<:Array{<:NamedTuple,1}} = logpdf(d, Data)
+	loglikelihood(d::Grouped, Data::Vector{Vector{Int64}}) = logpdf(d, Data)
 	
-	function logpdf(d::Grouped, Data::Array{<:T,1}) where {T<:Array{<:NamedTuple,1}}
-	    LL = computeLL(Data, d.fixed_parms; δ=d.δ)
+	function logpdf(d::Grouped, Data::Vector{Vector{Int64}})
+	    LL = computeLL(Data, d.fixed_parms, d.n_groups, d.n_positions; δ=d.δ)
 	    return LL
 	end
 	
-	function computeLL(Data, fixed_parms; δ)
+	function computeLL(Data, fixed_parms, n_groups=3, n_positions=3; δ)
 	    T = typeof(δ)
 	    act = zero(T)
 	    # initialize chunks
@@ -258,56 +348,80 @@ begin
 	    LL::T = 0.0
 	    # loop over each block of trials
 	    for data in Data
-	        # log likelihood of block of trials
-	        LL += computeLLBlock(data, actr; δ)
+	        # marginalize over all possible orders of retrievals and retrieval failrues for a given block of trials
+	        LL += computeLLMultisets(actr, data, n_groups, n_positions; δ)
 	        # reset all chunks to retrieved = false
-	        reset_memory!(actr)
 	    end
 	    return LL
 	end
 	
-	function computeLLBlock(data, actr; δ)
+	function computeLLMultisets(actr, data, n_groups=3, n_positions=3; δ)
 	    # initialize log likelihood
 	    LL = 0.0
+	    n_items = n_groups * n_positions
+	    n = length(data)
+	    # n retrievals coded as false plus (n_items - n) retrieval failures true
+	    indicators = [fill(false, n); fill(true, n_items - n)]
+	    # all possible orders of n retrievals and (n_items - n ) retrieval failures
+	    orders = multiset_permutations(indicators, length(indicators))
+	    # a vector of log likelihoods to be marginalized
+	    LLs = zeros(typeof(δ), length(orders))
+	    # compute the log likelihoods of the data across all possible orders of 
+	    # retrievals and retrieval failures
+	    for (i,order) in enumerate(orders)
+	        LLs[i] = computeLLBlock(actr, data, order, n_groups, n_positions)
+	        reset_memory!(actr)
+	    end
+	    # return the marginal log likelihood
+	    return logsumexp(LLs)
+	end
+	
+	function computeLLBlock(actr, data, order, n_groups=3, n_positions=3)
 	    # inhabition of return: exclude retrieved chunks
 	    retrieved = [false]
-	    for k in data
-	        if k.resp == -100
+	    # index for retrieval attempts
+	    r_idx = 0
+	    # index for the obseved data
+	    data_idx = 0
+	    LL = 0.0
+	    for group in 1:n_groups
+	        for position in 1:n_positions
+	            r_idx += 1
 	            # log likelihood of retrieval failure given retrieval request for group and position indices
-	            p,_ = retrieval_probs(actr; group=k.group, position=k.position, retrieved)
-	            LL += log(p[end])
-	        else
-	            # get retrieved chunk
-	            chunk = get_chunks(actr; number=k.resp)
-	            # log likelihood of retrieving chunk given retrieval request for group and position indices
-	            p,_ = retrieval_prob(actr,chunk; group=k.group, position=k.position, retrieved)
-	            # set the retrieved chunk to retrieved = true for inhabition of return 
-	            chunk[1].slots.retrieved[1] = true
-	            LL += log(p)
+	            p,r_chunks = retrieval_probs(actr; group, position, retrieved)
+	            # compute log likelihood of retrieval failure if order is true
+	            if order[r_idx] == true
+	                # log likelihood of retrieval failure
+	                LL += log(p[end])
+	            else
+	                # compute the log likelihood of retrieving chunk associated with next response
+	                # increment data index
+	                data_idx += 1
+	                # get the index associated with retrieved chunk
+	                chunk_idx = find_index(r_chunks; number = data[data_idx])
+	                # set the retrieved chunk to retrieved = true for inhabition of return 
+	                r_chunks[chunk_idx].slots.retrieved[1] = true
+	                # log likelihood of retrieving chunk associated with response 
+	                LL += log(p[chunk_idx])
+	            end
 	        end
 	    end
 	    return LL
 	end
-	
-	function reset_memory!(actr)
-	    chunks = actr.declarative.memory
-	    map(x-> x.slots.retrieved[1]=false, chunks)
-	    return nothing
-	end
 end
 
-# ╔═╡ ed8baecd-cf26-41d9-9288-bb96fab718d8
+# ╔═╡ 50ead427-1cd7-41f5-8782-8d56a88d5c25
 md"""
 ## Define Model
 
 We can summarize the prior and model as follows:
 
 $\begin{align}
-\delta \sim \textrm{normal}(1.0,.5)
+\delta \sim \rm normal(1.0,.5)
 \end{align}$
 
 $\begin{align}
-\theta_i = \textrm{Pr}(Y_i = y_i \mid \mathbf{r}_i)
+\theta_i = \Pr(Y_i = y_i \mid \delta ;\mathbf{r}_i )
 \end{align}$
 
 $\begin{align}
@@ -317,20 +431,13 @@ y_{i} \sim \rm Bernouli(\theta_i)
 In the code block below, the model is specified for Turing. 
 """
 
-# ╔═╡ 53d6de88-e44f-43ca-a50a-58b0454f0271
-@model model(Data, fixed_parms) = begin
+# ╔═╡ dea8c391-8928-4f75-a093-98b945dd8abe
+@model model(Data, fixed_parms, n_groups=3, n_positions=3) = begin
     δ ~ truncated(Normal(1, 1.0), 0, Inf)
-    Data ~ Grouped(δ, fixed_parms)
+    Data ~ Grouped(δ, fixed_parms,  n_groups, n_positions)
 end
 
-# ╔═╡ 14e2719b-877e-4f10-a80c-bf7a48a2bd9d
-md"""
-## Estimate Parameters
-
-Now that the priors, likelihood and Turing model have been specified, we can now estimate the parameters. In the following code, we will run four MCMC chains with the NUTS sample for 2,000 iterations and omit the first 1,000 warmup samples. 
-"""
-
-# ╔═╡ f1ab493f-2558-4c82-af1c-978dc5f67c46
+# ╔═╡ ba7c22d3-bac2-447d-af6e-d3735841acc8
 begin
 	# number of samples retained after warmup
 	n_samples = 1000
@@ -345,7 +452,7 @@ begin
 	describe(chain)
 end
 
-# ╔═╡ c086aacb-a227-428a-a602-f02299b75981
+# ╔═╡ 2ad6c3fd-9746-408a-9bdd-d08a5634e2f4
 md"""
 # Results
 
@@ -358,44 +465,37 @@ The first panel for each plot shows good mixing between the four chains. Additio
 As expected, the density plot located in the third panel shows that the posterior distribution is centered near the data-generating parameter values of $\delta = 1$. 
 """
 
-# ╔═╡ ebd207af-b14c-4eb2-8b1c-a571ff266cc4
-let
+# ╔═╡ 4bc8e46d-6f5c-4b84-897b-66a78851e7b5
+begin
 	ch = group(chain, :δ)
-	p1 = plot(ch,  seriestype=(:traceplot), grid=false)
+	p1 = plot(ch, seriestype=(:traceplot), grid=false)
 	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
 	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
 	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
 end
 
-# ╔═╡ bb028eb5-5d10-42b3-83bf-c3e4a74a407d
+# ╔═╡ 14d1e1ba-9871-4082-a040-8c371a9686fa
 md"""
 ## Posterior Predictive Distributions
 
-### Transposition Errors
+### Retrieval Failures
 
-The plot below shows the posterior predictive distribution of transposition errors. The x-axis represents the displacement or absolute difference between the correct number and the retrieved number. The posterior predictive distribution indicates that a displacement of zero (e.g. a correct response) is the most likely observation. Displacement values greater than zero are less likely. 
+The plot below shows the posterior predictive distribution of retrieval failures. The probability of 0 to 2 retrieval failures is approximately $95\$, with 1 retrieval failure being the most likely outcome. More than three retrieval failures is extremrely rare according to the predictions. 
 """
 
-# ╔═╡ edb30533-18b5-4cd9-8302-287564dfeb9d
-function displacement(data)
-    responses = map(x->x.resp, data)
-    answers = 1:length(responses)
-    map!(i->responses[i] == -100 ? i : responses[i], responses, 1:length(responses))
-    return @. abs(responses - answers)
-end
-
-# ╔═╡ 97418410-45a5-4a02-9cf0-5b77df9055a5
-let
-	preds = posterior_predictive(x -> simulate(;fixed_parms..., x...), chain, 1000, displacement)
-	preds = vcat(preds...)
-	p4 = histogram(preds, grid=false, norm=true,
-	    titlefont=font(7), leg=false, color=:grey, xlabel="Displacement")
+# ╔═╡ b24ad897-a6ee-4c68-aec6-ce9f40066698
+begin
+	preds = posterior_predictive(x -> simulate(;fixed_parms..., x...), chain, 1000)
+	failures = n_groups * n_positions .- length.(preds)
+	p4 = histogram(failures,  grid=false,leg=false, color=:grey, xlabel="Retrieval Failures", ylabel="Probability",
+	    normalize=:probability)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 ACTRModels = "c095b0ea-a6ca-5cbd-afed-dbab2e976880"
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -405,6 +505,7 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
 ACTRModels = "~0.10.6"
+Combinatorics = "~1.0.2"
 Distributions = "~0.25.66"
 PlutoUI = "~0.7.39"
 Revise = "~3.3.4"
@@ -595,9 +696,9 @@ version = "0.14.2"
 
 [[deps.CodeTracking]]
 deps = ["InteractiveUtils", "UUIDs"]
-git-tree-sha1 = "6d4fa04343a7fc9f9cb9cff9558929f3d2752717"
+git-tree-sha1 = "bfae3e59e3e20c0655e963c7f06362dce07c98d6"
 uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
-version = "1.0.9"
+version = "1.0.10"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -1560,9 +1661,9 @@ version = "0.0.1"
 
 [[deps.SciMLBase]]
 deps = ["ArrayInterfaceCore", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "RecipesBase", "RecursiveArrayTools", "StaticArraysCore", "Statistics", "Tables"]
-git-tree-sha1 = "d48bd7ac5500dd45aac2d4a2bd1da8baedb4a7e1"
+git-tree-sha1 = "7cb46ff55af945a8b68e148bf22f9325f7221d8d"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.44.1"
+version = "1.45.0"
 
 [[deps.ScientificTypesBase]]
 git-tree-sha1 = "a8e18eb383b5ecf1b5e6fc237eb39255044fd92b"
@@ -2030,26 +2131,31 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╟─c2e12ddc-0dbe-11ed-1996-efa44c3bcc59
-# ╟─1108e059-c7bf-473d-a89d-af3d466f602d
-# ╠═4daaac5a-f4bf-4b8d-8872-87e1e697906b
-# ╟─3982f6ff-9611-49a6-9026-c450f4fa9d1c
-# ╟─f17b4732-a440-48bb-8d27-8dce3b92a9ff
-# ╠═4adbc231-d72c-4b60-b82e-685f4fefa78d
-# ╟─e1867d03-b35e-45cc-93ac-db880b14467b
-# ╟─dd9f5d10-7e72-4bfb-9a85-498608c56cf7
-# ╟─75a13bf2-a9a9-4576-a61e-31c181f999fa
-# ╠═89684bd5-21ce-4829-988e-8f3811dd1de7
-# ╟─b16d3abc-d435-4014-a689-6bbd05cd1dc0
-# ╠═2fe40c79-0b9f-4ede-b8eb-25294e282f83
-# ╟─ed8baecd-cf26-41d9-9288-bb96fab718d8
-# ╠═53d6de88-e44f-43ca-a50a-58b0454f0271
-# ╟─14e2719b-877e-4f10-a80c-bf7a48a2bd9d
-# ╠═f1ab493f-2558-4c82-af1c-978dc5f67c46
-# ╟─c086aacb-a227-428a-a602-f02299b75981
-# ╟─ebd207af-b14c-4eb2-8b1c-a571ff266cc4
-# ╟─bb028eb5-5d10-42b3-83bf-c3e4a74a407d
-# ╟─97418410-45a5-4a02-9cf0-5b77df9055a5
-# ╟─edb30533-18b5-4cd9-8302-287564dfeb9d
+# ╟─08956357-087f-46ef-92ef-15f9dd9d4398
+# ╟─6131e1aa-0e66-11ed-27bc-dfcf007f0250
+# ╟─39bcd58d-77b6-4817-98ae-e44c83028621
+# ╠═f905e538-2b08-4d97-a325-b42cf3331c93
+# ╟─36db6520-e916-4d0b-83de-3fc94c43a9d0
+# ╟─ef6af056-9505-4e6a-8ba7-ad03dc2c11fe
+# ╟─fba4dd77-1813-41c6-b99f-84e2f4cdfe4e
+# ╟─3905c3d8-2640-4e14-a270-5d3f555b3bc1
+# ╠═417f7816-9dd4-4423-8313-e67e8dddd1f6
+# ╟─e5411ce4-bed9-46a0-b865-98e9cf625577
+# ╟─16b6d6f1-61e1-492a-91cc-467b505c8fed
+# ╟─7ac26860-e318-498c-a7ef-821c64ee79f6
+# ╠═fd662274-6219-4045-9983-238c85cdc3e9
+# ╟─7f75f77d-8eef-45db-839a-203c380fce22
+# ╟─32e83847-6841-4816-af84-0f3d15e882b9
+# ╟─c9d75e54-f080-4faf-a719-e892fda58b1f
+# ╠═97881862-2b17-40b8-a8e9-a4ec0ecc790c
+# ╟─9a98a0af-8f01-4c23-95aa-6a4233d4a61a
+# ╠═b61335d4-6499-4bba-96f3-548b96ee2e5e
+# ╟─50ead427-1cd7-41f5-8782-8d56a88d5c25
+# ╟─dea8c391-8928-4f75-a093-98b945dd8abe
+# ╠═ba7c22d3-bac2-447d-af6e-d3735841acc8
+# ╟─2ad6c3fd-9746-408a-9bdd-d08a5634e2f4
+# ╟─4bc8e46d-6f5c-4b84-897b-66a78851e7b5
+# ╟─14d1e1ba-9871-4082-a040-8c371a9686fa
+# ╟─b24ad897-a6ee-4c68-aec6-ce9f40066698
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

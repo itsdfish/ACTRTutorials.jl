@@ -52,6 +52,8 @@ path_u7_1 = joinpath(pwd(), "../Tutorial_Models/Unit7/IBL/IBL_Model_Notebook.jl"
 path_u7_2 = joinpath(pwd(), "../Tutorial_Models/Unit7/IBL_Inertia/IBL_Inertia_Model_Notebook.jl")
 
 path_u8_1 = joinpath(pwd(), "../Tutorial_Models/Unit8/Grouped_Recall_1/Grouped_Recall_1_Notebook.jl")
+
+path_u8_2 = joinpath(pwd(), "../Tutorial_Models/Unit8/Grouped_Recall_2/Grouped_Recall_2_Notebook.jl")
 	
 path_u9_1 = joinpath(pwd(), "../Tutorial_Models/Unit9/Fan_Model_1/Fan_Model_1_Notebook.jl")
 
@@ -156,7 +158,7 @@ The model tutorials are organized based on concepts and increasing difficulty. W
 * Unit 8
 
     1. [Grouped Recall 1](./open?path=$path_u8_1)
-    2. [Grouped Recall 2](../Tutorial_Models/Unit8/Grouped_Recall_2/Grouped_Recall_Model_2.ipynb)
+    2. [Grouped Recall 2](./open?path=$path_u8_2)
 
 * Unit 9
     
@@ -260,7 +262,24 @@ We provide a series of tutorials for using software and statistical and mathemat
 	
 )
 
+# ╔═╡ 00000000-0000-0000-0000-000000000001
+PLUTO_PROJECT_TOML_CONTENTS = """
+[deps]
+"""
+
+# ╔═╡ 00000000-0000-0000-0000-000000000002
+PLUTO_MANIFEST_TOML_CONTENTS = """
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.7.3"
+manifest_format = "2.0"
+
+[deps]
+"""
+
 # ╔═╡ Cell order:
 # ╟─d87a7f68-13d5-41a9-a12d-6bffdad25809
 # ╟─e6912ca4-3638-11ec-3bb7-012c76824681
 # ╟─464a18a4-90ee-4fcb-baa3-5d9f992c92c8
+# ╟─00000000-0000-0000-0000-000000000001
+# ╟─00000000-0000-0000-0000-000000000002

@@ -65,5 +65,41 @@ Package version information can be found in the package mode with the command:
      
 5. A minimal reproducable example if possible.
 
+# Citing This Tutorial
+
+Please use the citation below to cite the tutorial.
+
+## APA CITATION
+```
+Houpt, J. W., Fisher, C. R., & Gunzelmann, G. (2022, July). Developing analytic likelihood functions for ACT-R [Workshop]. 20th International Conference on Cognitive Modeling (ICCM), Toronto, ON, Canada.
+```
+
+## bib tex 
+```
+@inproceedings{houpt2022actr,
+  author = {Houpt, Joseph W., Fisher, Christopher R., and Gunzelmann, Glenn},
+  title = {{Developing analytic likelihood functions for ACT-R}},
+  year = {2022},
+  maintitle = {{20th International Conference on Cognitive Modeling (ICCM)}},
+  howpublished = "\url{https://github.com/itsdfish/ACTRTutorials.jl}"
+}
+```
+## Related Paper 
+
+```
+@article{fisher2022fundamental,
+  title={Fundamental tools for developing likelihood functions within {ACT-R}},
+  author={Fisher, Christopher R and Houpt, Joseph W and Gunzelmann, Glenn},
+  journal={Journal of Mathematical Psychology},
+  volume={107},
+  pages={102636},
+  year={2022},
+  publisher={Elsevier},
+  doi = {https://doi.org/10.1016/j.jmp.2021.102636},
+  url = {https://www.sciencedirect.com/science/article/pii/S0022249621000997},
+  abstract = {Likelihood functions are an integral component of statistical approaches to parameter estimation and model evaluation. However, likelihood functions are rarely used in cognitive architectures due, in part, to challenges in their derivation, and the lack of accessible tutorials. In this tutorial, we present fundamental concepts and tools for developing analytic likelihood functions for the ACT-R cognitive architecture. These tools are based on statistical concepts such as serial vs. parallel process, convolution, minimum/maximum processing time, and mixtures. Importantly, these statistical concepts are highly composable, allowing them to be combined to form likelihood functions for many models. We demonstrate how to apply these tools within the context of Bayesian parameter estimation using five models taken from the standard ACT-R tutorial. Although the tutorial focuses on ACT-R due to its prevalence, the concepts covered within the tutorial are applicable to other cognitive architectures.}
+}
+```
+
 DISTRIBUTION A. Cleared for public release, distribution unlimited
 (AFRL-2022-3018)

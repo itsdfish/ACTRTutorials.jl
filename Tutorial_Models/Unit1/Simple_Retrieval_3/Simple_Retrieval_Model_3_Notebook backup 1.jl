@@ -4,337 +4,520 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ d3ee1516-582b-11ec-09c9-ad88f606e221
+# ╔═╡ b8af21e5-c433-4646-8d17-23d5976eb1e8
 begin
-	using StatsPlots, PlutoUI, ACTRModels
-	using Turing, PlutoTest,Distributions, Random
-	using MCMCChains, StatsPlots, ARFIMA
+	using Turing, StatsPlots, Revise, ACTRModels, Random
+	using PlutoUI
+	# seed random number generator
+	Random.seed!(2341);
 	TableOfContents()
 end
 
-# ╔═╡ e6496a18-40b8-41a0-8f0e-4c3a661aba72
-md" 
+# ╔═╡ 52b30b5e-6f92-11ec-1ade-1d67bf8cd2d9
+begin
+	path_u1_1 = joinpath(pwd(), "../Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl")
+	path_u1_2= joinpath(pwd(), "../Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
+	nothing
+end
+
+# ╔═╡ 89c69b0b-64bf-4753-9364-ee045fa4f1c5
+Markdown.parse(
+	"""
 # Introduction
 
-In this tutorial, you will learn how to develop models and perform Bayesian parameter estimation in Turing. For a more detailed introduction to the concept of MCMC samplers, please see the reference at the end of this tutorial. Turing is a Julia library for performing Bayesian parameter estimation.
+In the present tutorial, we modify [Simple Retrievel Model 2](./open?path=$path_u1_2) to allow guessing in the event of a retrieval failure. This model is applicable to paired associates task which do not allow a person to response "I don't know", but instead require guessing when a retrieval failure occurs.
 
-"
+# Task
 
-# ╔═╡ ddad76a3-3e8f-4f7b-a127-3035f36bc8cb
+The task is similar to the one described in the tutorial [Simple Retrievel Model 2](./open?path=$path_u1_2). In the paired associates task, subjects learn arbitrary letter number pairs, such as
+
+- (X, 2)
+- (M, 5)
+
+In the test phase, a letter is presented and the subject must recall the associated number and press the corresponding key on the keyboard. Unlike previous versions of the paired associates task, participants must guess if they do not know the answer. 
+
+# Simple Retrieval Model 3
+
+As with the model decribed in the [previous tutorial](./open?path=$path_u1_2), the present model encodes a cue and uses it as a retrieval request to find the answer. If a retrieval failure occurs, the model guesses with equal probability from a set of candidates.  
+
+"""
+)
+
+# ╔═╡ 975e6f95-0127-40fa-ad8e-dff74866cb54
 md"
 
-# Generate Data
+## Declarative memory
 
-The following code generates $n=50$ trials of a binomial model with probability of success $\theta = .50$. 
+Let $M$ denote the set of $n$ chunks in declarative memory, one chunk for each stimulus in the experiment. Each chunk consists of the following set of slots: $Q= \rm \{letter,number\}$. 
+
+### Encoding
+
+On each trial $i$, a letter $v_i$ is presented on a screen and the model encodes the stimulus into a chunk that is stored in the imaginal buffer. Formally, we define the encoded chunk as:
+```math
+\begin{align}
+\mathbf{c}_{i,\rm \textrm{imaginal}} = \{ (\rm letter, v_i)\}
+\end{align}
+```
+
+### Retrieval Request
+
+The retrieval request for trial $i$ is defined as:
+```math
+\begin{align}
+\mathbf{r}_i = \{(\textrm{letter},c_{i,\rm imaginal}(\rm letter)\} 
+\end{align}
+```
+where $c_{i,\rm imaginal}(\rm letter)$ is the letter value (i.e. A or M) of the chunk in the imaginal buffer. The slot set for the retrieval request is defined as $Q_r = \rm \{letter\}$ 
+
+### Activation
+
+Memory activation for chunk $m$ is defined as 
+```math
+\begin{equation}
+a_m = \textrm{blc} + \rho_m + \epsilon_m
+\end{equation}
+```
+
+where $\textrm{blc}$ is the base-level constant and $\rho_m$ represents activation due to partial matching. Partial matching allows chunks to be retrieved as a function of dissimilarity to the retrieval request values, $r$. For simplicity, partial matching is defined as a weighted count of mismatching slot-values:
+
+```math
+\begin{equation}
+\rho_m = -\delta  \sum_{q \in Q_r} I\left(r(q),  c_{m}(q)\right).
+\end{equation}
+```
+
+where $Q_r = \{\textrm{letter}\}$ is the set of slots in the retrieval request, the mismatch penalty parameter $\delta$ controls the steepness of the dissimilarity gradient, and $I$ is an indicator function: 
+```math
+I(x,y) =
+  \begin{cases}
+    1  & x \neq y\\
+    0  & x = y
+  \end{cases}
+```
+Thus, in the present model, mean activation $\mu_m$ of chunk $m$ assumes one of three values: blc in the case of a match, blc $-\delta$ in the case of a mismatch, or $\tau$ in the case of a retrieval failure. 
+
 "
 
-# ╔═╡ 50867820-5e92-4158-b69f-2f2f7e573748
+# ╔═╡ 3efb7bb9-d89f-44d1-85ab-120b0fc69f03
+Markdown.parse("
+### Response Probability
+
+Unlike the [Simple Retrievel Model 2](./open?path=$path_u1_2), the present model does not have a simple one-to-one mapping between retrieved chunk and the observed response. Instead, any response could be the product of a retrieval process or a guessing process. In order to account for the uncertainty of which process generated a given response, we use a mixture of both processes.
+
+")
+
+# ╔═╡ 6c215ff3-8d8e-4546-bc08-158592871792
+md"
+#### Retrieval Process
+
+Let $\mathbf{Y} = \{y_1,y_2, \dots y_n \}$ represent the observed responses and let $\mathbf{c}_r$ be the retrieved chunk, such that $y_i = c_r(\textrm{value})$. The probability of retrieving chunk $\mathbf{c}_r$ is the same as that defined in Simple Retrievel Model 2:
+
+$\begin{equation}
+\Pr(Y_i=y_i \mid \mathbf{c}_r, \delta, \tau;\mathbf{r}_i) = \frac{e^{\frac{\mu_r}{\sigma}}}{\sum_{\mathbf{c}_k \in M} e^{\frac{\mu_k}{\sigma}} + e^{\frac{\mu_{m^{\prime}}}{\sigma}}}
+\end{equation}$
+
+where $\sigma = s\sqrt{2}$ controls activation noise and $s$ is the logistic scale parameter (see Weaver 2008). 
+
+#### Guessing process
+
+The guessing process involves selecting a random response from the of $n$ with equal probability:
+
+$\begin{equation}
+\Pr(Y_i=y_i|\mathbf{c}_{m^\prime},\delta, \tau;\mathbf{r}_i) = \frac{1}{n}
+\end{equation}$
+
+#### Mixture
+
+Putting these pieces together, the mixture probability of responding $y_i$ is defined as:
+
+$\begin{aligned}
+\Pr(Y_i=y_i\mid \delta, \tau;\mathbf{r}_i ) =  \Pr(Y_i=y_i \mid \mathbf{c}_r, \delta, \tau;\mathbf{r}_i) +  \\  Pr(Y_i=y_i \mid \mathbf{c}_{m^{\prime}},\delta, \tau;\mathbf{r}_i) Pr(\mathbf{c}_{m^\prime}\mid \delta, \tau;\mathbf{r}_i ) 
+\end{aligned}$
+
+where the probability of a retrieval failure is
+
+$\begin{equation}
+Pr(\mathbf{c}_{m^\prime}\mid \delta, \tau;\mathbf{r}_i ) = \frac{e^{\frac{\mu_{m^\prime}}{\sigma}}}{\sum_{\mathbf{c}_k \in M} e^{\frac{\mu_k}{\sigma}} + e^{\frac{\mu_{m^{\prime}}}{\sigma}}}
+\end{equation}$
+
+
+### Likelihood Function
+
+The likelihood function is given by
+
+$\begin{align}
+\mathcal{L}(\delta; \mathbf{Y}, \mathbf{r}_i) = \prod_{i=1}^n \Pr(Y_i = y_i \mid \delta, \tau;\mathbf{r}_i )
+\end{align}$
+
+where $\mathbf{Y} = \{y_1,y_2, \dots y_n \}$ is the set of responses. 
+"
+
+# ╔═╡ c997a77a-189e-4182-9d67-1d44cadf9997
+md"
+
+## Model Assumptions 
+Here we summarize the assumptions of the model:
+
+
+1. Activation is a function of similarity between the retrieval request and chunk slots 
+3. A retrieval failure occurs the model guesses with equal probability among $n_{\rm items}$ candidates
+4. No learning or forgeting occurs
+"
+
+# ╔═╡ cdd82d51-2080-4608-bc15-1549bb0aa329
+md"
+## Generate Data
+
+ In the code block below, we define two functions to generate simulated data from the model: `simulate` and `simulate_trial`. The `simulate` function populates declarative memory with `n_items` chunks, creates a model object, and calls the function `simulate_trial` for each stimulus. Without changing the predictions of the model, the code, omits the letter slot for simplicity. Instread, it requests a chucnk for (value=v), and the answer is considered correct if the retrieved chunk has (value=v). The function `simulate` accepts the following arguments:
+
+- n_items: the number of unique items in the stimulus set
+- stimuli: an array of numbers representing cues
+- parms: a `NamedTuple` of fixed parameters
+-  $\delta$: a keyword arguemtn for the mismatch penalty parameter
+-  $\tau$: a keyword argument for the retrieval threshold parameter
+"
+
+# ╔═╡ f26a372f-6b3a-4079-9b76-5fb0df32ac71
+md"
+`simulate_trial` simulates a single trial of the paired associates experiment and accepts the following arguments:
+
+- actr: an actr model object
+- stimulus: a number representing a cue
+
+In the function `simulate_trial`, a vector of retrieval probabilities  $\theta$ is computed from `retrieval_probs`. An index index from 1 to $n_{\rm items} + 1$ is sampled proportional to $\theta$. If the index indicates a retrieval failure, an index from 1 to $n_{\rm items}$ is sampled with equal probability to represent the guessing process. The final index is coded as correct or incorrect and store as a `NamedTuple`, rather than storing the details of the retrieved chunk. This simplification is possible because all correct and incorrect responses have the same probability of occuring. 
+"
+
+# ╔═╡ 5e448e46-2650-4af9-a1d3-d2bf312695a4
 begin
-	Random.seed!(89605)
-	n = 50
-	θ = 0.5
-	k = rand(Binomial(n, θ))
+
+	
+	function simulate_trial(actr, stimulus)
+	    # Compute the retrieval probability of the chunk
+	    Θ,_ = retrieval_probs(actr; value = stimulus)
+	    n = length(Θ)
+	    idx = sample(1:n, Weights(Θ))
+	    # if idx corresponds to retrieval failure, guess between 1 and n-1
+	    idx = idx == n ? rand(1:(n-1)) : idx
+	    # identify whether the response matches
+	    matches = idx == stimulus ? true : false
+	    return (matches=matches,)
+	end
 end
 
-# ╔═╡ 4c6442c1-50ca-4549-85f2-d6c0b3884873
+# ╔═╡ 06c79bdf-0b64-467f-8034-909cbd091866
 md"
-
-# Define model
-
-Turing models are prefixed with an `@model` macro and defined within a model block. The model accepts to arguements:
-
-- `n`: the number of trials
-
-- `k`: the observed number of successes
-
-Inside the model block, we specify a beta prior for the parameter $\theta$. The parameter $\theta$ is passed to the binomial distribution object along with $n$. This sampling statement indicates that $k$, the observed number of successes, follows a binomial distribution with $n$ trials and parameter $\theta$.
+Reveal the cell immediately below to see details about helper functions.
 "
 
-# ╔═╡ 82881ec8-1f9d-4e57-a071-1d7bb3c0c1bb
-@model function model(n, k)
-    θ ~ Beta(5, 5)
-    k ~ Binomial(n, θ)
+# ╔═╡ 351f0950-de85-4748-9a30-4bdc5de1e7df
+begin
+	"""
+		sample_stimuli(n, m)
+
+	Generates `m` samples from set from set {1, 2, ..., `n`}, which represent stimuli
+
+	# Arguments
+	- `n`: upper bound on range of stimuli to be sampled
+	- `m': the number of samples taken from set {1, 2, ..., n}
+	"""
+	function sample_stimuli(n, m)
+		return rand(1:n, m)
+	end
+
+	"""
+		populate_memory(n, act=0.0)
+
+	Returns a vector of chunks with a slot-value pairs 1 through `n`
+
+	# Arguments
+	- `n`: number of chunks
+	- `act=0': default activation value
+	"""
+	function populate_memory(n, act=0.0)
+		return [Chunk(;act=act, value=i) for i in 1:n]
+	end
+
+	"""
+		unique_data(data)
+
+	Associates duplicate responses with a count
+	
+	"""
+	function unique_data(data)
+    	return map(x->add_counts(data, x), unique(data))
+	end
+
+	function add_counts(data, u)
+	    N = count(x->x == u, data)
+	    return (u...,N=N)
+	end
+
+	nothing
 end
 
-# ╔═╡ 4d72edfa-9e34-4d94-a8bd-d36f4cf293e8
+# ╔═╡ c92aee5f-4a45-4af9-893b-ca863332945c
+# ╠═╡ disabled = true
+#=╠═╡
+function simulate(n_items, stimuli, parms; δ, τ)
+	# Create chunk
+	chunks = populate_memory(n_items)
+	# add chunk to declarative memory
+	memory = Declarative(;memory=chunks)
+	# create ACTR object and pass parameters
+	actr = ACTR(;declarative=memory, parms..., τ, δ)
+	data = map(x->simulate_trial(actr, x), stimuli)
+	return data
+end
+  ╠═╡ =#
+
+# ╔═╡ b52c2611-e336-498f-b913-14cce60e3d01
 md"
-# Estimate Parameters
-
-## Setup Sampler
-
-Now that we have generated data and specified a model, we can perform Bayesian parameter estimation. We will use the No U-Turn (NUTS) algorithm to sample from the posterior distribution. We will run four chains for a total of 2,000 iterations and exclude the first 1,000 adaption samples. adaption (a.k.a. burn-in, or warmup) samples are excluded because the sampling algorithm requires time to adapt before it can converge on the posterior distribution. We will also set the NUTS $\delta$ to .65. Typically, a value between .65 and .85 perform well. 
+In the following code, we will generate 50 simulated trials. The function `unique_data` creates an array of `NamedTuples` containing each response category and a count of `N` of instances of each response category. Reformatting the data in this manner is not necessary but it can increase the execution speed of the code in some cases. 
 "
 
-# ╔═╡ 983b875f-6325-4ddc-8fa0-8be1ee8a09c2
+# ╔═╡ 28e84151-a22a-4ecb-a9b4-106aedf1cd32
 begin
+	# Number of trials
+	n_trials = 50
+	# number of items in stimulus list
+	n_items = 10
+	# Sample stimulis
+	stimuli = sample_stimuli(n_items, n_trials)
+	# Retrieval threshold parameter
+	τ = 0.5
+	# Mismatch penalty parameter
+	δ = 1.0
+	# Fixed parameters
+	parms = (blc = 1.5,s = 0.2, mmp=true)
+	# Simulate model
+	temp = simulate(n_items, stimuli, parms; δ, τ)
+	# Tabulate counts of unique responses
+	data = unique_data(temp)
+end
+
+# ╔═╡ aff6ae6e-d19c-4e42-a137-cf6b1bde3a8b
+md"
+## Define Log Likelihood Function
+
+The first step is to define a distribution object for `logpdf`, which will compute the log likelihood. The distribution object `Retrieval` contains the parameters and fixed data: 
+
+-  $\delta$: the mismatch penalty parameter
+-  $\tau$: retrieval threshold parameter
+- n_items: the number of unique items in the stimulus set
+- parms: a `NamedTuple` of fixed parameters
+"
+
+# ╔═╡ 150fd918-5fcd-4e23-ab74-3e32c2025e73
+md"
+The code block below shows the code used to define the log likelihood function. `computeLL` is the primary function for computing the log likelihood, which accepts the following arguments:
+
+- parms: a `NamedTuple` of fixed parameters
+- n_items: the number of unique items in the stimulus set
+- data: an array of numbers representing responses
+-  $\delta$: a keyword arguemtn for the mismatch penalty parameter
+-  $\tau$: a keyword argument for the retrieval threshold parameter
+
+`computeLL` works in much the same way as the function `simulate`. First, it populates declarative memory with chunks, it creates a model object, and computes the probability of each response category weighted by the number of responses in that category. In order to improve performance, the probabilities for a correct response, incorrect response, and guess are cached and reused inside the for loop. 
+"
+
+# ╔═╡ e2f41b29-b08e-466b-9764-14bc18cd1bf3
+# primary function for computing log likelihood
+function computeLL(parms, n_items, data; τ, δ)
+    # initialize activation for auto-differentiation
+    act = zero(τ)
+    # populate declarative memory
+    chunks = populate_memory(n_items, act)
+    # add chunks to declarative memory
+    memory = Declarative(;memory=chunks)
+    # create ACTR object and pass parameters
+    actr = ACTR(;declarative=memory, parms..., τ, δ)
+    # pre-compute probabilities for correct, incorrect and failures
+    p_correct,p_failure = retrieval_prob(actr, chunks[1]; value=1)
+    p_incorrect,_ = retrieval_prob(actr, chunks[1]; value=2)
+    p_guess = 1 / n_items
+    LL = 0.0
+    LLs = zeros(typeof(τ), 2)
+    for d in data
+        if d.matches
+            LLs[1] = log(p_correct)
+            LLs[2] = log(p_failure) + log(p_guess)
+        else
+            LLs[1] = log(p_incorrect)
+            LLs[2] = log(p_failure) + log(p_guess)
+        end
+        LL += logsumexp(LLs) * d.N
+    end
+    return LL
+end
+
+# ╔═╡ 27536366-d347-41a7-8f67-ebda1e18998d
+begin
+	using Distributions
+	import Distributions: logpdf, loglikelihood
+	
+	struct Retrieval{T1,T2,T3,T4} <: ContinuousUnivariateDistribution
+	    τ::T1
+	    δ::T2
+	    n_items::T3
+	    parms::T4
+	end
+	
+	loglikelihood(d::Retrieval, data::Array{<:NamedTuple,1}) = logpdf(d, data)
+	
+	function logpdf(d::Retrieval, data::Array{<:NamedTuple,1})
+	    return computeLL(d.parms, d.n_items, data; τ=d.τ, δ=d.δ)
+	end
+end
+
+# ╔═╡ 1d8fecc6-769c-48dc-bea1-f38d76f61d96
+md"
+You may have noticed that the log likelihood of a mixture is computed differently than non-mixtures. It is typically the case that log likelihoods are more numerically stable compared to likelihoods. A mixture model requires adding likelihoods, which is not directly possible with the log function. As a workaround, we use a special function `logsumexp` which allows a vector of log likelihoods to be added (e.i., `LLs`) in a numerically stable fashion. For this reason, the log likelihood of the retrieval process and guessing process are stored as seperate elements in the vector `LLs`. 
+"
+
+# ╔═╡ 212ed2f3-118c-4284-85f8-35936db37057
+md"
+## Define Model
+
+Our next step is to formulate the model and the prior distribution over $\tau$ and $\delta$.
+
+
+$\tau \sim \rm normal(.5,.5)$
+
+$\delta \sim \rm normal(1, .5)$
+
+$\theta = \Pr(Y_i=y_i \mid \mathbf{c}_r, \delta, \tau;\mathbf{r}_i) +  \\  Pr(Y_i=y_i \mid \mathbf{c}_{m^{\prime}},\delta, \tau;\mathbf{r}_i) Pr(\mathbf{c}_{m^\prime}\mid \delta, \tau;\mathbf{r}_i )$
+
+$y \sim \rm Bernoulli(\theta)$
+
+In Turing, the model is written as follows:
+"
+
+# ╔═╡ 6f6ab667-67da-441e-81df-f537d1a2eb9e
+@model model(data, parms, n_items) = begin
+  δ ~ Normal(1.0, 0.5)
+  τ ~ Normal(0.5, 0.5)
+  data ~ Retrieval(τ, δ, n_items, parms)
+end
+
+# ╔═╡ 208d39f3-25a3-4d64-b8ae-52bf1af35c91
+md"
+## Estimate Parameters
+
+Now that the priors, likelihood and Turing model have been specified, we can now estimate the parameters. In the following code, we will run four MCMC chains with the NUTS sample for 2,000 iterations and omit the first 1,000 warmup samples in each chain. 
+"
+
+# ╔═╡ f2f67537-819a-404d-9d6b-e5cc2655c5c7
+begin
+	# Settings of the NUTS sampler.
 	n_samples = 1000
+	delta = 0.85
 	n_adapt = 1000
 	n_chains = 4
-	δ = 0.65
-	specs = NUTS(n_adapt, δ);
-end
-
-# ╔═╡ 98860ab6-8f85-4502-8532-e4ddd44ec033
-md"
-## Run the Sampler
-
-Next, we will pass the model, sampler configuration details to the `sample` function. This will return a chain object containing all of the retained samples for each chain. The chain will automatically print out a summary of the posterior distribution for each parameter in addition to the effective sample size (ess) and rhat. Larger values of ess indicate efficient sampling (e.g. low autocorrelation), whereas rhat measures convergence. rhat is based on the ratio of between chain and within chain variance. rhat values $\leq 1.05$ are generally considered good evidence of convergence.
-"
-
-# ╔═╡ fa67e049-9140-4596-9a35-cf0094b22939
-begin
-	chain = sample(
-		model(n, k),
-		specs, 
-		MCMCThreads(), 
-		n_samples, 
-		n_chains
-	)
+	specs = NUTS(n_adapt, delta)
+	# Start sampling.
+	chain = sample(model(data, parms, n_items), specs, MCMCThreads(), n_samples, n_chains, progress=true)
 	describe(chain)
 end
 
-# ╔═╡ 732d3ad2-7498-43bd-82a1-3bec8348a1aa
+# ╔═╡ 29d4f1fe-5a53-4c87-b245-bd24c6cff081
 md"
-# Plotting the Results
+## Results
 
-## Diagnostics
+### Diagnostics
 
-By default, the `plot` function generates two plots for each parameter. The trace plot on the left provides a way to visually diagnose the chains for convergence problems. A trace plot shows the sequence of samples for each chain. When the chains have converged and have low auto-correlation, the trace plot will look like a hairy caterpillar---the chains should move erradically up and down and should show no tendency to drift up or down, or seperate from each other. The second plot shows the probability density for each chain.
+The code below plots the diagnostics for the model. The first panel shows good mixing between the four chains: each line is jittery and superimposed on top of each other. This is corroborated by $\hat{r}$, which is $\approx 1$. In the second panel, the auto-correlation between successive samples drops rapidly after a lag of about 5, indicating a high effective sample size. The last panel shows the posterior distribution of $\tau$ is centered near the data generating value of $\tau$, indicating that the model is behaving as expected.
 "
 
-# ╔═╡ 4628180d-b38e-4336-bff9-a5a095072f57
-plot(chain, grid=false)
-
-# ╔═╡ 051ed3f7-5b60-4cc2-a177-1b9335c43777
-md"
-One formal convergence diagnostic is Gelman diagnostic, which is esssentially a test of between vs. within chain variance. The basic idea is that if multiple chains have converged onto the same distribution, then the ratio of between vs. within variances should be approximately equal.  The potential scale reduction factor, often called r hat, is the ratio of the variances. According to some standards,  value of r hat $< 1.01$ is considered to be good evidence of convergence. The r hat value can be found in the chain summary below:
-"
-
-# ╔═╡ 338609d8-7dba-4b7e-9567-afba21cd7d69
-describe(chain)
-
-# ╔═╡ 3e638c3b-6391-4e73-989a-494d8119ad6c
-md"
-
-Consistent with our visual assessment, r hat is very close to 1.
-"
-
-# ╔═╡ 3ad7b4e9-8e4a-4c6f-bf13-a03227e164dc
-md"
-### Non-Converging Chains
-There are many symptoms of chains that fail to coverge on the same distribution. Perhaps the simplest case is when one chain has a different mean than the others. In the trace plot below, it is clear that one chain is consistently higher than the other. This can also be seen in the density plot in which one distribution is shifted to the right of theother three.
-"
-
-# ╔═╡ 173acc01-6220-444b-894c-cf9af13c14c0
-begin 
-	bad_chain1 = Chains(rand(2,2,1))
-	let
-		x = randn(1000, 1, 4)
-		x[:,:,4] .+= 2
-		bad_chain1 = Chains(x)
-		plot(bad_chain1)
-	end
+# ╔═╡ 57b99ea2-6f25-444f-935b-4c354ad9f526
+let
+	font_size = 12
+	ch = group(chain, :τ)
+	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
+	  grid=false, size=(250,100), titlefont=font(font_size))
+	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
+	  grid=false, size=(250,100), titlefont=font(font_size))
+	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
+	  grid=false, size=(250,100), titlefont=font(font_size))
+	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
 end
 
-# ╔═╡ f7dfd6cf-419b-4ef5-b8d2-94ebd586c304
-describe(bad_chain1)
-
-# ╔═╡ 9e313e5c-46d0-4c32-bb9e-a24b796d0eef
-md"
-
-In the trace plot below, the chains are superimposed and look like a hairy catepillar. However, the mean is non-stationary: it decreases for a while and then increases to its original value. In this case, the chain has not converged. If this happens at the beginning of the trace, it may indicate that you need to run the sampler longer before it converges. 
-
-Note that the r hat statistic is not garrenteed to detect this problem. For this reason, it is important to inspect the trace plots for any anomolies. 
-
-"
-
-# ╔═╡ ea0fa33a-6b41-48e5-a54f-5eb4b2483576
-begin 
-	bad_chains2 = Chains(rand(2,2,1))
-	let
-		x = randn(1000, 1, 4)
-		x[1:200,:,:] .+= 1
-		x[400:800,:,:] .+= -1
-		x[:801:end,:,:] .+= .3
-		
-		bad_chains2 = Chains(x)
-		plot(bad_chains2)
-	end
+# ╔═╡ dc63bbff-2573-45c4-8b27-34454bdf4bf7
+let
+	font_size = 12
+	ch = group(chain, :δ)
+	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
+	  grid=false, size=(250,100), titlefont=font(font_size))
+	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
+	  grid=false, size=(250,100), titlefont=font(font_size))
+	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
+	  grid=false, size=(250,100), titlefont=font(font_size))
+	pcδ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
 end
 
-# ╔═╡ cf4204a1-62b4-425a-8fec-566a2d9c0ac1
+# ╔═╡ c6b84b2c-5fce-49e8-9715-0a0be72020da
 md"
-Another potential problem is that the sampler may get stuck in certain regions for an extended period of time. The trace plot below shows two chains that oversample an area: the blue line towards the top, and the magenta line towards the bottom. 
+### Posterior Predictive Distribution
+
+In the following code blocks, we generate a posterior predictive distributions for each response category: correct, incorrect and retrieval failures. As previously noted, a posterior predictive distribution is a mixture distribution of data (e.g. number of correct responses) based on samples from the posterior distribution of parameters.
+
+The basic algorithm for sampling from the posterior predictive uses the following steps:
+
+1. On repetition $i$, sample a parameter vector  $\Theta_j j \in \{1,2,\dots,n_{\textrm{samples}}\}$ from the MCMC chain
+2. Simulate data from the model using parameter vector $\Theta_j$
+3. Repeat steps 1 and 2 many times
+
+In the code block below, function `posterior_predictive` accepts the data simulation function `simulate`, the chain object, and the number of simulations (e.g. 1000). The histograms below indicate that 40-45 trials out of 50 are correct responses while the remaining responses are incorrect.  
 "
 
-# ╔═╡ e18048e2-6d5a-489c-b3d2-cee51f264813
-begin 
-	bad_chains3 = Chains(rand(2,2,1))
-	let
-		x = randn(1000, 1, 4)
-		x[1:400,:,1] .= 3
-		x[401:600,:,1] .= 2.3
-		x[300:500,:,4] .= -2
-		bad_chains3 = Chains(x)
-		plot(bad_chains3)
-	end
-end
-
-# ╔═╡ fd716b08-18b6-4092-8865-39e2e51b24fd
-# function simulate_markov(ρ, Δ, n_sim)
-#     # initialize data
-#     data = fill(0.0, n_sim)
-#     # sample first state
-#     data[1] = randn()
-# 	w  = Weights([ρ, (1 - ρ) / 2, (1-ρ) / 2])
-#     for i in 2:n_sim
-#         # sample next state given state r
-#         c = sample(1:3, w)
-#         if c == 1
-# 			data[i] = data[i-1]
-# 		elseif c == 2
-# 			data[i] = data[i-1] + Δ
-# 		else
-# 			data[i] = data[i-1] - Δ
-# 		end
-#     end
-#     return data
-# end
-# begin
-# 	ρ = .95
-# 	Δ = 1
-# 	n_sim = fill(1000, 4)
-# 	#y = rand(1000, 1, 4)
-# 	x = simulate_markov.(ρ, Δ, n_sim)
-# 	x = mapreduce(permutedims, vcat, x)'
-# 	x = reshape(x, (1000, 1, 4))
-# 	bad_chains4 = Chains(x)
-# 	plot(bad_chains4)
-# 	#bad_chains4
-	
-# end
-
-# ╔═╡ 613ee009-307f-4f64-9ad4-93fde4f2a560
-md"
-As expected, the r hat value is much greater than 1. 
-"
-
-# ╔═╡ 050fd03d-3825-4e8c-bd9e-60e8ac665906
-describe(bad_chains3)
-
-# ╔═╡ 6b09e621-f13b-4fe2-8468-6fd49426ab79
-md"
-## Effective Sample Size and Autocorrelation
-
-Another important indicator of chain quality is effective sample size and autocorrelation. Effective sample size adjusts the nominal sample size for autocorrelation, or temporal dependencies between samples. Ideally, autocorrlation should be low, indicating efficient sampling of the MCMC algorithm. Although an effective sample size of approximately 200-300 might be sufficient to estimate the mean of a posterior distribution, approximately 1,000 to 2,000 samples are needed to estimate quantitites in the tails of the distribution, such as $95\%$ credible intervals. Note that these are only rough guidelines.
-
-Effective sample size can be found in the chain summaries above. In addition, autocorrelation (a determinant of effective sample size) can be inspected visually with an autocorrelation plot, as illustrated below. The plot shows a sharp decline in autocorrelation with lag, indicating low autocorrelation and high effective sample size. The degree of autocorrelation depends on two factors: the geometry of the posterior distribution, and the MCMC sampler. NUTS has low autocorrelation in general, but particularly for approximately multivariate normal distributions. Autocorrelation can increase when the shape deviates from a normal shape or becomes irregular in some way. Other samplers, such as Differential Evolution MCMC, tend to have more autocorrelation in general. 
-"
-
-# ╔═╡ f3c272b0-96fa-4afe-ad2b-641fede8724b
-autocorplot(chain, grid=false)
-
-# ╔═╡ 540299ab-2863-47da-891f-49479b6a5e8b
-md"
-
-The autocorrelation plot below provides an example of high autocorrelation between samples. As you can see, autocorrelation remains high even after a lag of 20 or 30 samples. One way to reduce autocorrelation is to reparameterize your model so that the topology of the posterior distribution is easier for the MCMC sampler to traverse. An excellent resource on repareterizing a model can be found [here](https://mc-stan.org/docs/2_18/stan-users-guide/reparameterization-section.html). Reparameterization can also increase the speed of the sampler in some cases.
-"
-
-# ╔═╡ 9e359272-03ef-4344-9dd5-4a1220b35419
-begin 
-	bad_chains4 = Chains(rand(2,2,1))
-	let
-		N = fill(1000, 4)
-		σ =  1.0
-		x = arfima.(N, σ, 0.5) 
-		x = mapreduce(permutedims, vcat, x)'
-		x = reshape(x, (1000, 1, 4))
-		bad_chains4 = Chains(x)
-		autocorplot(bad_chains4, grid = false)
-	end
-end
-
-# ╔═╡ 07e08df2-bef4-4fd3-b8b6-a0edbc161989
-md"
-
-## Pooled Density Plot
-
-If the chains have converged, it is sometimes desirable to smooth out the density plot by pooling the chains. This can be accomplished with the `pooleddensity()` function.
-"
-
-# ╔═╡ 0f389b99-5840-476b-b334-26fe128d5ff2
-pooleddensity(chain, grid=false)
-
-# ╔═╡ 6e92d586-1933-4e3c-b6fd-e5d180e563f1
+# ╔═╡ 4f4f9851-b055-446c-96c0-af99fa68d93e
 begin
-	simulate(;θ) = rand(Binomial(n, θ))
-	preds = posterior_predictive(x -> simulate(;x...), chain, 10000)
-	histogram( preds, xlabel="H=h", leg=false, color=:grey, grid=false, yaxis=font(10), xaxis=font(10),
-	    ylim=(0,2000), xlim=(10,40), title="posterior predictive")
+	get_counts(data, v) = count(x->x.matches == v, data)
+	nothing
 end
 
-# ╔═╡ d7dfe957-f1d3-486f-a87b-db9c178404d3
-md"
-# Using Custom Likelihood Functions
-
-In the previous example, the commonly used beta and binomial distribution functions were imported from the package Distributions.jl. Many ACT-R models cannot be expressed with standard distribution functions. In such cases, we can easily define one. So that the method is not lost in complex model details
-"
-
-# ╔═╡ 7e8c1e06-2240-41e3-8a28-957f12024ed3
+# ╔═╡ 1fd43c22-63db-4f11-a3a4-4f0d4de88390
 begin
-	import Distributions: logpdf
 	
-	struct My_Dist{T} <: ContinuousUnivariateDistribution
-	    n::Int
-	    θ::T
-	end
-	
-	function logpdf(dist::My_Dist, k::Int)
-	    return logpdf(Binomial(dist.n, dist.θ), k)
+	preds = posterior_predictive(x -> simulate(n_items, stimuli, parms; x...), chain, 1000)
+	let
+		counts_correct = get_counts.(preds, true)
+		p4 = histogram(counts_correct, xlabel="Number Correct", ylabel="Density", xaxis=font(12), yaxis=font(12),
+		    grid=false, norm=true, color=:grey, leg=false, titlefont=font(12),
+		    bar_width=1)
 	end
 end
 
-# ╔═╡ 4db5c8cb-a016-4a12-aeb9-cebd26fee2a0
-@model function awesome_model(n, k)
-    θ ~ Beta(5, 5)
-    k ~ My_Dist(n, θ)
+# ╔═╡ 9859d477-4f7d-4b38-a430-ee6c81c9572a
+let
+	counts_incorrect = get_counts.(preds, false)
+	p4 = histogram(counts_incorrect, xlabel="Number Incorrect", ylabel="Density", xaxis=font(12), yaxis=font(12),
+	    grid=false, norm=true, color=:grey, leg=false, titlefont=font(12),
+	    bar_width=1)
 end
 
-# ╔═╡ 2b26c8a6-aeb7-4b65-863e-fa81be2f0c2c
-begin
-	chain1 = sample(awesome_model(n, k), specs, MCMCThreads(), n_samples, n_chains)
-	describe(chain1)
-end
-
-# ╔═╡ 6a8df808-c671-47d8-9a8e-4309218902c1
+# ╔═╡ c304174f-0e7f-46d8-bf00-07a388fc9a87
 md"
-
 # References
 
-Van Ravenzwaaij, D., Cassey, P., & Brown, S. D. (2018). A simple introduction to Markov Chain Monte–Carlo sampling. Psychonomic bulletin & review, 25(1), 143-154. [Link](https://core.ac.uk/download/pdf/157691414.pdf)
+Weaver, R. (2008). Parameters, predictions, and evidence in computational modeling: A statistical view informed by ACT–R. Cognitive Science, 32(8), 1349-1375.
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 ACTRModels = "c095b0ea-a6ca-5cbd-afed-dbab2e976880"
-ARFIMA = "9d0fb3db-ba49-4108-bc86-650b3813b6d5"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
-MCMCChains = "c7f686f2-ff18-58e9-bc7b-31028e88f75d"
-PlutoTest = "cb4044da-4d16-4ffa-a6a3-8cad7f73ebdc"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
-ACTRModels = "~0.11.1"
-ARFIMA = "~0.4.0"
-Distributions = "~0.25.93"
-MCMCChains = "~6.0.1"
-PlutoTest = "~0.2.2"
+ACTRModels = "~0.11.0"
+Distributions = "~0.25.46"
 PlutoUI = "~0.7.51"
+Revise = "~3.5.2"
 StatsPlots = "~0.15.5"
 Turing = "~0.25.1"
 """
@@ -345,24 +528,13 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "4f9671cef83aea24ea79e0ce447d1e1be7015b7a"
+project_hash = "a4b180a2cfcc107979ad51c7facef5a2ba143159"
 
 [[deps.ACTRModels]]
 deps = ["ConcreteStructs", "Distributions", "Parameters", "Pkg", "PrettyTables", "Random", "Reexport", "SafeTestsets", "SequentialSamplingModels", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "ca795df6568ce4d3f386e8c775f798e6e7b71565"
+git-tree-sha1 = "434d72846ecdc49483daf0ddb47a56709d229280"
 uuid = "c095b0ea-a6ca-5cbd-afed-dbab2e976880"
-version = "0.11.1"
-
-[[deps.ADTypes]]
-git-tree-sha1 = "dcfdf328328f2645531c4ddebf841228aef74130"
-uuid = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
-version = "0.1.3"
-
-[[deps.ARFIMA]]
-deps = ["LinearAlgebra", "Random", "StaticArrays", "Test"]
-git-tree-sha1 = "e75e73b854b4f592466782c0d035f0e5b64ac83d"
-uuid = "9d0fb3db-ba49-4108-bc86-650b3813b6d5"
-version = "0.4.0"
+version = "0.11.0"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -596,6 +768,12 @@ deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "Random", "S
 git-tree-sha1 = "a6e6ce44a1e0a781772fc795fb7343b1925e9898"
 uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 version = "0.15.2"
+
+[[deps.CodeTracking]]
+deps = ["InteractiveUtils", "UUIDs"]
+git-tree-sha1 = "d730914ef30a06732bdd9f763f6cc32e92ffbff1"
+uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
+version = "1.3.1"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -946,15 +1124,15 @@ version = "0.1.4"
 
 [[deps.GR]]
 deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Preferences", "Printf", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "UUIDs", "p7zip_jll"]
-git-tree-sha1 = "d014972cd6f5afb1f8cd7adf000b7a966d62c304"
+git-tree-sha1 = "efaac003187ccc71ace6c755b197284cd4811bfe"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.72.5"
+version = "0.72.4"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "f670f269909a9114df1380cc0fcaa316fff655fb"
+git-tree-sha1 = "4486ff47de4c18cb511a0da420efebb314556316"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.72.5+0"
+version = "0.72.4+0"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -1011,9 +1189,9 @@ version = "0.9.4"
 
 [[deps.IOCapture]]
 deps = ["Logging", "Random"]
-git-tree-sha1 = "d75853a0bdbfb1ac815478bacd89cd27b550ace6"
+git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
-version = "0.2.3"
+version = "0.2.2"
 
 [[deps.InitialValues]]
 git-tree-sha1 = "4da0f88e9a39111c2fa3add390ab15f3a44f3ca3"
@@ -1097,6 +1275,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "6f2675ef130a300a112286de91973805fcc5ffbc"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
 version = "2.1.91+0"
+
+[[deps.JuliaInterpreter]]
+deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
+git-tree-sha1 = "6a125e6a4cb391e0b9adbd1afa9e771c2179f8ef"
+uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
+version = "0.9.23"
 
 [[deps.KernelAbstractions]]
 deps = ["Adapt", "Atomix", "InteractiveUtils", "LinearAlgebra", "MacroTools", "PrecompileTools", "SparseArrays", "StaticArrays", "UUIDs", "UnsafeAtomics", "UnsafeAtomicsLLVM"]
@@ -1268,9 +1452,9 @@ version = "2.1.1"
 
 [[deps.LogDensityProblemsAD]]
 deps = ["DocStringExtensions", "LogDensityProblems", "Requires", "SimpleUnPack"]
-git-tree-sha1 = "b726468867eb032ebd7aba0337213eb18ed0566b"
+git-tree-sha1 = "5f219f583a399381dc147b984648429bf8c3fc6a"
 uuid = "996a588d-648d-4e1f-a8f0-a84b347e47b1"
-version = "1.4.3"
+version = "1.4.2"
 
     [deps.LogDensityProblemsAD.extensions]
     LogDensityProblemsADEnzymeExt = "Enzyme"
@@ -1308,6 +1492,12 @@ deps = ["Dates", "Logging"]
 git-tree-sha1 = "cedb76b37bc5a6c702ade66be44f831fa23c681e"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.0.0"
+
+[[deps.LoweredCodeUtils]]
+deps = ["JuliaInterpreter"]
+git-tree-sha1 = "60168780555f3e663c536500aa790b6368adc02a"
+uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
+version = "2.3.0"
 
 [[deps.MCMCChains]]
 deps = ["AbstractMCMC", "AxisArrays", "Dates", "Distributions", "Formatting", "IteratorInterfaceExtensions", "KernelDensity", "LinearAlgebra", "MCMCDiagnosticTools", "MLJModelInterface", "NaturalSort", "OrderedCollections", "PrettyTables", "Random", "RecipesBase", "Statistics", "StatsBase", "StatsFuns", "TableTraits", "Tables"]
@@ -1566,12 +1756,6 @@ version = "1.38.12"
     ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
-[[deps.PlutoTest]]
-deps = ["HypertextLiteral", "InteractiveUtils", "Markdown", "Test"]
-git-tree-sha1 = "17aa9b81106e661cffa1c4c36c17ee1c50a86eda"
-uuid = "cb4044da-4d16-4ffa-a6a3-8cad7f73ebdc"
-version = "0.2.2"
-
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
 git-tree-sha1 = "b478a748be27bd2f2c73a7690da219d0844db305"
@@ -1710,6 +1894,12 @@ git-tree-sha1 = "838a3a4188e2ded87a4f9f184b4b0d78a1e91cb7"
 uuid = "ae029012-a4dd-5104-9daa-d747884805df"
 version = "1.3.0"
 
+[[deps.Revise]]
+deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "Pkg", "REPL", "Requires", "UUIDs", "Unicode"]
+git-tree-sha1 = "feafdc70b2e6684314e188d95fe66d116de834a7"
+uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
+version = "3.5.2"
+
 [[deps.Rmath]]
 deps = ["Random", "Rmath_jll"]
 git-tree-sha1 = "f65dcb5fa46aee0cf9ed6274ccbd597adc49aa7b"
@@ -1753,10 +1943,10 @@ uuid = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 version = "0.0.1"
 
 [[deps.SciMLBase]]
-deps = ["ADTypes", "ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "PrecompileTools", "Preferences", "RecipesBase", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLOperators", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface", "Tables", "TruncatedStacktraces"]
-git-tree-sha1 = "75552338dda481baeb9b9e171f73ecd0171e8f34"
+deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "PrecompileTools", "Preferences", "RecipesBase", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLOperators", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface", "Tables", "TruncatedStacktraces"]
+git-tree-sha1 = "e803672f8d58e9937f59923dd3b159c9b7e1838b"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.92.2"
+version = "1.92.0"
 
 [[deps.SciMLOperators]]
 deps = ["ArrayInterface", "DocStringExtensions", "Lazy", "LinearAlgebra", "Setfield", "SparseArrays", "StaticArraysCore", "Tricks"]
@@ -2294,42 +2484,37 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─d3ee1516-582b-11ec-09c9-ad88f606e221
-# ╟─e6496a18-40b8-41a0-8f0e-4c3a661aba72
-# ╟─ddad76a3-3e8f-4f7b-a127-3035f36bc8cb
-# ╠═50867820-5e92-4158-b69f-2f2f7e573748
-# ╟─4c6442c1-50ca-4549-85f2-d6c0b3884873
-# ╠═82881ec8-1f9d-4e57-a071-1d7bb3c0c1bb
-# ╟─4d72edfa-9e34-4d94-a8bd-d36f4cf293e8
-# ╠═983b875f-6325-4ddc-8fa0-8be1ee8a09c2
-# ╟─98860ab6-8f85-4502-8532-e4ddd44ec033
-# ╠═fa67e049-9140-4596-9a35-cf0094b22939
-# ╟─732d3ad2-7498-43bd-82a1-3bec8348a1aa
-# ╠═4628180d-b38e-4336-bff9-a5a095072f57
-# ╟─051ed3f7-5b60-4cc2-a177-1b9335c43777
-# ╟─338609d8-7dba-4b7e-9567-afba21cd7d69
-# ╟─3e638c3b-6391-4e73-989a-494d8119ad6c
-# ╟─3ad7b4e9-8e4a-4c6f-bf13-a03227e164dc
-# ╟─173acc01-6220-444b-894c-cf9af13c14c0
-# ╟─f7dfd6cf-419b-4ef5-b8d2-94ebd586c304
-# ╟─9e313e5c-46d0-4c32-bb9e-a24b796d0eef
-# ╟─ea0fa33a-6b41-48e5-a54f-5eb4b2483576
-# ╟─cf4204a1-62b4-425a-8fec-566a2d9c0ac1
-# ╟─e18048e2-6d5a-489c-b3d2-cee51f264813
-# ╟─fd716b08-18b6-4092-8865-39e2e51b24fd
-# ╟─613ee009-307f-4f64-9ad4-93fde4f2a560
-# ╟─050fd03d-3825-4e8c-bd9e-60e8ac665906
-# ╟─6b09e621-f13b-4fe2-8468-6fd49426ab79
-# ╠═f3c272b0-96fa-4afe-ad2b-641fede8724b
-# ╟─540299ab-2863-47da-891f-49479b6a5e8b
-# ╟─9e359272-03ef-4344-9dd5-4a1220b35419
-# ╟─07e08df2-bef4-4fd3-b8b6-a0edbc161989
-# ╠═0f389b99-5840-476b-b334-26fe128d5ff2
-# ╠═6e92d586-1933-4e3c-b6fd-e5d180e563f1
-# ╟─d7dfe957-f1d3-486f-a87b-db9c178404d3
-# ╠═7e8c1e06-2240-41e3-8a28-957f12024ed3
-# ╠═4db5c8cb-a016-4a12-aeb9-cebd26fee2a0
-# ╠═2b26c8a6-aeb7-4b65-863e-fa81be2f0c2c
-# ╟─6a8df808-c671-47d8-9a8e-4309218902c1
+# ╟─52b30b5e-6f92-11ec-1ade-1d67bf8cd2d9
+# ╠═b8af21e5-c433-4646-8d17-23d5976eb1e8
+# ╟─89c69b0b-64bf-4753-9364-ee045fa4f1c5
+# ╟─975e6f95-0127-40fa-ad8e-dff74866cb54
+# ╟─3efb7bb9-d89f-44d1-85ab-120b0fc69f03
+# ╟─6c215ff3-8d8e-4546-bc08-158592871792
+# ╟─c997a77a-189e-4182-9d67-1d44cadf9997
+# ╟─cdd82d51-2080-4608-bc15-1549bb0aa329
+# ╠═c92aee5f-4a45-4af9-893b-ca863332945c
+# ╟─f26a372f-6b3a-4079-9b76-5fb0df32ac71
+# ╠═5e448e46-2650-4af9-a1d3-d2bf312695a4
+# ╟─06c79bdf-0b64-467f-8034-909cbd091866
+# ╟─351f0950-de85-4748-9a30-4bdc5de1e7df
+# ╟─b52c2611-e336-498f-b913-14cce60e3d01
+# ╠═28e84151-a22a-4ecb-a9b4-106aedf1cd32
+# ╟─aff6ae6e-d19c-4e42-a137-cf6b1bde3a8b
+# ╠═27536366-d347-41a7-8f67-ebda1e18998d
+# ╟─150fd918-5fcd-4e23-ab74-3e32c2025e73
+# ╠═e2f41b29-b08e-466b-9764-14bc18cd1bf3
+# ╟─1d8fecc6-769c-48dc-bea1-f38d76f61d96
+# ╟─212ed2f3-118c-4284-85f8-35936db37057
+# ╠═6f6ab667-67da-441e-81df-f537d1a2eb9e
+# ╟─208d39f3-25a3-4d64-b8ae-52bf1af35c91
+# ╠═f2f67537-819a-404d-9d6b-e5cc2655c5c7
+# ╟─29d4f1fe-5a53-4c87-b245-bd24c6cff081
+# ╟─57b99ea2-6f25-444f-935b-4c354ad9f526
+# ╟─dc63bbff-2573-45c4-8b27-34454bdf4bf7
+# ╟─c6b84b2c-5fce-49e8-9715-0a0be72020da
+# ╟─4f4f9851-b055-446c-96c0-af99fa68d93e
+# ╟─1fd43c22-63db-4f11-a3a4-4f0d4de88390
+# ╟─9859d477-4f7d-4b38-a430-ee6c81c9572a
+# ╟─c304174f-0e7f-46d8-bf00-07a388fc9a87
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

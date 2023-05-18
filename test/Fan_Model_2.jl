@@ -10,7 +10,6 @@ using SafeTestsets
     include("../Tutorial_Models/Unit9/Common_Functions/Chunks.jl")
     include("../Tutorial_Models/Unit9/Common_Functions/Stimuli.jl")
     include("../Tutorial_Models/Unit9/Common_Functions/Utilities.jl")
-    include("../Tutorial_Models/Unit9/Common_Functions/Plotting.jl")
 
     Random.seed!(6112015)
 
@@ -21,13 +20,13 @@ using SafeTestsets
     temp = simulate(stimuli, slots, parms, n_blocks; δ=δ, γ=γ)
     data = vcat(temp...)
     x = range(δ*.8, δ*1.2, length=50)
-    y = map(x->computeLL(parms, slots, data; δ=x, γ=γ), x)
+    y = map(x -> computeLL(parms, slots, data; δ=x, γ=γ), x)
     mxv,mxi = findmax(y)
     δ′ = x[mxi]
     @test δ′≈ δ atol=1e-1
 
     x = range(γ*.8, γ*1.2, length=50)
-    y = map(x->computeLL(parms, slots, data; δ=δ, γ=x), x)
+    y = map(x -> computeLL(parms, slots, data; δ=δ, γ=x), x)
     mxv,mxi = findmax(y)
     γ′ = x[mxi]
     @test γ′≈ γ atol=1e-1

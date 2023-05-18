@@ -43,7 +43,7 @@ function loglikelihood_trial(ex, target, visicon, fixations; parms...)
     # create a model based on target, visual objects and parameters
     actr = initialize_model(ex, target, visicon; noise=false, parms...)
     # compute the angular size of objects in visicon
-    compute_angular_size!(actr)
+    compute_angular_size!(actr, ex.ppi)
     # initialize visual attention in center of screen
     orient!(actr, ex)
     LL = 0.0
@@ -51,7 +51,7 @@ function loglikelihood_trial(ex, target, visicon, fixations; parms...)
         # increment model time 
         actr.time += 0.05
         # compute log likelihood of fixation 
-        LL += loglikelihood_fixation(actr, visicon, fixation)
+        LL += loglikelihood_fixation(ex, actr, visicon, fixation)
         # if the model terminates search, break. Otherwise update attention and threshold
         fixation.stop ? (break) : nothing
         vo = visicon[fixation.idx]
@@ -64,11 +64,11 @@ function loglikelihood_trial(ex, target, visicon, fixations; parms...)
     return LL 
 end
 
-function loglikelihood_fixation(actr, visicon, fixation)
+function loglikelihood_fixation(ex, actr, visicon, fixation)
     # before computing fixation probability, update decay in iconic memory, finst, visibliity and activaiton values
     update_decay!(actr)
     update_finst!(actr)
-    update_visibility!(actr)
+    update_visibility!(actr, ex.ppi)
     compute_activations!(actr)
     # get all visible objects, which factor in the the fixation probability
     visible_objects = filter(x->relevant_object(actr, x), get_iconic_memory(actr))
@@ -80,6 +80,7 @@ function loglikelihood_fixation(actr, visicon, fixation)
     p = fixation_prob(actr, visicon, visible_objects, fixation)
     return log(p)
 end
+
 
 function computeLL(stimuli, all_fixations; topdown_weight)
     ex = Experiment()

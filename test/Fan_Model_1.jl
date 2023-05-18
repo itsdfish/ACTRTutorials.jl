@@ -9,7 +9,6 @@ using SafeTestsets
     include("../Tutorial_Models/Unit9/Common_Functions/Chunks.jl")
     include("../Tutorial_Models/Unit9/Common_Functions/Stimuli.jl")
     include("../Tutorial_Models/Unit9/Common_Functions/Utilities.jl")
-    include("../Tutorial_Models/Unit9/Common_Functions/Plotting.jl")
 
     Random.seed!(5057)
     γ = 1.6
@@ -18,7 +17,7 @@ using SafeTestsets
     temp = simulate(stimuli, slots, parms, Nblocks; γ=γ)
     data = vcat(temp...)
     x = range(γ*.5, γ*1.5, length=50)
-    y = map(x->computeLL(parms, slots, data; γ=x), x)
+    y = map(x -> computeLL(parms, slots, data; γ=x), x)
     mxv,mxi = findmax(y)
     γ′ = x[mxi]
     @test γ′≈ γ atol=1e-1

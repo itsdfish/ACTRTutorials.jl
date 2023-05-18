@@ -396,11 +396,13 @@ The following code will generate fixations for 10 trials using a topdown activat
 begin
 	# number of trials
 	n_trials = 10
+	# fixed parameters
+	fixed_parms = (noise=false, rnd_time=false)
 	# weight for topdown activation
 	topdown_weight = 0.66
     # create an experiment object containing experiment parameters
 	_experiment = Experiment(;n_trials)
-	stimuli,all_fixations = simulate(_experiment ; topdown_weight);
+	stimuli,all_fixations = simulate(_experiment ; topdown_weight, fixed_parms...);
 end
 
 # ╔═╡ 232d202c-6585-440f-b936-6a6ca6ccb7b4
@@ -596,6 +598,7 @@ Nyamsuren, E., & Taatgen, N. A. (2013). Pre-attentive and attentive vision modul
 Moran, R., Zehetleitner, M., Müller, H. J., & Usher, M. (2013). Competitive guided search: Meeting the challenge of benchmark RT distributions. Journal of Vision, 13(8), 24-24.
 """
 
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -615,7 +618,7 @@ PlutoUI = "~0.7.51"
 Revise = "~3.5.2"
 StatsPlots = "~0.15.5"
 Turing = "~0.25.1"
-VisualSearchACTR = "~0.3.5"
+VisualSearchACTR = "~0.3.6"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -624,13 +627,18 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "a7bae6e53c8df1f66126fb85730b67cbd8161048"
+project_hash = "9e3aa3a4f1aa4594cb55a9dd337c8920837a32b9"
 
 [[deps.ACTRModels]]
 deps = ["ConcreteStructs", "Distributions", "Parameters", "Pkg", "PrettyTables", "Random", "Reexport", "SafeTestsets", "SequentialSamplingModels", "StatsBase", "StatsFuns", "Test"]
 git-tree-sha1 = "ca795df6568ce4d3f386e8c775f798e6e7b71565"
 uuid = "c095b0ea-a6ca-5cbd-afed-dbab2e976880"
 version = "0.11.1"
+
+[[deps.ADTypes]]
+git-tree-sha1 = "dcfdf328328f2645531c4ddebf841228aef74130"
+uuid = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+version = "0.1.3"
 
 [[deps.ATK_jll]]
 deps = ["Artifacts", "Glib_jll", "JLLWrappers", "Libdl"]
@@ -1608,9 +1616,9 @@ version = "2.1.1"
 
 [[deps.LogDensityProblemsAD]]
 deps = ["DocStringExtensions", "LogDensityProblems", "Requires", "SimpleUnPack"]
-git-tree-sha1 = "5f219f583a399381dc147b984648429bf8c3fc6a"
+git-tree-sha1 = "b726468867eb032ebd7aba0337213eb18ed0566b"
 uuid = "996a588d-648d-4e1f-a8f0-a84b347e47b1"
-version = "1.4.2"
+version = "1.4.3"
 
     [deps.LogDensityProblemsAD.extensions]
     LogDensityProblemsADEnzymeExt = "Enzyme"
@@ -2111,10 +2119,10 @@ uuid = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 version = "0.0.1"
 
 [[deps.SciMLBase]]
-deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "PrecompileTools", "Preferences", "RecipesBase", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLOperators", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface", "Tables", "TruncatedStacktraces"]
-git-tree-sha1 = "e803672f8d58e9937f59923dd3b159c9b7e1838b"
+deps = ["ADTypes", "ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "PrecompileTools", "Preferences", "RecipesBase", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLOperators", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface", "Tables", "TruncatedStacktraces"]
+git-tree-sha1 = "75552338dda481baeb9b9e171f73ecd0171e8f34"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.92.0"
+version = "1.92.2"
 
 [[deps.SciMLOperators]]
 deps = ["ArrayInterface", "DocStringExtensions", "Lazy", "LinearAlgebra", "Setfield", "SparseArrays", "StaticArraysCore", "Tricks"]
@@ -2410,9 +2418,9 @@ version = "0.2.0"
 
 [[deps.VisualSearchACTR]]
 deps = ["ACTRModels", "ArgCheck", "Cairo", "ColorSchemes", "Colors", "ConcreteStructs", "Crayons", "Distributions", "Graphics", "Gtk", "Random", "Reexport", "SafeTestsets", "Statistics", "StatsBase", "StatsPlots"]
-git-tree-sha1 = "7ef983cfd94f94b65e09ba5f49a85ad02d2400f4"
+git-tree-sha1 = "26c417ccb63ca2c047c68a08c2d6972e86576075"
 uuid = "ad0872d7-b137-4624-87af-d763ac8dea1a"
-version = "0.3.5"
+version = "0.3.6"
 
 [[deps.Wayland_jll]]
 deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg", "XML2_jll"]
@@ -2718,7 +2726,7 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─7ec2da8e-0bf9-11ed-1f84-6dfe87a9d83b
+# ╠═7ec2da8e-0bf9-11ed-1f84-6dfe87a9d83b
 # ╟─d1592c9c-3516-4b59-9ba3-fe33c2274bf7
 # ╟─7d8bfda3-ed03-4b43-b02b-c218aad7e76f
 # ╟─5549bd89-1220-4d71-9cd7-c5b286d4ffd9

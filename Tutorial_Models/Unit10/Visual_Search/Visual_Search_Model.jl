@@ -17,11 +17,9 @@ function logpdf(d::VisualSearch, data::Vector{Vector{Fixation}})
     return LL
 end
 
-function simulate(;n_trials, parms...)
-    # create an experiment object containing experiment parameters
-    experiment = Experiment(;n_trials)
+function simulate(experiment; parms...)
     # generate stimuli, consisting of visual array and target for each trial
-    stimuli = map(_->generate_stimuli(experiment), 1:n_trials)
+    stimuli = map(_-> generate_stimuli(experiment), 1:experiment.n_trials)
     # generate data for each trial
     run_condition!(experiment, stimuli; parms...);
     # return stimuli and fixation data
@@ -82,13 +80,13 @@ function loglikelihood_fixation(ex, actr, visicon, fixation)
 end
 
 
-function computeLL(stimuli, all_fixations; topdown_weight)
+function computeLL(stimuli, all_fixations; topdown_weight, parms...)
     ex = Experiment()
     LL = 0.0
     # copy and reset fields in visual array
     _stimuli = set_stimuli(stimuli, topdown_weight)
     for i in 1:length(all_fixations)
-       LL += loglikelihood_trial(ex, _stimuli[i][1], _stimuli[i][3], all_fixations[i]; topdown_weight)
+       LL += loglikelihood_trial(ex, _stimuli[i][1], _stimuli[i][3], all_fixations[i]; topdown_weight, parms...)
     end
     return LL
 end

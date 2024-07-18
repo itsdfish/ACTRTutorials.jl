@@ -1,523 +1,747 @@
 ### A Pluto.jl notebook ###
-# v0.19.25
+# v0.19.44
 
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ b8af21e5-c433-4646-8d17-23d5976eb1e8
+# ╔═╡ a10e7108-08fd-11ed-3325-99f69255421b
 begin
-	using Turing, StatsPlots, Revise, ACTRModels, Random
+	using Turing, StatsPlots, Revise, ACTRModels, KernelDensity
+	using Distributions, StatsFuns, StatsBase, DataFrames, Random
 	using PlutoUI
-	# seed random number generator
-	Random.seed!(2341);
+	Random.seed!(8545)
+
 	TableOfContents()
 end
 
-# ╔═╡ 52b30b5e-6f92-11ec-1ade-1d67bf8cd2d9
+# ╔═╡ 444f7bb3-9f15-4cac-a4b5-6271ad2b6bf3
 begin
-	path_u1_1 = joinpath(pwd(), "../Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl")
-	path_u1_2= joinpath(pwd(), "../Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
-	nothing
+
+path1 = joinpath(pwd(), "../IBL/IBL_Model_Notebook.jl")
+nothing
 end
 
-# ╔═╡ 89c69b0b-64bf-4753-9364-ee045fa4f1c5
-Markdown.parse(
-	"""
+# ╔═╡ 741a2155-5f51-460b-bd9d-3ace4fc38bb5
+Markdown.parse("
 # Introduction
 
-In the present tutorial, we modify [Simple Retrievel Model 2](./open?path=$path_u1_2) to allow guessing in the event of a retrieval failure. This model is applicable to paired associates task which do not allow a person to response "I don't know", but instead require guessing when a retrieval failure occurs.
+In this tutorial, we will extend the instance based learning (IBL) model described in the previous [tutorial](./open?path=$path1).  The extended IBL includes the concept called inertia whereby the model repeates previous decision with some probability. Otherwise, the model makes the decision according to its current memory-based estimate of expected utility.
+## Task
 
-# Task
+The decision making is the same as the one used for the previous IBL model [tutorial](./open?path=$path1). Participants choose between two options: Option A and Option B. Participants do not know the payoff distribution associated with each option. Instead they must learn it through experience. When an option is selected, a random sample from the option's payoff distribution is selected and presented to the participant. Typically, decisions are incentivized by awarding participants money based on the outcomes experienced throughout the experiemnt. 
+")
 
-The task is similar to the one described in the tutorial [Simple Retrievel Model 2](./open?path=$path_u1_2). In the paired associates task, subjects learn arbitrary letter number pairs, such as
+# ╔═╡ dd8b8032-d1ea-46ef-a514-c7bfaf937e06
+md"""
+The table below summarizes the payoff distributions used in the simulations below. On each block, the participant makes 50 chooses between Option A and Option B. In block 1, for example, Option A has a 50% of 2 and a 50% of -1, whereas Option B has a 100% of 0. Option A has a higher expected value (.5 vs 0), but is riskier due to greater variance in outcomes. 
 
-- (X, 2)
-- (M, 5)
+|       | Option A      |           |               |           |   | Option B      |           |               |           |
+|-------|---------------|-----------|---------------|-----------|---:|---------------|-----------|---------------|-----------|
+| Block | Probability 1 | Outcome 1 | Probability 2 | Outcome 2 |   | Probability 1 | Outcome 1 | Probability 2 | Outcome 2 |
+| 1     | 0.5           | 2         | 0.5           | -1        |   | 1             | 0         |               |           |
+| 2     | 0.8           | 3         | 0.2           | 1         |   | 0.5           | 4         | 0.5           | 2         |
+| 3     | -10           | 0         | 0.5           | 0.5       |   | 1             | 4         |               |           |
 
-In the test phase, a letter is presented and the subject must recall the associated number and press the corresponding key on the keyboard. Unlike previous versions of the paired associates task, participants must guess if they do not know the answer. 
-
-# Simple Retrieval Model 3
-
-As with the model decribed in the [previous tutorial](./open?path=$path_u1_2), the present model encodes a cue and uses it as a retrieval request to find the answer. If a retrieval failure occurs, the model guesses with equal probability from a set of candidates.  
-
-"""
-)
-
-# ╔═╡ 975e6f95-0127-40fa-ad8e-dff74866cb54
-md"
+# Instance Based Learning
 
 ## Declarative memory
 
-Let $M$ denote the set of $n$ chunks in declarative memory, one chunk for each stimulus in the experiment. Each chunk consists of the following set of slots: $Q= \rm \{letter,number\}$. 
+Let $M$ denote the set of chunks in declarative memory representing experienced gamble outcomes. Each chunk consists of the following set of slots: $Q= \rm \{choice,outcome\}$, where choice hold a value for A or B and outcome holds the value of the experienced outcome. For example, 
 
-### Encoding
+$\begin{align}
+\mathbf{c}_{m} = \{ (\rm choice, a), (outcome, 2)\}
+\end{align}$
 
-On each trial $i$, a letter $v_i$ is presented on a screen and the model encodes the stimulus into a chunk that is stored in the imaginal buffer. Formally, we define the encoded chunk as:
-```math
-\begin{align}
-\mathbf{c}_{i,\rm \textrm{imaginal}} = \{ (\rm letter, v_i)\}
-\end{align}
-```
+is a chunk that records an exprienced outcome of 2 for option a. As previously noted, the participant has no knoweldge of the payoff distribution at the begining of the block of trials. Declarative memory is initialized with two chunks which serve more or less as a prior:
 
-### Retrieval Request
+$\begin{align}
+\mathbf{c}_{k} = \{ (\rm choice, a), (outcome, 30)\}
+\end{align}$
 
-The retrieval request for trial $i$ is defined as:
-```math
-\begin{align}
-\mathbf{r}_i = \{(\textrm{letter},c_{i,\rm imaginal}(\rm letter)\} 
-\end{align}
-```
-where $c_{i,\rm imaginal}(\rm letter)$ is the letter value (i.e. A or M) of the chunk in the imaginal buffer. The slot set for the retrieval request is defined as $Q_r = \rm \{letter\}$ 
+$\begin{align}
+\mathbf{c}_{j} = \{ (\rm choice, b), (outcome, 30)\}
+\end{align}$
+
+As more outcomes are experienced, the influence of the initial chunks has a smaller and smaller influence on the choice probabilities. 
 
 ### Activation
 
-Memory activation for chunk $m$ is defined as 
-```math
-\begin{equation}
-a_m = \textrm{blc} + \rho_m + \epsilon_m
-\end{equation}
-```
-
-where $\textrm{blc}$ is the base-level constant and $\rho_m$ represents activation due to partial matching. Partial matching allows chunks to be retrieved as a function of dissimilarity to the retrieval request values, $r$. For simplicity, partial matching is defined as a weighted count of mismatching slot-values:
-
-```math
-\begin{equation}
-\rho_m = -\delta  \sum_{q \in Q_r} I\left(r(q),  c_{m}(q)\right).
-\end{equation}
-```
-
-where $Q_r = \{\textrm{letter}\}$ is the set of slots in the retrieval request, the mismatch penalty parameter $\delta$ controls the steepness of the dissimilarity gradient, and $I$ is an indicator function: 
-```math
-I(x,y) =
-  \begin{cases}
-    1  & x \neq y\\
-    0  & x = y
-  \end{cases}
-```
-Thus, in the present model, mean activation $\mu_m$ of chunk $m$ assumes one of three values: blc in the case of a match, blc $-\delta$ in the case of a mismatch, or $\tau$ in the case of a retrieval failure. 
-
-"
-
-# ╔═╡ 3efb7bb9-d89f-44d1-85ab-120b0fc69f03
-Markdown.parse("
-### Response Probability
-
-Unlike the [Simple Retrievel Model 2](./open?path=$path_u1_2), the present model does not have a simple one-to-one mapping between retrieved chunk and the observed response. Instead, any response could be the product of a retrieval process or a guessing process. In order to account for the uncertainty of which process generated a given response, we use a mixture of both processes.
-
-")
-
-# ╔═╡ 6c215ff3-8d8e-4546-bc08-158592871792
-md"
-#### Retrieval Process
-
-Let $\mathbf{Y} = \{y_1,y_2, \dots y_n \}$ represent the observed responses and let $\mathbf{c}_r$ be the retrieved chunk, such that $y_i = c_r(\textrm{value})$. The probability of retrieving chunk $\mathbf{c}_r$ is the same as that defined in Simple Retrievel Model 2:
-
-$\begin{equation}
-\Pr(Y_i=y_i \mid \mathbf{c}_r, \delta, \tau;\mathbf{r}_i) = \frac{e^{\frac{\mu_r}{\sigma}}}{\sum_{\mathbf{c}_k \in M} e^{\frac{\mu_k}{\sigma}} + e^{\frac{\mu_{m^{\prime}}}{\sigma}}}
-\end{equation}$
-
-where $\sigma = s\sqrt{2}$ controls activation noise and $s$ is the logistic scale parameter (see Weaver 2008). 
-
-#### Guessing process
-
-The guessing process involves selecting a random response from the of $n$ with equal probability:
-
-$\begin{equation}
-\Pr(Y_i=y_i|\mathbf{c}_{m^\prime},\delta, \tau;\mathbf{r}_i) = \frac{1}{n}
-\end{equation}$
-
-#### Mixture
-
-Putting these pieces together, the mixture probability of responding $y_i$ is defined as:
-
-$\begin{aligned}
-\Pr(Y_i=y_i\mid \delta, \tau;\mathbf{r}_i ) =  \Pr(Y_i=y_i \mid \mathbf{c}_r, \delta, \tau;\mathbf{r}_i) +  \\  Pr(Y_i=y_i \mid \mathbf{c}_{m^{\prime}},\delta, \tau;\mathbf{r}_i) Pr(\mathbf{c}_{m^\prime}\mid \delta, \tau;\mathbf{r}_i ) 
-\end{aligned}$
-
-where the probability of a retrieval failure is
-
-$\begin{equation}
-Pr(\mathbf{c}_{m^\prime}\mid \delta, \tau;\mathbf{r}_i ) = \frac{e^{\frac{\mu_{m^\prime}}{\sigma}}}{\sum_{\mathbf{c}_k \in M} e^{\frac{\mu_k}{\sigma}} + e^{\frac{\mu_{m^{\prime}}}{\sigma}}}
-\end{equation}$
-
-
-### Likelihood Function
-
-The likelihood function is given by
+Activation for chunk $m$ is defined as:
 
 $\begin{align}
-\mathcal{L}(\delta; \mathbf{Y}, \mathbf{r}_i) = \prod_{i=1}^n \Pr(Y_i = y_i \mid \delta, \tau;\mathbf{r}_i )
+a_m = \textrm{bll}_m + \epsilon_m
 \end{align}$
 
-where $\mathbf{Y} = \{y_1,y_2, \dots y_n \}$ is the set of responses. 
-"
+where bll is base level learning. Base level learning captures the dynamics of learning and forgetting and is defined as:
 
-# ╔═╡ c997a77a-189e-4182-9d67-1d44cadf9997
-md"
+$\begin{align}
+\textrm{bll}_m \approx  \textrm{LN}\left(\sum_{j=1}^{k} t_{mj}^{-d} + \frac{(N_m-k)(L_m^{1-d} - t_{mk}^{1-d}) }{(1-d)(L_m - t_{mk})}\right)
+\end{align}$
 
-## Model Assumptions 
-Here we summarize the assumptions of the model:
+Unlike previous uses of base level learning, t represents the trial index rather than time. In other words, IBL makes the simplifying assumption that trials are equally spaced by 1 second. The parameter $d$ is the decay parameter, $L_m$ is the lifetime of the chunk (the time since its creation) and $t_k$ is the trial since the $k^{th}$ use of the chunk. The hybrid only tracks the exact time stamps for the most recent subset of $k$ uses of the chunk. Note that $k=1$, is sufficient for a very accurate approximation.
+
+### Retrieval Request
+
+Unlike previous models, IBL models issue a seperate retrieval request for each available option. The retrieval request for option a is given by:
 
 
-1. Activation is a function of similarity between the retrieval request and chunk slots 
-3. A retrieval failure occurs the model guesses with equal probability among $n_{\rm items}$ candidates
-4. No learning or forgeting occurs
-"
+$\begin{align}
+\mathbf{r}_{a} = \{ (\rm choice, a)\}
+\end{align}$
 
-# ╔═╡ cdd82d51-2080-4608-bc15-1549bb0aa329
-md"
-## Generate Data
+and the retrieval request for option b is given by:
 
- In the code block below, we define two functions to generate simulated data from the model: `simulate` and `simulate_trial`. The `simulate` function populates declarative memory with `n_items` chunks, creates a model object, and calls the function `simulate_trial` for each stimulus. Without changing the predictions of the model, the code, omits the letter slot for simplicity. Instread, it requests a chucnk for (value=v), and the answer is considered correct if the retrieved chunk has (value=v). The function `simulate` accepts the following arguments:
 
-- n_items: the number of unique items in the stimulus set
-- stimuli: an array of numbers representing cues
-- parms: a `NamedTuple` of fixed parameters
--  $\delta$: a keyword arguemtn for the mismatch penalty parameter
--  $\tau$: a keyword argument for the retrieval threshold parameter
-"
+$\begin{align}
+\mathbf{r}_{b} = \{ (\rm choice, b)\}
+\end{align}$
 
-# ╔═╡ f26a372f-6b3a-4079-9b76-5fb0df32ac71
-md"
-`simulate_trial` simulates a single trial of the paired associates experiment and accepts the following arguments:
 
-- actr: an actr model object
-- stimulus: a number representing a cue
+### Retrieval Set
 
-In the function `simulate_trial`, a vector of retrieval probabilities  $\theta$ is computed from `retrieval_probs`. An index index from 1 to $n_{\rm items} + 1$ is sampled proportional to $\theta$. If the index indicates a retrieval failure, an index from 1 to $n_{\rm items}$ is sampled with equal probability to represent the guessing process. The final index is coded as correct or incorrect and store as a `NamedTuple`, rather than storing the details of the retrieved chunk. This simplification is possible because all correct and incorrect responses have the same probability of occuring. 
-"
+The rerieval set is the set of chunks compete for retrieval given a retrieval request. The retrieval set for $\mathbf{r}_a$ is defined as:
 
-# ╔═╡ 5e448e46-2650-4af9-a1d3-d2bf312695a4
+
+$\begin{align}
+R_a = \{ \mathbf{c}_m \in M : c_m(\textrm{choice}) = a\}
+\end{align}$
+
+Likewise, the retrieval set for $\mathbf{r}_b$ is defined as:
+
+$\begin{align}
+R_b = \{ \mathbf{c}_m \in M : c_m(\textrm{choice}) = b\}
+\end{align}$
+
+
+### Expected Utility
+
+The IBL model assumes that expected utility for option A is based on a "blending" of outcomes for option A in memory weighted by the probability of retrieval. The expected value is rewritten as:
+
+$\begin{align}
+\text{EU}[A] = \sum_{\mathbf{c}_m \in R_a} \Pr(\mathbf{c}_m| \mathbf{r}_a)U\left(c_m(\textrm{outcome})\right)
+\end{align}$
+
+For simplicitiy, the IBL uses the identity function $U(x) = x$. The probability of retrieving chunk $m$ given retrieval request $\mathbf{r}_i$ is:
+
+$\begin{equation}
+ \Pr( \mathbf{c}_m |\mathbf{r}_i) = \frac{e^{\mu_m/\sigma}}{\sum_{\mathbf{c}_k \in R_i} e^{\mu_k/\sigma}}
+\end{equation}$
+
+
+where $\sigma = s\sqrt{2}$ controls activation noise and $s$ is the logistic scale parameter (see Weaver 2008).
+
+With perfect memory and sufficient learning trials, the expected utility based on memory will approximate the objective expected utility. However, due to sampling error and memory decay, the expected utility based on memory may differ from the objective expected utility. 
+
+
+### Response Selection
+
+Unlike the previous IBL model, the present decision making process is a mixture of inertia and a utility based process. Let $\rho$ be the inertia probability in which the previous response is selected and let $C = \{a,b\}$  be the choice set and let $y_i \in C$ be an observed choice on trial $i$. The probability of choosing option $y_i \in C$ on trial $i$ given $y_{i} = y_{i-1}$ where $i >1$ is defined as 
+
+$\begin{equation}
+ \textrm{Pr}(y_i|y_i = y_{i-1}) = (1-\rho)\frac{e^{\textrm{EU}[y_i]/\phi}}{\sum_{c \in C} e^{\textrm{EU}[c]/\phi}} + \rho
+\end{equation}$
+
+where $\phi$ represents noise in the decision process. Note that we have fixed $s$ which controls the parameter $\sigma$ in the retrieval probability equation. The probability of choosing option $j$ on trial $i$ given $y_{i-1} = k \neq j$ is defined as 
+
+$\begin{equation}
+ \textrm{Pr}(y_i|y_i = y_{i-1}) = (1-\rho)\frac{e^{\textrm{EU}[y_i]/\phi}}{\sum_{c \in C} e^{\textrm{EU}[c]/\phi}}
+\end{equation}$
+
+The second term $\rho$ is eliminated because making different consequative decisions is impossible with the inertia mechanism. 
+
+The following summarizes the assumption of the model:
+
+
+1. Retrieval failures are negligible
+2. Activation is a function of base level learning and noise
+3. The time between each retrieval is approximately 1 second
+"""
+
+# ╔═╡ c1d50b13-46ea-4800-99b4-96a5c9a7df06
+md"""
+## Likelihood Function
+
+The likelihood function is defined as:
+
+$\begin{align}
+f(\mathbf{Y}|\phi, d) =\prod_{i=1}^N \frac{e^{\textrm{EU}[y_i]/\phi}}{\sum_{c \in C} e^{\textrm{EU}[c]/\phi}}
+\end{align}$
+
+where $\mathbf{Y} = \{y_1, y_2, \dots, y_{N}\}$ is a vector of choices and $N$ is the number of choices and $y_i \in C,  \forall_i$.
+"""
+
+# ╔═╡ 5c86870d-ad49-40ce-98c2-11217accc0f6
+md"""
+# Generate Data
+
+The function `simulate` generates data from the IBL model for a given set of gambles. `simulate` accepts the following arguments:
+
+- `parms`: fixed parameters
+- `gambles`: a `NamedTuple` of gambles
+- `n_trials`: number of decision trials
+- `d`: decay parameter
+- `ϕ`: decision noise parameter
+- `ρ`: the inertia probability parameter 
+
+
+Another important supporting function is `compute_utility`, which computes the utility of a given option. `compute_utility` accepts the following arguments:
+
+- `actr`: an ACT-R model object
+- `trial`: trial index, an approximation to time in seconds
+- `choice`: a symbol representing the choosen option, i.e. `:a`
+
+The details of each function are annotated in the code block below.
+"""
+
+# ╔═╡ 544bdd50-db77-4b84-b973-c4457c272d79
+md"""
+Reveal the cell below to see the helper functions"
+"""
+
+# ╔═╡ 131d5382-5dd9-4d80-8378-a0ed3d82e4f2
+md"""
+Reveal the cell below to see the gamble functions
+"""
+
+# ╔═╡ bcb9e25f-0f61-446a-9461-17782a8d3044
 begin
-
+	import StatsBase: sample
 	
-	function simulate_trial(actr, stimulus)
-	    # Compute the retrieval probability of the chunk
-	    Θ,_ = retrieval_probs(actr; value = stimulus)
-	    n = length(Θ)
-	    idx = sample(1:n, Weights(Θ))
-	    # if idx corresponds to retrieval failure, guess between 1 and n-1
-	    idx = idx == n ? rand(1:(n-1)) : idx
-	    # identify whether the response matches
-	    matches = idx == stimulus ? true : false
-	    return (matches=matches,)
+	mutable struct Gamble{T1,T2}
+	    v::T1
+	    p::T2
 	end
-end
-
-# ╔═╡ 06c79bdf-0b64-467f-8034-909cbd091866
-md"
-Reveal the cell immediately below to see details about helper functions.
-"
-
-# ╔═╡ 351f0950-de85-4748-9a30-4bdc5de1e7df
-begin
-	"""
-		sample_stimuli(n, m)
-
-	Generates `m` samples from set from set {1, 2, ..., `n`}, which represent stimuli
-
-	# Arguments
-	- `n`: upper bound on range of stimuli to be sampled
-	- `m': the number of samples taken from set {1, 2, ..., n}
-	"""
-	function sample_stimuli(n, m)
-		return rand(1:n, m)
-	end
-
-	"""
-		populate_memory(n, act=0.0)
-
-	Returns a vector of chunks with a slot-value pairs 1 through `n`
-
-	# Arguments
-	- `n`: number of chunks
-	- `act=0': default activation value
-	"""
-	function populate_memory(n, act=0.0)
-		return [Chunk(;act=act, value=i) for i in 1:n]
-	end
-
-	"""
-		unique_data(data)
-
-	Associates duplicate responses with a count
 	
-	"""
-	function unique_data(data)
-    	return map(x->add_counts(data, x), unique(data))
+	Gamble(v::T) where {T<:Real} = Gamble([v],[1.0])
+	
+	function Gamble(;v, p)
+	    return Gamble(v, p)
 	end
-
-	function add_counts(data, u)
-	    N = count(x->x == u, data)
-	    return (u...,N=N)
+	
+	function Gambles()
+	    temp = (a=Gamble([2.,-1.],[.5,.5]),b=Gamble(0.0))
+	    gambles = Array{typeof(temp),1}()
+	    push!(gambles,temp)
+	    temp = (a=Gamble([3.,1.],[.8,.2]),b=Gamble([4.,2.],[.5,.5]))
+	    push!(gambles,temp)
+	    temp = (a=Gamble([-10.,-0.],[.5,.5]),b=Gamble(-4.0))
+	    push!(gambles,temp)
+	    return gambles
 	end
-
-	nothing
+	
+	sample(G::NamedTuple, option::Symbol) = sample(getfield(G, option))
+	
+	function sample(g::Gamble)
+	    w = Weights(g.p)
+	    return sample(g.v, w)
+	end
+	
+	EV(g) = g.v' * g.p
+	
 end
 
-# ╔═╡ c92aee5f-4a45-4af9-893b-ca863332945c
-# ╠═╡ disabled = true
-#=╠═╡
-function simulate(n_items, stimuli, parms; δ, τ)
-	# Create chunk
-	chunks = populate_memory(n_items)
-	# add chunk to declarative memory
-	memory = Declarative(;memory=chunks)
-	# create ACTR object and pass parameters
-	actr = ACTR(;declarative=memory, parms..., τ, δ)
-	data = map(x->simulate_trial(actr, x), stimuli)
-	return data
-end
-  ╠═╡ =#
-
-# ╔═╡ b52c2611-e336-498f-b913-14cce60e3d01
-md"
-In the following code, we will generate 50 simulated trials. The function `unique_data` creates an array of `NamedTuples` containing each response category and a count of `N` of instances of each response category. Reformatting the data in this manner is not necessary but it can increase the execution speed of the code in some cases. 
-"
-
-# ╔═╡ 28e84151-a22a-4ecb-a9b4-106aedf1cd32
+# ╔═╡ ece63d7b-01c5-4fdf-aafa-cc5870f2bcd9
 begin
-	# Number of trials
+	function simulate(parms, gambles, n_trials; d, ϕ, ρ)
+	    # initialize a chunk for each gamble
+	    chunks = populate_memory(gambles)
+	    # populate declarative memory
+	    memory = Declarative(;memory=chunks)
+	    # create ACT-R object and pass parameters
+	    actr = ACTR(;declarative=memory, parms..., d, ϕ, ρ)
+	    choices = [keys(gambles)...]
+	    data = Array{NamedTuple,1}(undef,n_trials)
+	    # initialize blank variable for previous option
+	    prev = :_
+	    for (i,trial) in enumerate(1.0:n_trials)
+	        # select a response
+	        choice = decide(actr, choices, gambles, trial, prev)
+	        # sample an outcome from the choosen option
+	        outcome = sample(gambles, choice)
+	        # add trial, choice, and outcome information to data array
+	        data[i] = (trial=trial,choice=choice, outcome=outcome, prev=prev)
+	        # adds new chunk or updates N for existing chunk
+	        add_chunk!(actr, trial; choice, outcome)
+	        # update previous choice
+	        prev=choice
+	    end
+	    return [data...]
+	end
+	
+	function decide(actr, choices, gamble, trial, prev)
+	    ρ = get_parm(actr, :ρ)
+	    choice = :_
+	    if prev != :_ && rand() <= ρ
+	        choice = prev
+	    else
+	        θ = decision_probs(actr, gamble, trial)
+	        choice = sample(choices, Weights(θ))
+	    end
+	    return choice
+	end
+	
+	function compute_utility(actr, trial, choice)
+	    # return retrieval probability p and chunks given request choice = choice
+	    p,chunks = retrieval_probs(actr, trial; choice)
+	    # remove the last value, which represents a negligible probability of a retrieval failure
+	    pop!(p)
+	    # extract the utilities from the chunks
+	    u = map(x->x.slots.outcome, chunks)
+	    # compute the expected utility
+	    return p' * u
+	end
+	
+end
+
+# ╔═╡ 008909b9-ff35-4a60-89f2-81e5a987ece1
+begin
+	function populate_memory(gamble, act=0.0)
+	    chunks = [Chunk(;act=act, choice=k, outcome=30.0) for k in keys(gamble)]
+	    return chunks
+	end
+	
+	function get_index(choices, choice)
+	    for (i,v) in enumerate(choices)
+	        v == choice ? (return i) : nothing
+	    end
+	    return 0
+	end
+	
+	function decision_prob(actr, gambles, choice, trial)
+	    p = decision_probs(actr, gambles, trial)
+	    choices = [keys(gambles)...]
+	    idx = get_index(choices, choice)
+	    return p[idx]
+	end
+	
+	function decision_probs(actr, gambles, trial)
+	    ϕ = actr.parms.misc.ϕ
+	    choices = [keys(gambles)...]
+	    f(c) = compute_utility(actr, trial, c)
+	    u = map(f, choices)
+	    p = exp.(u / ϕ) ./ sum(exp.(u / ϕ))
+	    return p
+	end
+end
+
+# ╔═╡ 4ed0dc78-5402-4294-a48d-c522778c8d9d
+begin
+	# set of gambles
+	gamble_set = Gambles()
+	# number of trials per gamble block
 	n_trials = 50
-	# number of items in stimulus list
-	n_items = 10
-	# Sample stimulis
-	stimuli = sample_stimuli(n_items, n_trials)
-	# Retrieval threshold parameter
-	τ = 0.5
-	# Mismatch penalty parameter
-	δ = 1.0
-	# Fixed parameters
-	parms = (blc = 1.5,s = 0.2, mmp=true)
-	# Simulate model
-	temp = simulate(n_items, stimuli, parms; δ, τ)
-	# Tabulate counts of unique responses
-	data = unique_data(temp)
+	# decay parameter
+	d = 0.5
+	# decision noise
+	ϕ = 0.2
+	# inertia parameter 
+	ρ = 0.25
+	parms = (τ=-10,s=0.2,bll=true)
+	data = map(x->simulate(parms, x, n_trials; d, ϕ, ρ), gamble_set);
+	data[1]
 end
 
-# ╔═╡ aff6ae6e-d19c-4e42-a137-cf6b1bde3a8b
-md"
+# ╔═╡ b095a857-bf4f-4a94-bdb4-a3f75d54b3c0
+md"""
 ## Define Log Likelihood Function
 
-The first step is to define a distribution object for `logpdf`, which will compute the log likelihood. The distribution object `Retrieval` contains the parameters and fixed data: 
+The code block below highlights the top level functions for computing the log likelihood of the data. The function `computeLL` is the top-level function for computing the log likelihood. `computeLL` accepts the following arguments:
 
--  $\delta$: the mismatch penalty parameter
--  $\tau$: retrieval threshold parameter
-- n_items: the number of unique items in the stimulus set
-- parms: a `NamedTuple` of fixed parameters
-"
+- `parms`: fixed parameters
+- `gambles`: a `NamedTuple` of gambles
+- `n_trials`: number of decision trials
+- `Data`: an array of arrays where each sub-array represents a block of trials
+- `d`: decay parameter
+- `ϕ`: decision noise parameter
+- `ρ`: the inertia probability parameter 
 
-# ╔═╡ 150fd918-5fcd-4e23-ab74-3e32c2025e73
-md"
-The code block below shows the code used to define the log likelihood function. `computeLL` is the primary function for computing the log likelihood, which accepts the following arguments:
 
-- parms: a `NamedTuple` of fixed parameters
-- n_items: the number of unique items in the stimulus set
-- data: an array of numbers representing responses
--  $\delta$: a keyword arguemtn for the mismatch penalty parameter
--  $\tau$: a keyword argument for the retrieval threshold parameter
+The function `computeLLBlock` performs the heavy lifting. For a given block, it computes the log likelihood of each trial and updates the memory state of the model. `computeLLBlock` accepts the following parameters:
 
-`computeLL` works in much the same way as the function `simulate`. First, it populates declarative memory with chunks, it creates a model object, and computes the probability of each response category weighted by the number of responses in that category. In order to improve performance, the probabilities for a correct response, incorrect response, and guess are cached and reused inside the for loop. 
-"
+- `parms`: fixed parameters
+- `actr`: an ACT-R model object
+- `trial`: trial index, an approximation to time in seconds
+- `choice`: a symbol representing the choosen option, i.e. `:a`
 
-# ╔═╡ e2f41b29-b08e-466b-9764-14bc18cd1bf3
-# primary function for computing log likelihood
-function computeLL(parms, n_items, data; τ, δ)
-    # initialize activation for auto-differentiation
-    act = zero(τ)
-    # populate declarative memory
-    chunks = populate_memory(n_items, act)
-    # add chunks to declarative memory
-    memory = Declarative(;memory=chunks)
-    # create ACTR object and pass parameters
-    actr = ACTR(;declarative=memory, parms..., τ, δ)
-    # pre-compute probabilities for correct, incorrect and failures
-    p_correct,p_failure = retrieval_prob(actr, chunks[1]; value=1)
-    p_incorrect,_ = retrieval_prob(actr, chunks[1]; value=2)
-    p_guess = 1 / n_items
-    LL = 0.0
-    LLs = zeros(typeof(τ), 2)
-    for d in data
-        if d.matches
-            LLs[1] = log(p_correct)
-            LLs[2] = log(p_failure) + log(p_guess)
-        else
-            LLs[1] = log(p_incorrect)
-            LLs[2] = log(p_failure) + log(p_guess)
-        end
-        LL += logsumexp(LLs) * d.N
-    end
-    return LL
-end
+The function `decisionLL` computes the log likelihood for a single trial as a mixture of the inertia response and utility-based response. The arguments for `decisionLL` are:
 
-# ╔═╡ 27536366-d347-41a7-8f67-ebda1e18998d
+- `parms`: fixed parameters
+- `gambles`: a `NamedTuple` of gambles
+- `data`: a `NamedTuple` with trial level information
+- `d`: decay parameter
+- `ϕ`: decision noise parameter
+- `ρ`: the inertia probability parameter 
+
+The details of each function are annotated in the code block below.
+"""
+
+# ╔═╡ 41e4adbe-a089-45c8-8847-56c51c150838
 begin
-	using Distributions
 	import Distributions: logpdf, loglikelihood
 	
-	struct Retrieval{T1,T2,T3,T4} <: ContinuousUnivariateDistribution
-	    τ::T1
-	    δ::T2
-	    n_items::T3
+	struct IBL{T1,T2,T3,T4,T5} <: ContinuousUnivariateDistribution
+	    d::T1
+	    ϕ::T2
+	    ρ::T3
 	    parms::T4
+	    gambles::T5
 	end
 	
-	loglikelihood(d::Retrieval, data::Array{<:NamedTuple,1}) = logpdf(d, data)
+	Broadcast.broadcastable(x::IBL) = Ref(x)
 	
-	function logpdf(d::Retrieval, data::Array{<:NamedTuple,1})
-	    return computeLL(d.parms, d.n_items, data; τ=d.τ, δ=d.δ)
+	IBL(;d, ϕ, ρ, parms, gambles) = IBL(d, ϕ, ρ, parms, gambles)
+	
+	loglikelihood(d::IBL, data::Array{<:T,1})  where {T<:Array{<:NamedTuple,1}} = logpdf(d, data)
+	
+	function logpdf(dist::IBL, data::Array{T,1}) where {T<:Array{<:NamedTuple,1}}
+	    return computeLL(dist.parms, dist.gambles, data; d=dist.d, ϕ=dist.ϕ, ρ=dist.ρ)
+	end
+	
+	function computeLL(parms, gambles, Data; d, ϕ, ρ)
+	    # initialize the log likelihood
+	    LL = 0.0
+	    # compute log likelihood for all trials in a given block. Each block corresponds to a gamble
+	    for (data,gamble) in zip(Data,gambles)
+	        LL += computeLLBlock(parms, gamble, data; d, ϕ, ρ)
+	    end
+	    return LL
+	end
+	
+	function computeLLBlock(parms, gambles, data; d, ϕ, ρ)
+	    T = typeof(d)
+	    act = zero(T)
+	    # initialize a chunk for each option in gambles
+	    chunks = populate_memory(gambles, act)
+	    # populate declarative memory
+	    memory = Declarative(;memory=chunks)
+	    # create an ACT-R object and pass parameters 
+	    actr = ACTR(;declarative=memory, parms..., d, ϕ, ρ)
+	    LL::T = 0.0
+	    for v in data
+	        # compute the decision probability
+	        LL += decisionLL(actr, v, gambles; d, ϕ, ρ)
+	        # update declarative memory based on choice and outcome
+	        add_chunk!(actr, v.trial; bl=act, choice=v.choice, outcome=v.outcome)
+	    end
+	    return LL
+	end
+	
+	function decisionLL(actr, data, gambles; d, ϕ, ρ)
+	    @unpack prev,choice,trial = data
+	    # compute the decision probability
+	    pr = decision_prob(actr, gambles, choice, trial)
+	    if trial == 1
+	    # mixture when previous and current choices are equal
+	    elseif prev == choice
+	        pr = (1 - ρ) * pr + ρ
+	    # mixture when previous and current choices are different    
+	    else
+	        pr = (1 - ρ) * pr
+	    end
+	    return log(pr)
 	end
 end
 
-# ╔═╡ 1d8fecc6-769c-48dc-bea1-f38d76f61d96
-md"
-You may have noticed that the log likelihood of a mixture is computed differently than non-mixtures. It is typically the case that log likelihoods are more numerically stable compared to likelihoods. A mixture model requires adding likelihoods, which is not directly possible with the log function. As a workaround, we use a special function `logsumexp` which allows a vector of log likelihoods to be added (e.i., `LLs`) in a numerically stable fashion. For this reason, the log likelihood of the retrieval process and guessing process are stored as seperate elements in the vector `LLs`. 
-"
-
-# ╔═╡ 212ed2f3-118c-4284-85f8-35936db37057
-md"
+# ╔═╡ b2dd5400-d6c8-482a-8fbe-028b9cdddc0c
+md"""
 ## Define Model
 
-Our next step is to formulate the model and the prior distribution over $\tau$ and $\delta$.
+The model and prior distributions are summarized as follows:
 
+$\begin{align}
+d \sim \rm beta(10,10)
+\end{align}$
 
-$\tau \sim \rm normal(.5,.5)$
+$\begin{align}
+\phi \sim \textrm{normalT}(0.2,0.2)_{0}^{\infty}
+\end{align}$
 
-$\delta \sim \rm normal(1, .5)$
+$\begin{align}
+\rho \sim \rm beta(2.5,7.5)
+\end{align}$
 
-$\theta = \Pr(Y_i=y_i \mid \mathbf{c}_r, \delta, \tau;\mathbf{r}_i) +  \\  Pr(Y_i=y_i \mid \mathbf{c}_{m^{\prime}},\delta, \tau;\mathbf{r}_i) Pr(\mathbf{c}_{m^\prime}\mid \delta, \tau;\mathbf{r}_i )$
+$\begin{align}
+\theta_i = \Pr(y_i \mid \phi, d, \rho)
+\end{align}$
 
-$y \sim \rm Bernoulli(\theta)$
+$\begin{align}
+y_{i} \sim \rm bernouli(\theta_i)
+\end{align}$
 
-In Turing, the model is written as follows:
-"
+In computer code, the model is specified as follows:
+"""
 
-# ╔═╡ 6f6ab667-67da-441e-81df-f537d1a2eb9e
-@model model(data, parms, n_items) = begin
-  δ ~ Normal(1.0, 0.5)
-  τ ~ Normal(0.5, 0.5)
-  data ~ Retrieval(τ, δ, n_items, parms)
+# ╔═╡ ac2837b1-9a0c-4635-acba-ccf99eb50393
+@model model(data, parms, gamble_set) = begin
+    d ~ Beta(10, 10)
+    ϕ ~ truncated(Normal(0.2, 0.2), 0, Inf)
+    ρ ~ Beta(2.5, 7.5)
+    data ~ IBL(d, ϕ, ρ, parms, gamble_set)
 end
 
-# ╔═╡ 208d39f3-25a3-4d64-b8ae-52bf1af35c91
-md"
+# ╔═╡ 9c356bb7-d43e-46c1-9e2e-50b7d0c2ae3e
+md"""
 ## Estimate Parameters
 
-Now that the priors, likelihood and Turing model have been specified, we can now estimate the parameters. In the following code, we will run four MCMC chains with the NUTS sample for 2,000 iterations and omit the first 1,000 warmup samples in each chain. 
-"
+Now that the priors, likelihood and Turing model have been specified, we can now estimate the parameters. In the following code, we will run four MCMC chains with the NUTS sample for 2,000 iterations and omit the first 1,000 warmup samples. 
+"""
 
-# ╔═╡ f2f67537-819a-404d-9d6b-e5cc2655c5c7
+# ╔═╡ 3e59400d-05f8-4310-b218-72ce96541404
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
+	# total samples
+	n_samples = 2000
+	# adaption samples
 	n_adapt = 1000
+	# number of chains
 	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(model(data, parms, n_items), specs, MCMCThreads(), n_samples, n_chains, progress=true)
+	# sampler object
+	specs = NUTS(n_adapt, 0.65)
+	# start sampling.
+	chain = sample(model(data, parms, gamble_set), specs, MCMCThreads(), n_samples, n_chains, progress=true)
 	describe(chain)
 end
 
-# ╔═╡ 29d4f1fe-5a53-4c87-b245-bd24c6cff081
-md"
+# ╔═╡ f3dbf36f-8b1d-4a00-917c-a1155c0241bc
+md"""
 ## Results
 
-### Diagnostics
+A summary of the MCMC chains and the posterior distribution of $d$ and $\phi$ are presented in the two code blocks below. Although there were more gradient errors that normal, inspection of the trace plots in the top panels suggests good convergence of the chains. In addition, autocorrlation is low for both parameters, suggesting efficient sampling. The posterior distributions are centered near the data generating values of $d=.5$, $\phi = .2$, and $\rho = 25$.
+"""
 
-The code below plots the diagnostics for the model. The first panel shows good mixing between the four chains: each line is jittery and superimposed on top of each other. This is corroborated by $\hat{r}$, which is $\approx 1$. In the second panel, the auto-correlation between successive samples drops rapidly after a lag of about 5, indicating a high effective sample size. The last panel shows the posterior distribution of $\tau$ is centered near the data generating value of $\tau$, indicating that the model is behaving as expected.
-"
-
-# ╔═╡ 57b99ea2-6f25-444f-935b-4c354ad9f526
+# ╔═╡ 882e0ef9-77eb-4feb-8207-25be1fabb77b
 let
-	font_size = 12
-	ch = group(chain, :τ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+	ch = group(chain,:d)
+	p1 = plot(ch, seriestype=(:traceplot), grid=false)
+	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
+	p3 = plot(ch, seriestype=(:mixeddensity),grid=false)
+	pcd = plot(p1, p2, p3, layout=(3,1), size = (600,600))
 end
 
-# ╔═╡ dc63bbff-2573-45c4-8b27-34454bdf4bf7
+# ╔═╡ f45c1a5c-dec1-4874-81f4-14bc71b17a96
 let
-	font_size = 12
-	ch = group(chain, :δ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcδ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+	ch = group(chain,:ϕ)
+	p1 = plot(ch, seriestype=(:traceplot), grid=false)
+	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
+	p3 = plot(ch, seriestype=(:mixeddensity),grid=false)
+	pcd = plot(p1, p2, p3, layout=(3,1), size=(600,600))
 end
 
-# ╔═╡ c6b84b2c-5fce-49e8-9715-0a0be72020da
-md"
+# ╔═╡ 5518ba38-4014-41e9-a743-eea8ee2c8a8c
+let
+	ch = group(chain,:ρ)
+	p1 = plot(ch, seriestype=(:traceplot), grid=false)
+	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
+	p3 = plot(ch, seriestype=(:mixeddensity),grid=false)
+	pcd = plot(p1, p2, p3, layout=(3,1), size = (600,600))
+end
+
+# ╔═╡ 7b0c4455-4783-4149-96b7-568dbf7a8421
+md"""
 ### Posterior Predictive Distribution
 
-In the following code blocks, we generate a posterior predictive distributions for each response category: correct, incorrect and retrieval failures. As previously noted, a posterior predictive distribution is a mixture distribution of data (e.g. number of correct responses) based on samples from the posterior distribution of parameters.
+#### A-rate
 
-The basic algorithm for sampling from the posterior predictive uses the following steps:
+A common metric used to analyze the behavior of the model is the a-rate. The a-rate is defined as the probability of alternating choices on consequative trials. A high a-rate represents a lack of consistency in decisions, which might be indicative of uncertainty, exploration, or bordem. By contrast, a high a-rate is associated with high decision consistency, which may indicate a decision maker have identified the best alernative  The a-rate is computed as $\textrm{Pr}(y_i \neq y_{i+1}) = \frac{1}{N-1}\sum_{i=1}^{N-1} I(y_i,y_{i+1})$ where 
 
-1. On repetition $i$, sample a parameter vector  $\Theta_j j \in \{1,2,\dots,n_{\textrm{samples}}\}$ from the MCMC chain
-2. Simulate data from the model using parameter vector $\Theta_j$
-3. Repeat steps 1 and 2 many times
+$I(x,y) =
+  \begin{cases}
+    1      & x \neq y\\
+    0  & x = y
+  \end{cases}$
 
-In the code block below, function `posterior_predictive` accepts the data simulation function `simulate`, the chain object, and the number of simulations (e.g. 1000). The histograms below indicate that 40-45 trials out of 50 are correct responses while the remaining responses are incorrect.  
-"
+The plot below shows the posterior distribution of a-rate for each set of gambles. The a-rate is low and diffuse for gambles 1 and 2, but even lower and less diffuse for gamble 3. Generally speaking, the a-rate decreases as the difference in expected value between the options increases. When the difference in expected value is large, the signal to noise ratio is large, making it easier to learn. As a consequence, there are fewer alternations between choices. 
+"""
 
-# ╔═╡ 4f4f9851-b055-446c-96c0-af99fa68d93e
+# ╔═╡ ee1c86d9-34a2-4195-b309-a691f18c9267
+md"""
+#### Reccurence
+
+McCormick, Blaha, & Gonzalez, (2020) describe alternative metrics for analyzing time series for decision making models. One important metric is recurrence, which describes the tendency of a system to return to previous states (as opposed to the a-rate). A recurrence rate can be computed on a single sequence of data or on two different sequences of data. We will focus on analyzing recurrence on a single sequence of data. Recurrence is defined as
+
+$\begin{align}
+\textrm{RR} = \frac{1}{N^2 - N} \sum_{i=1}^N \sum_{j = 1, j \neq i}^N R_{i,j}
+\end{align}$
+
+where $N$ is the number of data points in $\mathbf{Y}$ and 
+
+$\begin{align}
+R_{i,j}  = \begin{cases}
+    1 & y_i = y_j \\
+    0 & y_i \neq y_j\\
+  \end{cases}\
+\end{align}$
+
+In a recurrence plot, the values of $R_{i,j}$ are plotted in two dimensional space where black represents $R_{i,j} = 1$ and white represents $R_{i,j} = 0$. Diagonal values where $i=j$ are also plotted in white. Note that the plots are symmetrical about the diagonal. A large block of solid black indicates the model has reached a steady state. For example, in the first plot below, the model selects the same choice starting around trial 20. To see this, notice that at about 20 on the x-axis, the values are solid black along the y-axis above the diagonal. In addition, the plot is mostly black below the diagonal, indicating that the model generally selected the same option. In some cases, indicated by the horizontal white line, the other option was selected, but the model immediately returned to the original option. 
+
+The checkered pattern in the second recurrence plot indicates signitificant alternation in choice behavior. The model selects one option for a short run, and selects the other option for a short run. This pattern indicates that the model has failed to find a steady state. 
+"""
+
+# ╔═╡ 90a5287d-e09c-4ad3-abd4-f60204b8cdcb
+md"""
+The code block below shows the posterior predictive distribution for the recurrence plots, where brighter colors indicate higher frequencies. The color gradient across trials moves from dark to light, meaning that, in general, the model tends to gravitate towards a single choice. This tendency appears to be strongest for Gamble 3. One point to bear in mind is that even with the same parameters, the model can produce a large range of patterns across simulated trials. This is due to the contribution of noise from two sources: (1) random samples from the selected payoff distribution, and (2) the probabalistic nature of the model's decision rule. Nonetheless, the posterior predictive plots illustrate that stability is more likely to be achieved with certain gambles, such as gamble 3, which has a large difference in expected value between the two choices. 
+
+The effect of the inertia parameter $\rho$ is appearent after comparing the plots below to the corresponding plots of the IBL model without the inertia parameter.  The color transitions to yellow more quickly with inertia than without inertia. This makes sense because inertia explicitly increases the probability of repeated choices. 
+"""
+
+# ╔═╡ f2fafe3d-cf80-4078-bf1b-ec2444f39490
+md"""
+Reveal the cell below to see plotting code
+"""
+
+# ╔═╡ 909344e2-4b72-4aa4-b3ef-d3130b276406
 begin
-	get_counts(data, v) = count(x->x.matches == v, data)
-	nothing
-end
-
-# ╔═╡ 1fd43c22-63db-4f11-a3a4-4f0d4de88390
-begin
+	function posterior_a_rate(parms, gambles, n_samples; d, ϕ, ρ)
+	    data = map(x->simulate(parms, x, n_trials; d, ϕ, ρ), gambles)
+	    return a_rate.(data)
+	end
 	
-	preds = posterior_predictive(x -> simulate(n_items, stimuli, parms; x...), chain, 1000)
-	let
-		counts_correct = get_counts.(preds, true)
-		p4 = histogram(counts_correct, xlabel="Number Correct", ylabel="Density", xaxis=font(12), yaxis=font(12),
-		    grid=false, norm=true, color=:grey, leg=false, titlefont=font(12),
-		    bar_width=1)
+	function a_rate(data)
+	    a = 0
+	    N = length(data) - 1
+	    for i in 1:N
+	        if data[i].choice != data[i+1].choice
+	            a += 1
+	        end
+	    end
+	    return a / N
+	end
+	
+	function recurrence_rate(x)
+	    cnt = 0 
+	    n = length(x)
+	    for i in 1:n
+	        for j in 1:n
+	            cnt += i ≠ j ? x[i] == x[j] : 0
+	        end
+	    end
+	    return cnt / (n^2 - n)
+	end
+	
+	recurrence_indices(x::Vector{<:NamedTuple}) = recurrence_indices(map(x->x.choice, x))
+	
+	function recurrence_indices(x)
+	    cnt = 0 
+	    n = length(x)
+	    v1 = Int[]
+	    v2 = Int[]
+	    for i in 1:n
+	        for j in 1:n
+	            if (i ≠ j) && (x[i] == x[j])
+	                push!(v1, i)
+	                push!(v2, j)
+	            end
+	        end
+	    end
+	    return v1,v2
+	end
+	
+	function recurrence_indices(x1::Vector{<:NamedTuple}, x2::Vector{<:NamedTuple}) 
+	     recurrence_indices(map(x->x.choice, x1), map(x->x.choice, x2))
+	end
+	
+	function recurrence_indices(x1, x2)
+	    cnt = 0 
+	    n = length(x)
+	    v1 = Int[]
+	    v2 = Int[]
+	    for i in 1:n
+	        for j in 1:n
+	            if x1[i] == x2[j]
+	                push!(v1, i)
+	                push!(v2, j)
+	            end
+	        end
+	    end
+	    return v1,v2
 	end
 end
 
-# ╔═╡ 9859d477-4f7d-4b38-a430-ee6c81c9572a
-let
-	counts_incorrect = get_counts.(preds, false)
-	p4 = histogram(counts_incorrect, xlabel="Number Incorrect", ylabel="Density", xaxis=font(12), yaxis=font(12),
-	    grid=false, norm=true, color=:grey, leg=false, titlefont=font(12),
-	    bar_width=1)
+# ╔═╡ 121bf141-3010-4805-81d8-442de9f00c8c
+let 
+	posterior_pred(x) = posterior_a_rate(parms, gamble_set, n_trials; x...)
+	preds = posterior_predictive(x -> posterior_pred(x), chain, 1000)
+	preds = permutedims(hcat(preds...))
+	df = DataFrame(preds, :auto)
+	colnames = Dict(Symbol(string("x", i)) => Symbol(string("Gamble ", i)) for i in 1:length(gamble_set))
+	rename!(df, colnames)
+	df = DataFrames.stack(df)
+	titles = reshape(unique(df.variable), 1, length(gamble_set))
+	p4 = @df df histogram(:value, group=:variable, layout=(3,1), xlims=(0,1), ylims=(0,10), color=:grey, xlabel="A-Rate",
+	  norm=true, leg=false, title=titles, grid=false)
+	obs_a_rates = a_rate.(data)
+	vline!(obs_a_rates', color=:darkred)
 end
 
-# ╔═╡ c304174f-0e7f-46d8-bf00-07a388fc9a87
-md"
+# ╔═╡ 2ad1402d-9522-4657-9239-3b97a26e7cbb
+let
+	v1,v2 = recurrence_indices(data[1])
+	hist1 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 1 Recurrence", leg=false, grid=false, color=:black)
+	
+	v1,v2 = recurrence_indices(data[2])
+	hist2 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 2 Recurrence", leg=false, grid=false, color=:black)
+	
+	v1,v2 = recurrence_indices(data[3])
+	hist3 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 3 Recurrence", leg=false, grid=false, color=:black)
+	plot(hist1, hist2, hist3, layout=(3, 1), size = (600,600))
+end
+
+# ╔═╡ d9f249d0-0e8b-4ece-a4b9-1979629c1c75
+let 
+	preds = posterior_predictive(x -> simulate(parms, gamble_set[1], n_trials; x...), chain, 1000, recurrence_indices)
+	v1 = mapreduce(x->x[1], vcat, preds)
+	v2 = mapreduce(x->x[2], vcat, preds)
+	hist1 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 1 Recurrence", 
+	  xaxis=font(12), yaxis=font(12))
+	
+	preds = posterior_predictive(x -> simulate(parms, gamble_set[2], n_trials; x...), chain, 1000, recurrence_indices)
+	v1 = mapreduce(x->x[1], vcat, preds)
+	v2 = mapreduce(x->x[2], vcat, preds)
+	hist2 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 2 Recurrence")
+	
+	preds = posterior_predictive(x -> simulate(parms, gamble_set[3], n_trials; x...), chain, 1000, recurrence_indices)
+	v1 = mapreduce(x->x[1], vcat, preds)
+	v2 = mapreduce(x->x[2], vcat, preds)
+	hist3 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 3 Recurrence")
+	plot(hist1, hist2, hist3, layout=(3, 1), size = (600,600))
+end
+
+# ╔═╡ cd69e5d8-a3e8-4f07-823b-f7b992193a38
+md"""
 # References
 
-Weaver, R. (2008). Parameters, predictions, and evidence in computational modeling: A statistical view informed by ACT–R. Cognitive Science, 32(8), 1349-1375.
-"
+
+Gonzalez, C., & Dutt, V. (2011). Instance-based learning: Integrating sampling and repeated decisions from experience. Psychological review, 118(4), 523.
+
+Lejarraga, T., Dutt, V., & Gonzalez, C. (2012). Instance‐based learning: A general model of repeated binary choice. Journal of Behavioral Decision Making, 25(2), 143-153.
+
+McCormick, E. N., Blaha, L. M., & Gonzalez, C. (2020). Exploring Dynamic Decision Making Strategies with Recurrence Quantification Analysis. Annual Conference for Cognitive Science.
+"""
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 ACTRModels = "c095b0ea-a6ca-5cbd-afed-dbab2e976880"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+KernelDensity = "5ab0869b-81aa-558d-bb23-cbf5423bbe9b"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
-ACTRModels = "~0.11.0"
-Distributions = "~0.25.46"
+ACTRModels = "~0.11.1"
+DataFrames = "~1.5.0"
+Distributions = "~0.25.93"
+KernelDensity = "~0.6.7"
 PlutoUI = "~0.7.51"
 Revise = "~3.5.2"
+StatsBase = "~0.33.21"
+StatsFuns = "~1.3.0"
 StatsPlots = "~0.15.5"
 Turing = "~0.25.1"
 """
@@ -526,15 +750,20 @@ Turing = "~0.25.1"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.0"
+julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "a4b180a2cfcc107979ad51c7facef5a2ba143159"
+project_hash = "41e4657f7b22b429cc7cd98d9510da22345480bc"
 
 [[deps.ACTRModels]]
 deps = ["ConcreteStructs", "Distributions", "Parameters", "Pkg", "PrettyTables", "Random", "Reexport", "SafeTestsets", "SequentialSamplingModels", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "434d72846ecdc49483daf0ddb47a56709d229280"
+git-tree-sha1 = "ca795df6568ce4d3f386e8c775f798e6e7b71565"
 uuid = "c095b0ea-a6ca-5cbd-afed-dbab2e976880"
-version = "0.11.0"
+version = "0.11.1"
+
+[[deps.ADTypes]]
+git-tree-sha1 = "dcfdf328328f2645531c4ddebf841228aef74130"
+uuid = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+version = "0.1.3"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -834,7 +1063,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.2+0"
+version = "1.1.1+0"
 
 [[deps.CompositionsBase]]
 git-tree-sha1 = "802bb88cd69dfd1509f6670416bd4434015693ad"
@@ -887,6 +1116,12 @@ version = "4.1.1"
 git-tree-sha1 = "8da84edb865b0b5b0100c0666a9bc9a0b71c553c"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.15.0"
+
+[[deps.DataFrames]]
+deps = ["Compat", "DataAPI", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SnoopPrecompile", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
+git-tree-sha1 = "aa51303df86f8626a962fccb878430cdb0a97eee"
+uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+version = "1.5.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -1004,6 +1239,12 @@ version = "1.1.0"
 git-tree-sha1 = "bdb1942cd4c45e3c678fd11569d5cccd80976237"
 uuid = "4e289a0a-7415-4d19-859d-a7e5c4648b56"
 version = "1.0.4"
+
+[[deps.EpollShim_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "8e9441ee83492030ace98f9789a654a6d0b1f643"
+uuid = "2702e6a9-849d-5ed8-8c21-79e8b8f9ee43"
+version = "0.0.20230411+0"
 
 [[deps.Expat_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1124,15 +1365,15 @@ version = "0.1.4"
 
 [[deps.GR]]
 deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Preferences", "Printf", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "UUIDs", "p7zip_jll"]
-git-tree-sha1 = "efaac003187ccc71ace6c755b197284cd4811bfe"
+git-tree-sha1 = "d014972cd6f5afb1f8cd7adf000b7a966d62c304"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.72.4"
+version = "0.72.5"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "4486ff47de4c18cb511a0da420efebb314556316"
+git-tree-sha1 = "f670f269909a9114df1380cc0fcaa316fff655fb"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.72.4+0"
+version = "0.72.5+0"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -1189,14 +1430,20 @@ version = "0.9.4"
 
 [[deps.IOCapture]]
 deps = ["Logging", "Random"]
-git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
+git-tree-sha1 = "d75853a0bdbfb1ac815478bacd89cd27b550ace6"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
-version = "0.2.2"
+version = "0.2.3"
 
 [[deps.InitialValues]]
 git-tree-sha1 = "4da0f88e9a39111c2fa3add390ab15f3a44f3ca3"
 uuid = "22cec73e-a1b8-11e9-2c92-598750a2cf9c"
 version = "0.3.1"
+
+[[deps.InlineStrings]]
+deps = ["Parsers"]
+git-tree-sha1 = "9cc2baf75c6d09f9da536ddf58eb2f29dedaf461"
+uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+version = "1.4.0"
 
 [[deps.InplaceOps]]
 deps = ["LinearAlgebra", "Test"]
@@ -1367,21 +1614,26 @@ version = "0.2.0"
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
-version = "0.6.3"
+version = "0.6.4"
 
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
-version = "7.84.0+0"
+version = "8.4.0+0"
 
 [[deps.LibGit2]]
-deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
+deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
+
+[[deps.LibGit2_jll]]
+deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
+uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
+version = "1.6.4+0"
 
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
 uuid = "29816b5a-b9ab-546f-933c-edad1886dfa8"
-version = "1.10.2+0"
+version = "1.11.0+1"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -1552,7 +1804,7 @@ version = "1.1.7"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.2+0"
+version = "2.28.2+1"
 
 [[deps.Measures]]
 git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
@@ -1576,7 +1828,7 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2022.10.11"
+version = "2023.1.10"
 
 [[deps.MultivariateStats]]
 deps = ["Arpack", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
@@ -1643,12 +1895,12 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.21+4"
+version = "0.3.23+4"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+0"
+version = "0.8.1+2"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
@@ -1688,7 +1940,7 @@ version = "1.6.0"
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
-version = "10.42.0+0"
+version = "10.42.0+1"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
@@ -1722,7 +1974,7 @@ version = "0.40.1+0"
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.9.0"
+version = "1.10.0"
 
 [[deps.PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
@@ -1761,6 +2013,12 @@ deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNu
 git-tree-sha1 = "b478a748be27bd2f2c73a7690da219d0844db305"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 version = "0.7.51"
+
+[[deps.PooledArrays]]
+deps = ["DataAPI", "Future"]
+git-tree-sha1 = "a6062fe4063cdafe78f4a0a81cfffb89721b30e7"
+uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
+version = "1.4.2"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1813,7 +2071,7 @@ deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[deps.Random]]
-deps = ["SHA", "Serialization"]
+deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[deps.Random123]]
@@ -1943,10 +2201,10 @@ uuid = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 version = "0.0.1"
 
 [[deps.SciMLBase]]
-deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "PrecompileTools", "Preferences", "RecipesBase", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLOperators", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface", "Tables", "TruncatedStacktraces"]
-git-tree-sha1 = "e803672f8d58e9937f59923dd3b159c9b7e1838b"
+deps = ["ADTypes", "ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "PrecompileTools", "Preferences", "RecipesBase", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLOperators", "StaticArraysCore", "Statistics", "SymbolicIndexingInterface", "Tables", "TruncatedStacktraces"]
+git-tree-sha1 = "49ab908a8e1fd40e6b7c143eceeb6f24c28ebe16"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.92.0"
+version = "1.92.1"
 
 [[deps.SciMLOperators]]
 deps = ["ArrayInterface", "DocStringExtensions", "Lazy", "LinearAlgebra", "Setfield", "SparseArrays", "StaticArraysCore", "Tricks"]
@@ -2006,6 +2264,12 @@ git-tree-sha1 = "58e6353e72cde29b90a69527e56df1b5c3d8c437"
 uuid = "ce78b400-467f-4804-87d8-8f486da07d0a"
 version = "1.1.0"
 
+[[deps.SnoopPrecompile]]
+deps = ["Preferences"]
+git-tree-sha1 = "e760a70afdcd461cf01a575947738d359234665c"
+uuid = "66db9d55-30c0-4569-8b51-7e840670fc0c"
+version = "1.0.3"
+
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
@@ -2018,6 +2282,7 @@ version = "1.1.0"
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+version = "1.10.0"
 
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
@@ -2055,7 +2320,7 @@ version = "3.2.0"
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-version = "1.9.0"
+version = "1.10.0"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
@@ -2102,9 +2367,9 @@ deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
 [[deps.SuiteSparse_jll]]
-deps = ["Artifacts", "Libdl", "Pkg", "libblastrampoline_jll"]
+deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
-version = "5.10.1+6"
+version = "7.2.1+1"
 
 [[deps.SymbolicIndexingInterface]]
 deps = ["DocStringExtensions"]
@@ -2235,7 +2500,7 @@ uuid = "41fe7b60-77ed-43a1-b4f0-825fd5a5650d"
 version = "0.2.0"
 
 [[deps.Wayland_jll]]
-deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg", "XML2_jll"]
+deps = ["Artifacts", "EpollShim_jll", "Expat_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg", "XML2_jll"]
 git-tree-sha1 = "ed8d92d9774b077c53e1da50fd81a36af3744c1c"
 uuid = "a2964d1f-97da-50d4-b82a-358c7fce9d89"
 version = "1.21.0+0"
@@ -2399,7 +2664,7 @@ version = "1.4.0+3"
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.13+0"
+version = "1.2.13+1"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -2434,7 +2699,7 @@ version = "0.15.1+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.7.0+0"
+version = "5.8.0+1"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2457,12 +2722,12 @@ version = "1.3.7+1"
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
-version = "1.48.0+0"
+version = "1.52.0+1"
 
 [[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
-version = "17.4.0+0"
+version = "17.4.0+2"
 
 [[deps.x264_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2484,37 +2749,36 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─52b30b5e-6f92-11ec-1ade-1d67bf8cd2d9
-# ╠═b8af21e5-c433-4646-8d17-23d5976eb1e8
-# ╟─89c69b0b-64bf-4753-9364-ee045fa4f1c5
-# ╟─975e6f95-0127-40fa-ad8e-dff74866cb54
-# ╟─3efb7bb9-d89f-44d1-85ab-120b0fc69f03
-# ╟─6c215ff3-8d8e-4546-bc08-158592871792
-# ╟─c997a77a-189e-4182-9d67-1d44cadf9997
-# ╟─cdd82d51-2080-4608-bc15-1549bb0aa329
-# ╠═c92aee5f-4a45-4af9-893b-ca863332945c
-# ╟─f26a372f-6b3a-4079-9b76-5fb0df32ac71
-# ╠═5e448e46-2650-4af9-a1d3-d2bf312695a4
-# ╟─06c79bdf-0b64-467f-8034-909cbd091866
-# ╟─351f0950-de85-4748-9a30-4bdc5de1e7df
-# ╟─b52c2611-e336-498f-b913-14cce60e3d01
-# ╠═28e84151-a22a-4ecb-a9b4-106aedf1cd32
-# ╟─aff6ae6e-d19c-4e42-a137-cf6b1bde3a8b
-# ╠═27536366-d347-41a7-8f67-ebda1e18998d
-# ╟─150fd918-5fcd-4e23-ab74-3e32c2025e73
-# ╠═e2f41b29-b08e-466b-9764-14bc18cd1bf3
-# ╟─1d8fecc6-769c-48dc-bea1-f38d76f61d96
-# ╟─212ed2f3-118c-4284-85f8-35936db37057
-# ╠═6f6ab667-67da-441e-81df-f537d1a2eb9e
-# ╟─208d39f3-25a3-4d64-b8ae-52bf1af35c91
-# ╠═f2f67537-819a-404d-9d6b-e5cc2655c5c7
-# ╟─29d4f1fe-5a53-4c87-b245-bd24c6cff081
-# ╟─57b99ea2-6f25-444f-935b-4c354ad9f526
-# ╟─dc63bbff-2573-45c4-8b27-34454bdf4bf7
-# ╟─c6b84b2c-5fce-49e8-9715-0a0be72020da
-# ╟─4f4f9851-b055-446c-96c0-af99fa68d93e
-# ╟─1fd43c22-63db-4f11-a3a4-4f0d4de88390
-# ╟─9859d477-4f7d-4b38-a430-ee6c81c9572a
-# ╟─c304174f-0e7f-46d8-bf00-07a388fc9a87
+# ╟─444f7bb3-9f15-4cac-a4b5-6271ad2b6bf3
+# ╠═a10e7108-08fd-11ed-3325-99f69255421b
+# ╟─741a2155-5f51-460b-bd9d-3ace4fc38bb5
+# ╟─dd8b8032-d1ea-46ef-a514-c7bfaf937e06
+# ╟─c1d50b13-46ea-4800-99b4-96a5c9a7df06
+# ╟─5c86870d-ad49-40ce-98c2-11217accc0f6
+# ╠═ece63d7b-01c5-4fdf-aafa-cc5870f2bcd9
+# ╟─544bdd50-db77-4b84-b973-c4457c272d79
+# ╟─008909b9-ff35-4a60-89f2-81e5a987ece1
+# ╟─131d5382-5dd9-4d80-8378-a0ed3d82e4f2
+# ╟─bcb9e25f-0f61-446a-9461-17782a8d3044
+# ╠═4ed0dc78-5402-4294-a48d-c522778c8d9d
+# ╟─b095a857-bf4f-4a94-bdb4-a3f75d54b3c0
+# ╠═41e4adbe-a089-45c8-8847-56c51c150838
+# ╟─b2dd5400-d6c8-482a-8fbe-028b9cdddc0c
+# ╠═ac2837b1-9a0c-4635-acba-ccf99eb50393
+# ╟─9c356bb7-d43e-46c1-9e2e-50b7d0c2ae3e
+# ╠═3e59400d-05f8-4310-b218-72ce96541404
+# ╟─f3dbf36f-8b1d-4a00-917c-a1155c0241bc
+# ╟─882e0ef9-77eb-4feb-8207-25be1fabb77b
+# ╟─f45c1a5c-dec1-4874-81f4-14bc71b17a96
+# ╟─5518ba38-4014-41e9-a743-eea8ee2c8a8c
+# ╟─7b0c4455-4783-4149-96b7-568dbf7a8421
+# ╟─121bf141-3010-4805-81d8-442de9f00c8c
+# ╟─ee1c86d9-34a2-4195-b309-a691f18c9267
+# ╟─2ad1402d-9522-4657-9239-3b97a26e7cbb
+# ╟─90a5287d-e09c-4ad3-abd4-f60204b8cdcb
+# ╟─d9f249d0-0e8b-4ece-a4b9-1979629c1c75
+# ╟─f2fafe3d-cf80-4078-bf1b-ec2444f39490
+# ╟─909344e2-4b72-4aa4-b3ef-d3130b276406
+# ╟─cd69e5d8-a3e8-4f07-823b-f7b992193a38
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

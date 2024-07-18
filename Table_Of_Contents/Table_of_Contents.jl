@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.25
+# v0.19.45
 
 using Markdown
 using InteractiveUtils
@@ -56,6 +56,8 @@ path_u8_1 = joinpath(pwd(), "../Tutorial_Models/Unit8/Grouped_Recall_1/Grouped_R
 path_u8_2 = joinpath(pwd(), "../Tutorial_Models/Unit8/Grouped_Recall_2/Grouped_Recall_2_Notebook.jl")
 	
 path_u9_1 = joinpath(pwd(), "../Tutorial_Models/Unit9/Fan_Model_1/Fan_Model_1_Notebook.jl")
+
+path_u9_2 = joinpath(pwd(), "../Tutorial_Models/Unit9/Fan_Model_1/Fan_Model_2_Notebook.jl")
 
 path_u10_1 = joinpath(pwd(), "../Tutorial_Models/Unit10/Visual_Search/Visual_Search_Model_Notebook.jl")
 
@@ -165,7 +167,7 @@ The model tutorials are organized based on concepts and increasing difficulty. W
     Models of the fan effect using spreading activation.
     
     1. [Fan Model 1](./open?path=$path_u9_1)
-    2. [Fan Model 2](../Tutorial_Models/Unit9/Fan_Model_2/Fan_Model_2.ipynb)
+    2. [Fan Model 2](./open?path=$path_u9_2)
 
 *  Unit 10
 
@@ -271,7 +273,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.0"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 

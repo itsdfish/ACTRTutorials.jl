@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,26 +23,26 @@ end
 
 # ╔═╡ 1f7b948e-720f-11ec-39e9-87b54b23add2
 begin
-	using Turing, StatsPlots, Revise, ACTRModels, Distributions
-	using PlutoUI, SequentialSamplingModels, Random, StatsFuns
-	Random.seed!(3401)
-	TableOfContents()
+    using Turing, StatsPlots, Revise, ACTRModels, Distributions
+    using PlutoUI, SequentialSamplingModels, Random, StatsFuns
+    Random.seed!(3401)
+    TableOfContents()
 end
 
 # ╔═╡ 79e9d604-d94e-4431-bf7b-7a257fcd0874
 begin
+    path_introduction = joinpath(pwd(), "../../Introduction/Introduction.jl")
 
-path_introduction = joinpath(pwd(), "../../Introduction/Introduction.jl")
+    path_u2_1 = joinpath(pwd(), "../Simple_RT_1/Simple_RT_Model_1_Notebook.jl")
 
-path_u2_1 = joinpath(pwd(), "../Simple_RT_1/Simple_RT_Model_1_Notebook.jl")
+    path_u2_3 = joinpath(pwd(), "../Simple_RT_3/Simple_RT_Model_3_Notebook.jl")
 
-path_u2_3 = joinpath(pwd(), "../Simple_RT_3/Simple_RT_Model_3_Notebook.jl")
+    path_u2_4 = joinpath(pwd(), "../Simple_RT_4/Simple_RT_Model_4_Notebook.jl")
 
-path_u2_4 = joinpath(pwd(), "../Simple_RT_4/Simple_RT_Model_4_Notebook.jl")
+    path_lognormal =
+        joinpath(pwd(), "../../../Background_Tutorials/Lognormal_Race_Process.jl")
 
-path_lognormal = joinpath(pwd(), "../../../Background_Tutorials/Lognormal_Race_Process.jl")
-
-nothing
+    nothing
 end
 
 # ╔═╡ 85dd5b71-0f56-4eea-a64e-df7b48948818
@@ -220,7 +227,7 @@ function simulate_trial(actr, n_items, stimulus)
     # retrieve chunk
     ter = get_parm(actr, :ter)
     chunk = retrieve(actr; value = stimulus)
-    rt,resp = 0.0,0
+    rt, resp = 0.0, 0
     if isempty(chunk)
         resp = rand(1:n_items)
         # compute reaction time 
@@ -232,7 +239,7 @@ function simulate_trial(actr, n_items, stimulus)
     end
     # correct: 1, incorrect: 2
     correct = resp == stimulus ? 1 : 2
-    return (correct = correct, stimulus=stimulus, rt = rt)
+    return (correct = correct, stimulus = stimulus, rt = rt)
 end
 
 # ╔═╡ 0a1d51cb-10e6-45bb-b834-b701df41459a
@@ -242,32 +249,32 @@ Reveal the cell below to see helper functions.
 
 # ╔═╡ 7783884e-c061-491d-a2f1-7774f671a9a8
 begin
-	"""
-		sample_stimuli(n, m)
+    """
+    	sample_stimuli(n, m)
 
-	Generates `m` samples from set from set {1, 2, ..., `n`}, which represent stimuli
+    Generates `m` samples from set from set {1, 2, ..., `n`}, which represent stimuli
 
-	# Arguments
-	- `n`: upper bound on range of stimuli to be sampled
-	- `m': the number of samples taken from set {1, 2, ..., n}
-	"""
-	function sample_stimuli(n, m)
-		return rand(1:n, m)
-	end
+    # Arguments
+    - `n`: upper bound on range of stimuli to be sampled
+    - `m': the number of samples taken from set {1, 2, ..., n}
+    """
+    function sample_stimuli(n, m)
+        return rand(1:n, m)
+    end
 
-	"""
-		populate_memory(n, act=0.0)
+    """
+    	populate_memory(n, act=0.0)
 
-	Returns a vector of chunks with a slot-value pairs 1 through `n`
+    Returns a vector of chunks with a slot-value pairs 1 through `n`
 
-	# Arguments
-	- `n`: number of chunks
-	- `act=0': default activation value
-	"""
-	function populate_memory(n, act=0.0)
-		return [Chunk(;act=act, value=i) for i in 1:n]
-	end
-	nothing
+    # Arguments
+    - `n`: number of chunks
+    - `act=0': default activation value
+    """
+    function populate_memory(n, act = 0.0)
+        return [Chunk(; act = act, value = i) for i = 1:n]
+    end
+    nothing
 end
 
 # ╔═╡ fe196783-2959-46cd-b902-fa908603d0b7
@@ -275,9 +282,9 @@ function simulate(n_items, stimuli, parms; δ, s, τ)
     # Create chunk
     chunks = populate_memory(n_items)
     # add chunk to declarative memory
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     # create ACTR object and pass parameters
-    actr = ACTR(;declarative=memory, parms..., δ, s, τ)
+    actr = ACTR(; declarative = memory, parms..., δ, s, τ)
     n = length(stimuli)
     data = map(x -> simulate_trial(actr, n_items, x), stimuli)
     return data
@@ -290,25 +297,25 @@ In the code block below, 50 simulated reaction times are simulated from the mode
 
 # ╔═╡ d89cb5ef-d3a2-4d13-84d4-e106ccf9475c
 begin
-	# Number of trials
-	n_trials = 50
-	# Number of unique stimuli
-	n_items = 10
-	# Sample stimuli
-	stimuli = sample_stimuli(n_items, n_trials)
-	# Mismatch penalty parameter
-	δ = 1.0
-	# Logistic scale parameter for activation noise
-	s = 0.3
-	# Retrieval Threshold parameter
-	τ = 0.5
-	# Perceptual-motor and conflict resolution time
-	ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
-	# Fixed Parameters
-	parms = (noise = true,ter = ter, blc=1.25, mmp=true)
-	# Generate Data
-	data = simulate(n_items, stimuli, parms; δ, τ, s)
-	data[1]
+    # Number of trials
+    n_trials = 50
+    # Number of unique stimuli
+    n_items = 10
+    # Sample stimuli
+    stimuli = sample_stimuli(n_items, n_trials)
+    # Mismatch penalty parameter
+    δ = 1.0
+    # Logistic scale parameter for activation noise
+    s = 0.3
+    # Retrieval Threshold parameter
+    τ = 0.5
+    # Perceptual-motor and conflict resolution time
+    ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
+    # Fixed Parameters
+    parms = (noise = true, ter = ter, blc = 1.25, mmp = true)
+    # Generate Data
+    data = simulate(n_items, stimuli, parms; δ, τ, s)
+    data[1]
 end
 
 # ╔═╡ ecd94413-6879-45b0-97d4-68a932e92601
@@ -326,59 +333,59 @@ In the following loop, the log likelihood is incremented for each data point.
 
 # ╔═╡ 119b88d1-6d72-4491-ae98-468c275fedf3
 begin
-	import Distributions: logpdf, loglikelihood
-	
-	struct RT{T1,T2,T3,T4} <: ContinuousUnivariateDistribution
-	    δ::T1
-	    s::T2
-	    τ::T3
-	    n_items::Int
-	    parms::T4
-	end
-	
-	RT(;δ, s, τ, n_items, parms) = RT(δ, s, τ, n_items, parms)
-	
-	loglikelihood(d::RT, data::Array{<:NamedTuple,1}) = logpdf(d, data)
-	
-	function logpdf(d::RT, data::Array{<:NamedTuple,1})
-	    LL = computeLL(d.n_items, d.parms, data; δ = d.δ, s=d.s, τ=d.τ)
-	    return LL
-	end
+    import Distributions: logpdf, loglikelihood
 
-	function computeLL(n_items, parms, data; δ, s, τ)
-	    (;ter) = parms
-	    LLs = zeros(typeof(τ), 2)
-	    LL = 0.0
-	    act = zero(δ)
-	    chunks = populate_memory(n_items, act)
-	    # add chunk to declarative memory
-	    memory = Declarative(;memory=chunks)
-	    # create ACTR object
-	    actr = ACTR(;declarative=memory, parms..., δ, s, τ) 
-	    actr.parms.noise = false
-	    # compute activation given retrieval request
-	    compute_activation!(actr; value=1)
-	    # get activation values
-	    Θs = map(x -> x.act, chunks)
-	    push!(Θs, τ)
-		σ = fill(s * pi / sqrt(3), length(Θs))
-	    # define distribution object for retrievals
-	    dist = LNR(; ν = -Θs, σ, τ = ter)
-	    # define distribution object for guessing after retrieval failure
-	    dist_guess = LNR(; ν = -Θs, σ, τ = (ter+0.05))
-	    # log probability of guess following retrieval failure
-	    lp_guess = log(1/n_items)
-	    # compute log likelihood for each data point
-	    for d in data
-	        # log likelihood of retrieving 
-	        LLs[1] = logpdf(dist, d.correct, d.rt)
-	        # log likelihood of guessing following retrieval failure
-	        LLs[2] = logpdf(dist_guess, n_items+1, d.rt) + lp_guess
-	        # increment log likelihiood of all data
-	        LL += logsumexp(LLs)
-	    end
-	    return LL
-	end
+    struct RT{T1, T2, T3, T4} <: ContinuousUnivariateDistribution
+        δ::T1
+        s::T2
+        τ::T3
+        n_items::Int
+        parms::T4
+    end
+
+    RT(; δ, s, τ, n_items, parms) = RT(δ, s, τ, n_items, parms)
+
+    loglikelihood(d::RT, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
+
+    function logpdf(d::RT, data::Array{<:NamedTuple, 1})
+        LL = computeLL(d.n_items, d.parms, data; δ = d.δ, s = d.s, τ = d.τ)
+        return LL
+    end
+
+    function computeLL(n_items, parms, data; δ, s, τ)
+        (; ter) = parms
+        LLs = zeros(typeof(τ), 2)
+        LL = 0.0
+        act = zero(δ)
+        chunks = populate_memory(n_items, act)
+        # add chunk to declarative memory
+        memory = Declarative(; memory = chunks)
+        # create ACTR object
+        actr = ACTR(; declarative = memory, parms..., δ, s, τ)
+        actr.parms.noise = false
+        # compute activation given retrieval request
+        compute_activation!(actr; value = 1)
+        # get activation values
+        Θs = map(x -> x.act, chunks)
+        push!(Θs, τ)
+        σ = fill(s * pi / sqrt(3), length(Θs))
+        # define distribution object for retrievals
+        dist = LNR(; ν = -Θs, σ, τ = ter)
+        # define distribution object for guessing after retrieval failure
+        dist_guess = LNR(; ν = -Θs, σ, τ = (ter + 0.05))
+        # log probability of guess following retrieval failure
+        lp_guess = log(1 / n_items)
+        # compute log likelihood for each data point
+        for d in data
+            # log likelihood of retrieving 
+            LLs[1] = logpdf(dist, d.correct, d.rt)
+            # log likelihood of guessing following retrieval failure
+            LLs[2] = logpdf(dist_guess, n_items + 1, d.rt) + lp_guess
+            # increment log likelihiood of all data
+            LL += logsumexp(LLs)
+        end
+        return LL
+    end
 end
 
 # ╔═╡ e79d5272-5f29-46e7-a660-5b49591f0189
@@ -390,64 +397,86 @@ To ensure the PDF is working correctly, the interactive plot below superimposes 
 "
 
 # ╔═╡ 3db55638-d69a-47a9-9f16-cf3b5f29f46d
-_blc = @bind _blc Slider(-1:.1:2, default=1.5, show_value=true)
+_blc = @bind _blc Slider(-1:0.1:2, default = 1.5, show_value = true)
 
 # ╔═╡ 89dd2172-1fb2-4c18-9c96-e6ada1802b37
 let
-	n_trials = 10_000
-	# Mismatch penalty parameter
-	δ = 1.0
-	# Logistic scale parameter for activation noise
-	s = 0.3
-	τ = 0.5
-	ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
-	# Fixed Parameters
-	parms = (noise = true,ter = ter, blc=_blc, mmp=true)
-	# Generate Data
-	ex_stimuli = fill(1, n_trials)
-	sim_data = simulate(n_items, ex_stimuli, parms, δ=δ, s=s, τ=τ)
-	# correct rts
-	c_rt = filter(x-> x.correct == 1, sim_data)
-	c_rt = map(x->x.rt, c_rt)
-	# incorrect rts
-	i_rt = filter(x-> x.correct == 2, sim_data)
-	i_rt = map(x->x.rt, i_rt)
-	# probability of a correct response
-	prob_correct = length(c_rt)/length(sim_data)
-	prob_2 = length(i_rt)/length(sim_data)*(1/(n_items-1))
-	# range of rt values for x-axis
-	times = 0.01:0.01:1.8
-	# density for correct rts
-	density_correct = map(x-> computeLL(n_items, parms, [(correct=1, stimulus=1,rt=x)]; δ=δ, s=s, τ=τ) |> exp, times)
-	# plot correct density
-	p = plot(layout=(2,1), leg=false, xlabel="RT (seconds)", ylabel="Density")
-	# histogram of correct simulated rts
-	histogram!(
-		c_rt, 
-		xlims = (0, 2),
-		ylims = (0, 6),
-		color=:darkgrey, 
-		grid=false, 
-		norm=true, 
-		title="Correct"
-	)
-	# weight normalized histogram according to response probability
-	p[1][1][:y] .*= prob_correct
-	plot!(times, density_correct, linewidth=2)
-	density_incorrect = map(x-> computeLL(n_items, parms, [(correct=2,stimulus=1,rt=x)]; δ=δ, s=s, τ=τ) |> exp, times)
-	# plot simulated rts for incorrect responses
-	histogram!(
-		i_rt, 
-		color=:darkgrey, 
-		grid=false, 
-		norm=true, 
-		title="Incorrect", 
-		subplot=2
-	)
-	# weight normalized histogram according to response probability
-	p[2][1][:y] .*= prob_2
-	# plot density for incorrect responses
-	plot!(times, density_incorrect, linewidth=2, subplot=2)
+    n_trials = 10_000
+    # Mismatch penalty parameter
+    δ = 1.0
+    # Logistic scale parameter for activation noise
+    s = 0.3
+    τ = 0.5
+    ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
+    # Fixed Parameters
+    parms = (noise = true, ter = ter, blc = _blc, mmp = true)
+    # Generate Data
+    ex_stimuli = fill(1, n_trials)
+    sim_data = simulate(n_items, ex_stimuli, parms, δ = δ, s = s, τ = τ)
+    # correct rts
+    c_rt = filter(x -> x.correct == 1, sim_data)
+    c_rt = map(x -> x.rt, c_rt)
+    # incorrect rts
+    i_rt = filter(x -> x.correct == 2, sim_data)
+    i_rt = map(x -> x.rt, i_rt)
+    # probability of a correct response
+    prob_correct = length(c_rt) / length(sim_data)
+    prob_2 = length(i_rt) / length(sim_data) * (1 / (n_items - 1))
+    # range of rt values for x-axis
+    times = 0.01:0.01:1.8
+    # density for correct rts
+    density_correct = map(
+        x ->
+            computeLL(
+                n_items,
+                parms,
+                [(correct = 1, stimulus = 1, rt = x)];
+                δ = δ,
+                s = s,
+                τ = τ
+            ) |> exp,
+        times
+    )
+    # plot correct density
+    p = plot(layout = (2, 1), leg = false, xlabel = "RT (seconds)", ylabel = "Density")
+    # histogram of correct simulated rts
+    histogram!(
+        c_rt,
+        xlims = (0, 2),
+        ylims = (0, 6),
+        color = :darkgrey,
+        grid = false,
+        norm = true,
+        title = "Correct"
+    )
+    # weight normalized histogram according to response probability
+    p[1][1][:y] .*= prob_correct
+    plot!(times, density_correct, linewidth = 2)
+    density_incorrect = map(
+        x ->
+            computeLL(
+                n_items,
+                parms,
+                [(correct = 2, stimulus = 1, rt = x)];
+                δ = δ,
+                s = s,
+                τ = τ
+            ) |> exp,
+        times
+    )
+    # plot simulated rts for incorrect responses
+    histogram!(
+        i_rt,
+        color = :darkgrey,
+        grid = false,
+        norm = true,
+        title = "Incorrect",
+        subplot = 2
+    )
+    # weight normalized histogram according to response probability
+    p[2][1][:y] .*= prob_2
+    # plot density for incorrect responses
+    plot!(times, density_incorrect, linewidth = 2, subplot = 2)
 end
 
 # ╔═╡ 4201b0c2-4e38-4ad9-a1e0-4ec40cc7ad62
@@ -486,15 +515,22 @@ Now that the priors, likelihood, and Turing model have been specified, we can no
 
 # ╔═╡ 9cb0cb4e-c518-47b5-b302-9abb38d27fb6
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(model(data, parms, n_items), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(data, parms, n_items),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 44c012f3-f5e6-4fee-a281-bee2183c782a
@@ -505,42 +541,51 @@ A summary of the parameter estimates can be found in the output above. The diagn
 "
 
 # ╔═╡ 68970c03-f90f-4584-a32d-11f6f1336220
-let 
-	ch = group(chain, :δ)
-	font_size = 12
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    ch = group(chain, :δ)
+    font_size = 12
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ d8bd3885-96f1-4194-8e6f-e27d9f99aff2
-let 
-	font_size = 12
-	ch = group(chain, :τ)
-p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-  grid=false, size=(250,100), titlefont=font(font_size))
-p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-  grid=false, size=(250,100), titlefont=font(font_size))
-p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-  grid=false, size=(250,100), titlefont=font(font_size))
-pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    font_size = 12
+    ch = group(chain, :τ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 8ca7d3e9-fce4-42cf-a3ce-50630ba84e3b
-let 
-	font_size = 12
-	ch = group(chain, :s)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    font_size = 12
+    ch = group(chain, :s)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 4d4637b4-6ad4-441b-8bd8-e86bc46d11ad
@@ -551,28 +596,32 @@ The code block below plots the posterior predictive distributions for correct rt
 "
 
 # ╔═╡ 0e9d9955-d6e5-4f6e-a081-35eac6753423
-let 
-	font_size = 12
-	temp = posterior_predictive(x -> simulate(n_items, stimuli, parms,; x...), chain, 1000)
-	preds = vcat(temp...)
-	correct = filter(x-> x.correct == 1, preds)
-	rts_correct = map(x->x.rt, correct)
-	p_correct = mean(x->x.correct == 1, preds)
-	correct_dist = histogram(rts_correct, xlabel="RT", ylabel="Density", xaxis=font(font_size), yaxis=font(font_size),
-	    grid=false, norm=true, color=:grey, leg=false, size=(600,300), title="Correct", titlefont=font(font_size),
-	    xlims=(0,1.5))
-	correct_dist[1][1][:y] *= p_correct
-	
-	incorrect = filter(x-> x.correct == 2, preds)
-	rts_incorrect = map(x->x.rt, incorrect)
-	incorrect_dist = histogram(rts_incorrect, xlabel="RT", ylabel="Density", xaxis=font(font_size), yaxis=font(font_size),
-	    grid=false, norm=true, color=:grey, leg=false, size=(600,300), title="Incorrect", titlefont=font(font_size),
-	    xlims=(0,1.5))
-	incorrect_dist[1][1][:y] *= (1 - p_correct)/ (n_items-1)
-	plot(correct_dist, incorrect_dist, layout=(2,1), ylims=(0,3))
+let
+    font_size = 12
+    temp = posterior_predictive(x -> simulate(n_items, stimuli, parms, ; x...), chain, 1000)
+    preds = vcat(temp...)
+    correct = filter(x -> x.correct == 1, preds)
+    rts_correct = map(x -> x.rt, correct)
+    p_correct = mean(x -> x.correct == 1, preds)
+    correct_dist =
+        histogram(rts_correct, xlabel = "RT", ylabel = "Density", xaxis = font(font_size),
+            yaxis = font(font_size),
+            grid = false, norm = true, color = :grey, leg = false, size = (600, 300),
+            title = "Correct", titlefont = font(font_size),
+            xlims = (0, 1.5))
+    correct_dist[1][1][:y] *= p_correct
+
+    incorrect = filter(x -> x.correct == 2, preds)
+    rts_incorrect = map(x -> x.rt, incorrect)
+    incorrect_dist =
+        histogram(rts_incorrect, xlabel = "RT", ylabel = "Density", xaxis = font(font_size),
+            yaxis = font(font_size),
+            grid = false, norm = true, color = :grey, leg = false, size = (600, 300),
+            title = "Incorrect", titlefont = font(font_size),
+            xlims = (0, 1.5))
+    incorrect_dist[1][1][:y] *= (1 - p_correct) / (n_items - 1)
+    plot(correct_dist, incorrect_dist, layout = (2, 1), ylims = (0, 3))
 end
-
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

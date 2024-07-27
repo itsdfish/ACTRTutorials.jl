@@ -6,19 +6,18 @@ using InteractiveUtils
 
 # ╔═╡ 6131e1aa-0e66-11ed-27bc-dfcf007f0250
 begin
-	# load the required packages
-	using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
-	using Combinatorics, StatsBase, StatsFuns
-	# seed random number generator
-	Random.seed!(7851);
-	TableOfContents()
+    # load the required packages
+    using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
+    using Combinatorics, StatsBase, StatsFuns
+    # seed random number generator
+    Random.seed!(7851)
+    TableOfContents()
 end
 
 # ╔═╡ 08956357-087f-46ef-92ef-15f9dd9d4398
 begin
-
-path = joinpath(pwd(), "../Grouped_Recall_1/Grouped_Recall_1_Notebook.jl")
-nothing
+    path = joinpath(pwd(), "../Grouped_Recall_1/Grouped_Recall_1_Notebook.jl")
+    nothing
 end
 
 # ╔═╡ 39bcd58d-77b6-4817-98ae-e44c83028621
@@ -39,11 +38,11 @@ The grouped recall model encodes items with a group and position id and uses the
 
 # ╔═╡ f905e538-2b08-4d97-a325-b42cf3331c93
 let
-	for group in 1:3
-	    for position in 1:3
-	        println("retrieval request: group $group position $position")
-	    end
-	end
+    for group = 1:3
+        for position = 1:3
+            println("retrieval request: group $group position $position")
+        end
+    end
 end
 
 # ╔═╡ 36db6520-e916-4d0b-83de-3fc94c43a9d0
@@ -127,10 +126,10 @@ end
 
 # ╔═╡ 417f7816-9dd4-4423-8313-e67e8dddd1f6
 let
-	X = multisets(2, 2)
-	for (i,x) in enumerate(X)
-	    println(i, " ", x)
-	end
+    X = multisets(2, 2)
+    for (i, x) in enumerate(X)
+        println(i, " ", x)
+    end
 end
 
 # ╔═╡ e5411ce4-bed9-46a0-b865-98e9cf625577
@@ -194,48 +193,50 @@ Reveal the cell below to see utility functions
 
 # ╔═╡ 32e83847-6841-4816-af84-0f3d15e882b9
 begin
-	function populate_memory(act=0.0, n_groups=3, n_positions=3)
-	    cnt = 0
-	    chunks = [Chunk(;act ,group=i, number=cnt+=1, position=j, retrieved=[false])
-	        for i in 1:n_groups for j in 1:n_positions]
-	    return chunks
-	end
-	
-	penalize(s, v1::Real, v2::Real) = abs(v1 - v2) / max(v1, v2)
-	penalize(s, v1::Vector{Bool}, v2::Vector{Bool}) = 1.0 * (v1[1] == v2[1])
+    function populate_memory(act = 0.0, n_groups = 3, n_positions = 3)
+        cnt = 0
+        chunks = [
+            Chunk(; act, group = i, number = cnt += 1, position = j, retrieved = [false])
+            for i = 1:n_groups for j = 1:n_positions
+        ]
+        return chunks
+    end
 
-	function reset_memory!(actr)
-	    chunks = actr.declarative.memory
-	    map(x-> x.slots.retrieved[1]=false, chunks)
-	    return nothing
-	end			
+    penalize(s, v1::Real, v2::Real) = abs(v1 - v2) / max(v1, v2)
+    penalize(s, v1::Vector{Bool}, v2::Vector{Bool}) = 1.0 * (v1[1] == v2[1])
+
+    function reset_memory!(actr)
+        chunks = actr.declarative.memory
+        map(x -> x.slots.retrieved[1] = false, chunks)
+        return nothing
+    end
 end
 
 # ╔═╡ fd662274-6219-4045-9983-238c85cdc3e9
-function simulate(n_groups=3, n_positions=3; δ, fixed_parms...)
+function simulate(n_groups = 3, n_positions = 3; δ, fixed_parms...)
     # initialize memory with chunks representing all stimuli
     chunks = populate_memory()
     # add chunks to declarative memory
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     # create ACT-R model object
-    actr = ACTR(;declarative=memory, δ, fixed_parms...)
+    actr = ACTR(; declarative = memory, δ, fixed_parms...)
     # initialize data for all trials
     data = Int[]
     # inhabition of return: exclude retrieved chunks
-    retrieved=[false]
+    retrieved = [false]
     # loop over all groups in asecnding order
-    for group in 1:n_groups
+    for group = 1:n_groups
         # loop over all positions within a group in ascending order
-        for position in 1:n_positions
+        for position = 1:n_positions
             # retrieve chunk given group and position indices
             # exclude retrieved chunks
-            probs,r_chunks = retrieval_probs(actr; group, position, retrieved)
+            probs, r_chunks = retrieval_probs(actr; group, position, retrieved)
             n_probs = length(probs)
             idx = sample(1:n_probs, Weights(probs))
             # ommit response on retrieval failure
             if idx < n_probs
                 # set chunk to retrieved = true for inhabition of return
-                chunk = r_chunks[idx] 
+                chunk = r_chunks[idx]
                 chunk.slots.retrieved[1] = true
                 # record the number value of the retrieved chunk
                 push!(data, chunk.slots.number)
@@ -252,18 +253,18 @@ Now that our `simulate` function has been defined, we can now generate some data
 
 # ╔═╡ 97881862-2b17-40b8-a8e9-a4ec0ecc790c
 begin
-	# fixed parameters and settings
-	fixed_parms = (s = 0.15, τ = -0.5, noise = true, mmp = true, dissim_func = penalize)
-	# mismatch penalty parameter for partial matching
-	δ = 1.0
-	# the number of blocks
-	n_blocks = 5
-	# the number of groups in the stimuli
-	n_groups = 3
-	# the number of positions within each stimulus
-	n_positions = 3 
-	Data = map(x -> simulate(n_groups, n_positions;δ, fixed_parms...), 1:n_blocks)
-	Data[1]
+    # fixed parameters and settings
+    fixed_parms = (s = 0.15, τ = -0.5, noise = true, mmp = true, dissim_func = penalize)
+    # mismatch penalty parameter for partial matching
+    δ = 1.0
+    # the number of blocks
+    n_blocks = 5
+    # the number of groups in the stimuli
+    n_groups = 3
+    # the number of positions within each stimulus
+    n_positions = 3
+    Data = map(x -> simulate(n_groups, n_positions; δ, fixed_parms...), 1:n_blocks)
+    Data[1]
 end
 
 # ╔═╡ 9a98a0af-8f01-4c23-95aa-6a4233d4a61a
@@ -304,96 +305,97 @@ In `computeLLMultisets`, the variable `orders` is a vector of multisets in which
 
 # ╔═╡ b61335d4-6499-4bba-96f3-548b96ee2e5e
 begin
-	import Distributions: logpdf, rand, loglikelihood
-	
-	mutable struct Grouped{T1,T2} <: ContinuousUnivariateDistribution
-	    δ::T1
-	    fixed_parms::T2
-	    n_groups::Int
-	    n_positions::Int
-	end
-	
-	Grouped(;δ, fixed_parms, n_groups=3, n_positions=3) = Grouped(δ, fixed_parms, n_groups, n_positions)
-	
-	loglikelihood(d::Grouped, Data::Vector{Vector{Int64}}) = logpdf(d, Data)
-	
-	function logpdf(d::Grouped, Data::Vector{Vector{Int64}})
-	    LL = computeLL(Data, d.fixed_parms, d.n_groups, d.n_positions; δ=d.δ)
-	    return LL
-	end
-	
-	function computeLL(Data, fixed_parms, n_groups=3, n_positions=3; δ)
-	    T = typeof(δ)
-	    act = zero(T)
-	    # initialize chunks
-	    chunks = populate_memory(act)
-	    # add chunks to declarative memory
-	    memory = Declarative(;memory=chunks)
-	    # create ACT-R object with declarative memory and parameters
-	    actr = ACTR(;declarative=memory, fixed_parms..., δ)
-	    LL::T = 0.0
-	    # loop over each block of trials
-	    for data in Data
-	        # marginalize over all possible orders of retrievals and retrieval failrues for a given block of trials
-	        LL += computeLLMultisets(actr, data, n_groups, n_positions; δ)
-	        # reset all chunks to retrieved = false
-	    end
-	    return LL
-	end
-	
-	function computeLLMultisets(actr, data, n_groups=3, n_positions=3; δ)
-	    # initialize log likelihood
-	    LL = 0.0
-	    n_items = n_groups * n_positions
-	    n = length(data)
-	    # n retrievals coded as false plus (n_items - n) retrieval failures true
-	    indicators = [fill(false, n); fill(true, n_items - n)]
-	    # all possible orders of n retrievals and (n_items - n ) retrieval failures
-	    orders = multiset_permutations(indicators, length(indicators))
-	    # a vector of log likelihoods to be marginalized
-	    LLs = zeros(typeof(δ), length(orders))
-	    # compute the log likelihoods of the data across all possible orders of 
-	    # retrievals and retrieval failures
-	    for (i,order) in enumerate(orders)
-	        LLs[i] = computeLLBlock(actr, data, order, n_groups, n_positions)
-	        reset_memory!(actr)
-	    end
-	    # return the marginal log likelihood
-	    return logsumexp(LLs)
-	end
-	
-	function computeLLBlock(actr, data, order, n_groups=3, n_positions=3)
-	    # inhabition of return: exclude retrieved chunks
-	    retrieved = [false]
-	    # index for retrieval attempts
-	    r_idx = 0
-	    # index for the obseved data
-	    data_idx = 0
-	    LL = 0.0
-	    for group in 1:n_groups
-	        for position in 1:n_positions
-	            r_idx += 1
-	            # log likelihood of retrieval failure given retrieval request for group and position indices
-	            p,r_chunks = retrieval_probs(actr; group, position, retrieved)
-	            # compute log likelihood of retrieval failure if order is true
-	            if order[r_idx] == true
-	                # log likelihood of retrieval failure
-	                LL += log(p[end])
-	            else
-	                # compute the log likelihood of retrieving chunk associated with next response
-	                # increment data index
-	                data_idx += 1
-	                # get the index associated with retrieved chunk
-	                chunk_idx = find_index(r_chunks; number = data[data_idx])
-	                # set the retrieved chunk to retrieved = true for inhabition of return 
-	                r_chunks[chunk_idx].slots.retrieved[1] = true
-	                # log likelihood of retrieving chunk associated with response 
-	                LL += log(p[chunk_idx])
-	            end
-	        end
-	    end
-	    return LL
-	end
+    import Distributions: logpdf, rand, loglikelihood
+
+    mutable struct Grouped{T1, T2} <: ContinuousUnivariateDistribution
+        δ::T1
+        fixed_parms::T2
+        n_groups::Int
+        n_positions::Int
+    end
+
+    Grouped(; δ, fixed_parms, n_groups = 3, n_positions = 3) =
+        Grouped(δ, fixed_parms, n_groups, n_positions)
+
+    loglikelihood(d::Grouped, Data::Vector{Vector{Int64}}) = logpdf(d, Data)
+
+    function logpdf(d::Grouped, Data::Vector{Vector{Int64}})
+        LL = computeLL(Data, d.fixed_parms, d.n_groups, d.n_positions; δ = d.δ)
+        return LL
+    end
+
+    function computeLL(Data, fixed_parms, n_groups = 3, n_positions = 3; δ)
+        T = typeof(δ)
+        act = zero(T)
+        # initialize chunks
+        chunks = populate_memory(act)
+        # add chunks to declarative memory
+        memory = Declarative(; memory = chunks)
+        # create ACT-R object with declarative memory and parameters
+        actr = ACTR(; declarative = memory, fixed_parms..., δ)
+        LL::T = 0.0
+        # loop over each block of trials
+        for data in Data
+            # marginalize over all possible orders of retrievals and retrieval failrues for a given block of trials
+            LL += computeLLMultisets(actr, data, n_groups, n_positions; δ)
+            # reset all chunks to retrieved = false
+        end
+        return LL
+    end
+
+    function computeLLMultisets(actr, data, n_groups = 3, n_positions = 3; δ)
+        # initialize log likelihood
+        LL = 0.0
+        n_items = n_groups * n_positions
+        n = length(data)
+        # n retrievals coded as false plus (n_items - n) retrieval failures true
+        indicators = [fill(false, n); fill(true, n_items - n)]
+        # all possible orders of n retrievals and (n_items - n ) retrieval failures
+        orders = multiset_permutations(indicators, length(indicators))
+        # a vector of log likelihoods to be marginalized
+        LLs = zeros(typeof(δ), length(orders))
+        # compute the log likelihoods of the data across all possible orders of 
+        # retrievals and retrieval failures
+        for (i, order) in enumerate(orders)
+            LLs[i] = computeLLBlock(actr, data, order, n_groups, n_positions)
+            reset_memory!(actr)
+        end
+        # return the marginal log likelihood
+        return logsumexp(LLs)
+    end
+
+    function computeLLBlock(actr, data, order, n_groups = 3, n_positions = 3)
+        # inhabition of return: exclude retrieved chunks
+        retrieved = [false]
+        # index for retrieval attempts
+        r_idx = 0
+        # index for the obseved data
+        data_idx = 0
+        LL = 0.0
+        for group = 1:n_groups
+            for position = 1:n_positions
+                r_idx += 1
+                # log likelihood of retrieval failure given retrieval request for group and position indices
+                p, r_chunks = retrieval_probs(actr; group, position, retrieved)
+                # compute log likelihood of retrieval failure if order is true
+                if order[r_idx] == true
+                    # log likelihood of retrieval failure
+                    LL += log(p[end])
+                else
+                    # compute the log likelihood of retrieving chunk associated with next response
+                    # increment data index
+                    data_idx += 1
+                    # get the index associated with retrieved chunk
+                    chunk_idx = find_index(r_chunks; number = data[data_idx])
+                    # set the retrieved chunk to retrieved = true for inhabition of return 
+                    r_chunks[chunk_idx].slots.retrieved[1] = true
+                    # log likelihood of retrieving chunk associated with response 
+                    LL += log(p[chunk_idx])
+                end
+            end
+        end
+        return LL
+    end
 end
 
 # ╔═╡ 50ead427-1cd7-41f5-8782-8d56a88d5c25
@@ -418,24 +420,31 @@ In the code block below, the model is specified for Turing.
 """
 
 # ╔═╡ dea8c391-8928-4f75-a093-98b945dd8abe
-@model model(Data, fixed_parms, n_groups=3, n_positions=3) = begin
+@model model(Data, fixed_parms, n_groups = 3, n_positions = 3) = begin
     δ ~ truncated(Normal(1, 1.0), 0, Inf)
-    Data ~ Grouped(δ, fixed_parms,  n_groups, n_positions)
+    Data ~ Grouped(δ, fixed_parms, n_groups, n_positions)
 end
 
 # ╔═╡ ba7c22d3-bac2-447d-af6e-d3735841acc8
 begin
-	# number of samples retained after warmup
-	n_samples = 1000
-	# the number of warmup or adaption samples
-	n_adapt = 1000
-	# the number of MCMC chains
-	n_chains = 4
-	# settings for the sampler
-	specs = NUTS(n_adapt, 0.8)
-	# estimate the parameters
-	chain = sample(model(Data, fixed_parms), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # number of samples retained after warmup
+    n_samples = 1000
+    # the number of warmup or adaption samples
+    n_adapt = 1000
+    # the number of MCMC chains
+    n_chains = 4
+    # settings for the sampler
+    specs = NUTS(n_adapt, 0.8)
+    # estimate the parameters
+    chain = sample(
+        model(Data, fixed_parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 2ad6c3fd-9746-408a-9bdd-d08a5634e2f4
@@ -453,11 +462,11 @@ As expected, the density plot located in the third panel shows that the posterio
 
 # ╔═╡ 4bc8e46d-6f5c-4b84-897b-66a78851e7b5
 begin
-	ch = group(chain, :δ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+    ch = group(chain, :δ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ 14d1e1ba-9871-4082-a040-8c371a9686fa
@@ -471,10 +480,11 @@ The plot below shows the posterior predictive distribution of retrieval failures
 
 # ╔═╡ b24ad897-a6ee-4c68-aec6-ce9f40066698
 begin
-	preds = posterior_predictive(x -> simulate(;fixed_parms..., x...), chain, 1000)
-	failures = n_groups * n_positions .- length.(preds)
-	p4 = histogram(failures,  grid=false,leg=false, color=:grey, xlabel="Retrieval Failures", ylabel="Probability",
-	    normalize=:probability)
+    preds = posterior_predictive(x -> simulate(; fixed_parms..., x...), chain, 1000)
+    failures = n_groups * n_positions .- length.(preds)
+    p4 = histogram(failures, grid = false, leg = false, color = :grey,
+        xlabel = "Retrieval Failures", ylabel = "Probability",
+        normalize = :probability)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

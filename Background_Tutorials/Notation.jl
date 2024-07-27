@@ -6,8 +6,8 @@ using InteractiveUtils
 
 # ╔═╡ f0b52870-6ecd-11ec-2565-213cacf93546
 begin
-	using PlutoUI
-	TableOfContents()
+    using PlutoUI
+    TableOfContents()
 end
 
 # ╔═╡ f0b5288e-6ecd-11ec-2b6a-27ff56a3cd0d
@@ -155,7 +155,6 @@ R_{\rm yes} = \{ \{(n_1,1),(n_1,3),(\textrm{sum},4)\},  \{(n_1,2),(n_2,2),(\text
 \end{align}$
 
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

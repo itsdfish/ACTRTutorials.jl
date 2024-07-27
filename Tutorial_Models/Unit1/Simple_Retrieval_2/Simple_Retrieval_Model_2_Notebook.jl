@@ -6,28 +6,34 @@ using InteractiveUtils
 
 # ╔═╡ 73f5c014-16ea-4042-9dac-8af06ca45cb2
 begin
-	using Turing, StatsPlots, Revise, ACTRModels, Random
-	using PlutoUI, StatsBase
-	# seed random number generator
-	Random.seed!(2340);
-	include("../../../Utilities/Utilities.jl")
-	TableOfContents()
+    using Turing, StatsPlots, Revise, ACTRModels, Random
+    using PlutoUI, StatsBase
+    # seed random number generator
+    Random.seed!(2340)
+    include("../../../Utilities/Utilities.jl")
+    TableOfContents()
 end
 
 # ╔═╡ 8784f246-5345-4224-8e6b-6c8f0c150533
 begin
-	path_u1_1 = joinpath(pwd(), "../Tutorial_Models/Unit1/Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl")
-	path_u1_2= joinpath(pwd(), "../Tutorial_Models/Unit1/Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
-	nothing
+    path_u1_1 = joinpath(
+        pwd(),
+        "../Tutorial_Models/Unit1/Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl"
+    )
+    path_u1_2 = joinpath(
+        pwd(),
+        "../Tutorial_Models/Unit1/Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl"
+    )
+    nothing
 end
 
 # ╔═╡ d7f0195e-0920-4950-b056-808b50536504
 Markdown.parse(
-"""
-# Introduction
+    """
+    # Introduction
 
-The goal of this tutorial is to develop a simple model of memory retrieval that produces errors of commission in addition to errors of omission. In the previous tutorial, [Simple Retrieval Model 1](./open?path=$path_u1_1) only produced errors of omission. In ACT-R, errors of omission occur when no chunk's activation exceeds the retrieval threshold \$\\tau\$. In such cases, the model provides a response of "I don't know". A simple model such as [Simple Retrieval Model 1](./open?path=$path_u1_1) neglects the possibility of committing an error commission in which one memory is confused for another. We will use the partial matching mechanism in ACT-R to produce errors of commission based on degree of simularity between a memory and a memory request. 
-"""
+    The goal of this tutorial is to develop a simple model of memory retrieval that produces errors of commission in addition to errors of omission. In the previous tutorial, [Simple Retrieval Model 1](./open?path=$path_u1_1) only produced errors of omission. In ACT-R, errors of omission occur when no chunk's activation exceeds the retrieval threshold \$\\tau\$. In such cases, the model provides a response of "I don't know". A simple model such as [Simple Retrieval Model 1](./open?path=$path_u1_1) neglects the possibility of committing an error commission in which one memory is confused for another. We will use the partial matching mechanism in ACT-R to produce errors of commission based on degree of simularity between a memory and a memory request. 
+    """
 )
 
 # ╔═╡ e8113cc1-e196-4543-82ff-c23359209359
@@ -160,113 +166,113 @@ Reveal the cell immediately below to see helper functions
 
 # ╔═╡ ca1edad3-0425-4503-85cb-a13974e0c452
 begin
-	"""
-		sample_stimuli(n, m)
+    """
+    	sample_stimuli(n, m)
 
-	Generates `m` samples from set from set {1, 2, ..., `n`}, which represent stimuli
+    Generates `m` samples from set from set {1, 2, ..., `n`}, which represent stimuli
 
-	# Arguments
-	- `n`: upper bound on range of stimuli to be sampled
-	- `m': the number of samples taken from set {1, 2, ..., n}
-	"""
-	function sample_stimuli(n, m)
-		return rand(1:n, m)
-	end
+    # Arguments
+    - `n`: upper bound on range of stimuli to be sampled
+    - `m': the number of samples taken from set {1, 2, ..., n}
+    """
+    function sample_stimuli(n, m)
+        return rand(1:n, m)
+    end
 
-	"""
-		populate_memory(n, act=0.0)
+    """
+    	populate_memory(n, act=0.0)
 
-	Returns a vector of chunks with a slot-value pairs 1 through `n`
+    Returns a vector of chunks with a slot-value pairs 1 through `n`
 
-	# Arguments
-	- `n`: number of chunks
-	- `act=0': default activation value
-	"""
-	function populate_memory(n, act=0.0)
-		return [Chunk(;act=act, value=i) for i in 1:n]
-	end
-	nothing
+    # Arguments
+    - `n`: number of chunks
+    - `act=0': default activation value
+    """
+    function populate_memory(n, act = 0.0)
+        return [Chunk(; act = act, value = i) for i = 1:n]
+    end
+    nothing
 end
 
 # ╔═╡ 94191393-0253-4b69-b925-5e0c9d22bb61
 begin
-	using Parameters, Distributions, StatsFuns
-	import Distributions: logpdf, loglikelihood
+    using Parameters, Distributions, StatsFuns
+    import Distributions: logpdf, loglikelihood
 
-	struct Retrieval{T1,T2,T3,T4} <: ContinuousUnivariateDistribution
-	    τ::T1
-	    δ::T2
-	    n_items::T3
-	    parms::T4
-	end
+    struct Retrieval{T1, T2, T3, T4} <: ContinuousUnivariateDistribution
+        τ::T1
+        δ::T2
+        n_items::T3
+        parms::T4
+    end
 
-	loglikelihood(d::Retrieval, data::Array{<:NamedTuple,1}) = logpdf(d, data)
+    loglikelihood(d::Retrieval, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
 
-	function logpdf(d::Retrieval, data::Array{<:NamedTuple,1})
-	    return computeLL(d.parms, d.n_items, data; τ=d.τ, δ=d.δ)
-	end
-	
-	# primary function for computing log likelihood
-	function computeLL(parms, n_items, data; τ, δ)
-	    # initialize activation for auto-differentiation
-	    act = zero(τ)
-	    # populate declarative memory
-	    chunks = populate_memory(n_items, act)
-	    # add chunks to declarative memory
-	    memory = Declarative(;memory=chunks)
-	    # create ACTR object and pass parameters
-	    actr = ACTR(;declarative=memory, parms..., τ, δ)
-	    # pre-compute probabilities for correct, incorrect and failures
-	    p_correct,p_failure = retrieval_prob(actr, chunks[1]; value=1)
-	    p_incorrect,_ = retrieval_prob(actr, chunks[1]; value=2)
-	    # initialize log likelihood
-	    LL = 0.0
-	    # for each unique data, compute loglikelihood and multiply by counts
-	    for d in data
-	        if d.resp == :correct
-	            LL += log(p_correct) * d.N
-	        elseif d.resp == :incorrect
-	            LL += log(p_incorrect) * d.N
-	        else
-	            LL += log(p_failure) * d.N
-			end 
-	    end
-	    return LL
-	end
+    function logpdf(d::Retrieval, data::Array{<:NamedTuple, 1})
+        return computeLL(d.parms, d.n_items, data; τ = d.τ, δ = d.δ)
+    end
+
+    # primary function for computing log likelihood
+    function computeLL(parms, n_items, data; τ, δ)
+        # initialize activation for auto-differentiation
+        act = zero(τ)
+        # populate declarative memory
+        chunks = populate_memory(n_items, act)
+        # add chunks to declarative memory
+        memory = Declarative(; memory = chunks)
+        # create ACTR object and pass parameters
+        actr = ACTR(; declarative = memory, parms..., τ, δ)
+        # pre-compute probabilities for correct, incorrect and failures
+        p_correct, p_failure = retrieval_prob(actr, chunks[1]; value = 1)
+        p_incorrect, _ = retrieval_prob(actr, chunks[1]; value = 2)
+        # initialize log likelihood
+        LL = 0.0
+        # for each unique data, compute loglikelihood and multiply by counts
+        for d in data
+            if d.resp == :correct
+                LL += log(p_correct) * d.N
+            elseif d.resp == :incorrect
+                LL += log(p_incorrect) * d.N
+            else
+                LL += log(p_failure) * d.N
+            end
+        end
+        return LL
+    end
 end
 
 # ╔═╡ 6fb8b445-1a16-4d7e-b38e-79dd75454446
 begin
-	function simulate(n_items, stimuli, parms; δ, τ)
-	    # Create chunk
-	    chunks = populate_memory(n_items)
-	    # Add chunk and parameters to declarative memory
-	    memory = Declarative(;memory=chunks)
-	    # Create ACTR object
-	    actr = ACTR(;declarative=memory, parms..., τ, δ)
-	    # Generate data for each trial
-	    data = map(x -> simulate_trial(actr, x), stimuli)
-	    return data
-	end
-	
-	function simulate_trial(actr, stimulus)
-	    # Compute the retrieval probability of the chunk
-	    Θ,_ = retrieval_probs(actr; value = stimulus)
-	    n = length(Θ)
-	    idx = sample(1:n, Weights(Θ))
-	    resp = :_
-	    # The last index corresponds to a retrieval failure
-	    if idx == n
-	        resp = :failure
-	    # Correct retrieval if match
-	    elseif idx == stimulus
-	        resp = :correct 
-	    #Incorrect retrieval otherwise
-	    else
-	        resp = :incorrect
-	    end
-	    return (resp=resp,)
-	end
+    function simulate(n_items, stimuli, parms; δ, τ)
+        # Create chunk
+        chunks = populate_memory(n_items)
+        # Add chunk and parameters to declarative memory
+        memory = Declarative(; memory = chunks)
+        # Create ACTR object
+        actr = ACTR(; declarative = memory, parms..., τ, δ)
+        # Generate data for each trial
+        data = map(x -> simulate_trial(actr, x), stimuli)
+        return data
+    end
+
+    function simulate_trial(actr, stimulus)
+        # Compute the retrieval probability of the chunk
+        Θ, _ = retrieval_probs(actr; value = stimulus)
+        n = length(Θ)
+        idx = sample(1:n, Weights(Θ))
+        resp = :_
+        # The last index corresponds to a retrieval failure
+        if idx == n
+            resp = :failure
+            # Correct retrieval if match
+        elseif idx == stimulus
+            resp = :correct
+            #Incorrect retrieval otherwise
+        else
+            resp = :incorrect
+        end
+        return (resp = resp,)
+    end
 end
 
 # ╔═╡ c8bb2ac8-0419-4cac-b35a-1c68a5708b91
@@ -277,22 +283,22 @@ The code block below generates the simulated data
 
 # ╔═╡ b3c1b437-c352-4a86-bf2d-ad3c3910fb15
 begin
-	# Number of trials
-	n_trials = 50
-	# number of items in stimulus list
-	n_items = 10
-	# Sample stimulis
-	stimuli = sample_stimuli(n_items, n_trials)
-	# Retrieval threshold parameter
-	τ = 0.5
-	# Mismatch penalty parameter
-	δ = 1.0
-	# Fixed parameters
-	parms = (blc = 1.5,s = 0.2, mmp=true)
-	# Simulate model
-	temp = simulate(n_items, stimuli, parms; δ, τ)
-	# Tabulate counts of unique responses
-	data = unique_data(temp)
+    # Number of trials
+    n_trials = 50
+    # number of items in stimulus list
+    n_items = 10
+    # Sample stimulis
+    stimuli = sample_stimuli(n_items, n_trials)
+    # Retrieval threshold parameter
+    τ = 0.5
+    # Mismatch penalty parameter
+    δ = 1.0
+    # Fixed parameters
+    parms = (blc = 1.5, s = 0.2, mmp = true)
+    # Simulate model
+    temp = simulate(n_items, stimuli, parms; δ, τ)
+    # Tabulate counts of unique responses
+    data = unique_data(temp)
 end
 
 # ╔═╡ dfb22c53-86d7-4224-876c-e1a94f5b0635
@@ -329,9 +335,9 @@ In Turing, the model is written as follows:
 
 # ╔═╡ 6d128d0e-fe38-41b7-b48c-8070ff75feeb
 @model model(data, parms, n_items) = begin
-  δ ~ Normal(1.0, .5)
-  τ ~ Normal(.5, .5)
-  data ~ Retrieval(τ, δ, n_items, parms)
+    δ ~ Normal(1.0, 0.5)
+    τ ~ Normal(0.5, 0.5)
+    data ~ Retrieval(τ, δ, n_items, parms)
 end
 
 # ╔═╡ 4b818e43-8a14-4b9a-b197-651f81617662
@@ -343,15 +349,22 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ add6eb34-1233-4475-965c-9dea80c495c8
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(model(data, parms, n_items), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(data, parms, n_items),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 33b19950-83fc-4e22-9843-54ad7b39ce28
@@ -368,27 +381,33 @@ The code below plots the diagnostics for the model. The first panel shows good m
 
 # ╔═╡ 71eda564-1307-4d70-8e56-b02a1a0a759a
 begin
-	font_size = 12
-	chτ = group(chain, :τ)
-	p1τ = plot(chτ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2τ = plot(chτ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3τ = plot(chτ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1τ, p2τ, p3τ, layout=(3,1), size=(600,600))
+    font_size = 12
+    chτ = group(chain, :τ)
+    p1τ = plot(chτ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2τ = plot(chτ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3τ = plot(chτ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1τ, p2τ, p3τ, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 88c6aee8-fcf5-4b2e-af79-2dce8d1761dc
 begin
-	chδ = group(chain, :δ)
-	p1δ = plot(chδ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2δ = plot(chδ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3δ = plot(chδ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcδ = plot(p1δ, p2δ, p3δ, layout=(3,1), size=(600,600))
+    chδ = group(chain, :δ)
+    p1δ = plot(chδ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2δ = plot(chδ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3δ = plot(chδ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcδ = plot(p1δ, p2δ, p3δ, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 92728b45-9d5f-4705-8f03-9eccb470a865
@@ -408,12 +427,13 @@ In the code block below, function `posterior_predictive` accepts the data simula
 
 # ╔═╡ f1fc7e46-9508-45d2-89b6-6112533c2d38
 begin
-	preds = posterior_predictive(x -> simulate(n_items, stimuli, parms; x...), chain, 1000)
-	get_counts(data, type) = count(x->x.resp == type, data)
-	counts_correct = get_counts.(preds, :correct)
-	p4 = histogram(counts_correct, xlabel="Number Correct", ylabel="Density", xaxis=font(12), yaxis=font(12),
-	    grid=false, norm=true, color=:grey, leg=false, titlefont=font(12),
-	    bar_width=1)
+    preds = posterior_predictive(x -> simulate(n_items, stimuli, parms; x...), chain, 1000)
+    get_counts(data, type) = count(x -> x.resp == type, data)
+    counts_correct = get_counts.(preds, :correct)
+    p4 = histogram(counts_correct, xlabel = "Number Correct", ylabel = "Density",
+        xaxis = font(12), yaxis = font(12),
+        grid = false, norm = true, color = :grey, leg = false, titlefont = font(12),
+        bar_width = 1)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

@@ -6,16 +6,16 @@ using InteractiveUtils
 
 # ╔═╡ d4ebd1c6-7389-11ec-0b57-0d367f2c935f
 begin
-	using AdaptiveDesignOptimization, Random, ACTRModels
-	using PlutoUI, Distributions, StatsPlots, DataFrames
-	Random.seed!(1915)
-	TableOfContents()
+    using AdaptiveDesignOptimization, Random, ACTRModels
+    using PlutoUI, Distributions, StatsPlots, DataFrames
+    Random.seed!(1915)
+    TableOfContents()
 end
 
 # ╔═╡ ae15d56e-07f1-4478-bfd1-a8ce13dd656a
 begin
-	path_u3_3 = joinpath(pwd(), "../../Unit3/Simple_Learning/Simple_Learning_Notebook.jl")
-	nothing
+    path_u3_3 = joinpath(pwd(), "../../Unit3/Simple_Learning/Simple_Learning_Notebook.jl")
+    nothing
 end
 
 # ╔═╡ a4250e69-08dc-4c01-9729-8c3320c29f78
@@ -173,21 +173,21 @@ function loglike(d, blc, delay, N, retrieved; fixed_parms...)
     # each practice is 2 seconds
     cur_time = N * 2.0
     # create a chunk
-    chunk = Chunk(;N, recent=[cur_time])
+    chunk = Chunk(; N, recent = [cur_time])
     # add the chunk to declarative memory
-    memory = Declarative(;memory=[chunk])
+    memory = Declarative(; memory = [chunk])
     # create ACTR object and pass parameters
-    actr = ACTR(;declarative=memory, d, blc, fixed_parms...)
+    actr = ACTR(; declarative = memory, d, blc, fixed_parms...)
     # random wait time
     cur_time += delay
     # time to encode stimulus and select retrieval production
     cur_time += 0.05 + 0.085 + 0.05
     # compute retrieval probability r and retrieval failure probability f
-    r,f = retrieval_prob(actr, chunk, cur_time)
+    r, f = retrieval_prob(actr, chunk, cur_time)
     p = retrieved ? r : f
     # avoid -Inf values
     p = max(eps(), p)
-    p = min(1-eps(), p)
+    p = min(1 - eps(), p)
     return log(p)
 end
 
@@ -200,11 +200,11 @@ Uniform priors are assumed by default. In such cases, a prior does not need to b
 
 # ╔═╡ f3ca3ea5-b34c-4a64-b3ae-d371fb901ac0
 begin
-	# τ: retrieval threshold
-	# s: activation noise
-	fixed_parms = (τ = 0.5,s = 0.4,bll = true,noise = true)
-	# model object
-	model = Model(;loglike, fixed_parms...);
+    # τ: retrieval threshold
+    # s: activation noise
+    fixed_parms = (τ = 0.5, s = 0.4, bll = true, noise = true)
+    # model object
+    model = Model(; loglike, fixed_parms...)
 end
 
 # ╔═╡ 333d2353-1fb9-4d79-9ae5-52fc936d86ec
@@ -233,22 +233,22 @@ In the current experiment, there are only two possible data values: a chunk is s
 
 # ╔═╡ 8377677d-3a22-47e5-aab7-3b228401b96d
 begin
-	# d: decay rate
-	# blc: base level constant
-	parm_list = (
-	    d = range(.1, .9, length=15), 
-	    blc = range(0.0, 2.5, length=15)
-	)
-	
-	# delay: time between practice and test
-	# N: number of practices
-	design_list = (
-	    delay = range(.1, 15, length=20) .|> x -> x^2,
-	    N = range(1, 10, length=10)  .|> Int
-	)
-	
-	# retrieved or not
-	data_list = (retrieved = [true,false],)
+    # d: decay rate
+    # blc: base level constant
+    parm_list = (
+        d = range(0.1, 0.9, length = 15),
+        blc = range(0.0, 2.5, length = 15)
+    )
+
+    # delay: time between practice and test
+    # N: number of practices
+    design_list = (
+        delay = range(0.1, 15, length = 20) .|> x -> x^2,
+        N = range(1, 10, length = 10) .|> Int
+    )
+
+    # retrieved or not
+    data_list = (retrieved = [true, false],)
 end
 
 # ╔═╡ 648263f9-c81c-49ec-be76-098b8b07fa03
@@ -262,35 +262,35 @@ Now that the model and experiment design space have been specified, we will comp
 
 # ╔═╡ 742d9530-2342-4698-b43f-98c59848ac63
 begin
-	# true parameter values
-	true_parms = (d=.5, blc=1.5)
-	# number of trials
-	n_trials = 100
-	# define optimizer object
-	optimizer = Optimizer(;
-		design_list, 
-		parm_list, 
-		data_list, 
-		model
-	)
-	# define best design
-	design = optimizer.best_design
-	# initialize a dataframe for storing posterior mean and standard deviation of 
+    # true parameter values
+    true_parms = (d = 0.5, blc = 1.5)
+    # number of trials
+    n_trials = 100
+    # define optimizer object
+    optimizer = Optimizer(;
+        design_list,
+        parm_list,
+        data_list,
+        model
+    )
+    # define best design
+    design = optimizer.best_design
+    # initialize a dataframe for storing posterior mean and standard deviation of 
     # each parameter
-	df = DataFrame(
-		design=Symbol[],
-		trial=Int[], 
-		mean_d=Float64[], 
-		mean_blc=Float64[],
-	    std_d=Float64[], 
-		std_blc=Float64[],
-		delay=Float64[], 
-		N=Int[]
-	)
-	# initial values
-	new_data = [:optimal, 0, mean_post(optimizer)..., std_post(optimizer)...,
-	    design...]
-	push!(df, new_data)
+    df = DataFrame(
+        design = Symbol[],
+        trial = Int[],
+        mean_d = Float64[],
+        mean_blc = Float64[],
+        std_d = Float64[],
+        std_blc = Float64[],
+        delay = Float64[],
+        N = Int[]
+    )
+    # initial values
+    new_data = [:optimal, 0, mean_post(optimizer)..., std_post(optimizer)...,
+        design...]
+    push!(df, new_data)
 end
 
 # ╔═╡ 6e994747-a0c0-4059-a0f4-42289c9a42d4
@@ -301,27 +301,27 @@ Next, we will simulate an optimal experiment. On each iteration, a data point is
 
 # ╔═╡ 8f7f8c84-09d3-4dce-a2f7-2a1dded2d936
 begin
-	function simulate(d, blc, delay, N; fixed_parms...)
-	    cur_time = N * 2.0
-	    # create a chunk
-	    chunk = Chunk(;N, recent=[cur_time])
-	    # add the chunk to declarative memory
-	    memory = Declarative(;memory=[chunk])
-	    # create ACTR object and pass parameters
-	    actr = ACTR(;declarative=memory, d, blc, fixed_parms...)
-	    # random wait time
-	    cur_time += delay
-	    # time to encode stimulus and select retrieval production
-	    cur_time += 0.05 + 0.085 + 0.05
-	    # retrieval probability p
-	    p,_ = retrieval_prob(actr, chunk, cur_time)
-	    return rand(Bernoulli(p))
-	end
-	nothing
+    function simulate(d, blc, delay, N; fixed_parms...)
+        cur_time = N * 2.0
+        # create a chunk
+        chunk = Chunk(; N, recent = [cur_time])
+        # add the chunk to declarative memory
+        memory = Declarative(; memory = [chunk])
+        # create ACTR object and pass parameters
+        actr = ACTR(; declarative = memory, d, blc, fixed_parms...)
+        # random wait time
+        cur_time += delay
+        # time to encode stimulus and select retrieval production
+        cur_time += 0.05 + 0.085 + 0.05
+        # retrieval probability p
+        p, _ = retrieval_prob(actr, chunk, cur_time)
+        return rand(Bernoulli(p))
+    end
+    nothing
 end
 
 # ╔═╡ e3cf6274-33c9-4057-b17d-a8541d17e4a6
-for trial in 1:n_trials
+for trial = 1:n_trials
     # simulate a trial
     data = simulate(true_parms..., design...; fixed_parms...)
     # update posterior distribution and return best design for next trial
@@ -343,12 +343,13 @@ The setup for the random experiment is identical except for specifying `design_t
 
 # ╔═╡ b5f7c2ce-db02-4a18-b107-dba98d39c755
 begin
-	randomizer = Optimizer(;design_list, parm_list, data_list, model, design_type=Randomize);
-	random_design = randomizer.best_design
-	random_new_data = [:random, 0, mean_post(randomizer)..., std_post(randomizer)...,
-	    random_design...]
-	push!(df, random_new_data);
-	last(df)
+    randomizer =
+        Optimizer(; design_list, parm_list, data_list, model, design_type = Randomize)
+    random_design = randomizer.best_design
+    random_new_data = [:random, 0, mean_post(randomizer)..., std_post(randomizer)...,
+        random_design...]
+    push!(df, random_new_data)
+    last(df)
 end
 
 # ╔═╡ 2a33adc2-26c2-4ebf-b0a5-8b66024d1386
@@ -358,7 +359,7 @@ The process of running the random design simulation is the same as above.
 "
 
 # ╔═╡ b19c8d86-ad3f-47e3-9bd0-48258b84d000
-for trial in 1:n_trials
+for trial = 1:n_trials
     data = simulate(true_parms..., design...; fixed_parms...)
     design = update!(randomizer, data)
     new_data = [:random, trial, mean_post(randomizer)..., std_post(randomizer)...,
@@ -385,20 +386,20 @@ md"
 
 # ╔═╡ ea568c2f-8e74-4784-89ea-a44bddbe1ad6
 begin
-	@df df plot(
-		:trial,
-		:std_d, 
-		xlabel = "trial", 
-		ylabel = "σ of d", 
-		grid = false, 
-		group = :design, 
-		ylims = (0,.3),
-	    xaxis = font(12),
-		yaxis = font(12),
-		legendfont = font(9), 
-		linewidth = 1.5
-	)
-	hline!([.08], label="termination point", color=:black, line=:dash)
+    @df df plot(
+        :trial,
+        :std_d,
+        xlabel = "trial",
+        ylabel = "σ of d",
+        grid = false,
+        group = :design,
+        ylims = (0, 0.3),
+        xaxis = font(12),
+        yaxis = font(12),
+        legendfont = font(9),
+        linewidth = 1.5
+    )
+    hline!([0.08], label = "termination point", color = :black, line = :dash)
 end
 
 # ╔═╡ fd53d6a3-21cc-4578-bc55-69942c6b6f51
@@ -408,17 +409,17 @@ md"
 
 # ╔═╡ 91942fa9-f953-441f-afc6-99573504d981
 @df df plot(
-	:trial, 
-	:std_blc, 
-	xlabel="trial", 
-	ylabel="σ of blc", 
-	grid=false, 
-	group=:design, 
-	ylims=(0,1),
-    xaxis=font(12), 
-	yaxis=font(12), 
-	legendfont=font(9), 
-	linewidth=1.5
+    :trial,
+    :std_blc,
+    xlabel = "trial",
+    ylabel = "σ of blc",
+    grid = false,
+    group = :design,
+    ylims = (0, 1),
+    xaxis = font(12),
+    yaxis = font(12),
+    legendfont = font(9),
+    linewidth = 1.5
 )
 
 # ╔═╡ b18bad20-096f-45dd-89b9-3f16f72824db
@@ -432,19 +433,19 @@ A secondary consideration is whether the mean of the posterior distribution appr
 
 # ╔═╡ 3981c5a2-961a-427d-982e-319db4e24263
 begin
-	@df df plot(
-		:trial, 
-		:mean_d, 
-		xlabel="Trial", 
-		ylabel="Mean d",
-		group=:design, 
-		grid=false,
-	    xaxis=font(12), 
-		yaxis=font(12),
-		linewidth=1.5, 
-		legendfont=font(9), 
-	)
-	hline!([true_parms.d], label="true")
+    @df df plot(
+        :trial,
+        :mean_d,
+        xlabel = "Trial",
+        ylabel = "Mean d",
+        group = :design,
+        grid = false,
+        xaxis = font(12),
+        yaxis = font(12),
+        linewidth = 1.5,
+        legendfont = font(9)
+    )
+    hline!([true_parms.d], label = "true")
 end
 
 # ╔═╡ 39a4ecbd-288d-4e09-b98a-08a02e9a9cd2
@@ -454,19 +455,19 @@ md"
 
 # ╔═╡ 65728ead-1ebe-4218-b4a1-57108b4cb34b
 begin
-	@df df plot(
-		:trial, 
-		:mean_blc,
-		xlabel="trial", 
-		ylabel="mean blc", 
-		group=:design, 
-		grid=false,
-	    xaxis=font(12),
-		yaxis=font(12), 
-		legendfont=font(9), 
-		linewidth=1.5, 
-		)
-	hline!([true_parms.blc], label="true")
+    @df df plot(
+        :trial,
+        :mean_blc,
+        xlabel = "trial",
+        ylabel = "mean blc",
+        group = :design,
+        grid = false,
+        xaxis = font(12),
+        yaxis = font(12),
+        legendfont = font(9),
+        linewidth = 1.5
+    )
+    hline!([true_parms.blc], label = "true")
 end
 
 # ╔═╡ a5f558d1-0dec-4465-8a39-b4f826596492
@@ -480,17 +481,17 @@ The first plot below shows a two dimensional histogram of practice and delay for
 
 # ╔═╡ 402af3c3-e0f6-41c1-93af-c22cfe7f4bcd
 @df df histogram2d(
-	:delay, 
-	:N, 
-	group=:design, 
-	grid=false, 
-	bins=5, 
-	xlabel="Delay (seconds)", 
-	ylabel="Practices", 
-    xaxis=font(12), 
-	yaxis=font(12), 
-	title = ["Optimal"  "Random"], 
-	layout=(2,1)
+    :delay,
+    :N,
+    group = :design,
+    grid = false,
+    bins = 5,
+    xlabel = "Delay (seconds)",
+    ylabel = "Practices",
+    xaxis = font(12),
+    yaxis = font(12),
+    title = ["Optimal" "Random"],
+    layout = (2, 1)
 )
 
 # ╔═╡ 21df76bb-5159-4161-b0c6-218d31de72bb
@@ -500,38 +501,40 @@ The preference for selecting designs with small delay and a low number of practi
 
 # ╔═╡ 83386b85-031a-4e59-a5dc-4828d9859a32
 begin
-	function activation_dynamics(delays, N; blc, d, fixed_parms...)
-	    # each practice is 2 seconds
-	    cur_time = N*2.0
-	    # create a chunk
-	    chunk = Chunk(;N, recent=[cur_time])
-	    # add the chunk to declarative memory
-	    memory = Declarative(;memory=[chunk])
-	    # create ACTR object and pass parameters
-	    actr = ACTR(;declarative=memory, d, blc, fixed_parms...)
-	    activations = fill(0.0, length(delays))
-	    for (s,delay) in enumerate(delays)
-	        compute_activation!(actr, cur_time + delay)
-	        activations[s] = chunk.act
-	    end
-	    return activations
-	end
-	nothing
+    function activation_dynamics(delays, N; blc, d, fixed_parms...)
+        # each practice is 2 seconds
+        cur_time = N * 2.0
+        # create a chunk
+        chunk = Chunk(; N, recent = [cur_time])
+        # add the chunk to declarative memory
+        memory = Declarative(; memory = [chunk])
+        # create ACTR object and pass parameters
+        actr = ACTR(; declarative = memory, d, blc, fixed_parms...)
+        activations = fill(0.0, length(delays))
+        for (s, delay) in enumerate(delays)
+            compute_activation!(actr, cur_time + delay)
+            activations[s] = chunk.act
+        end
+        return activations
+    end
+    nothing
 end
 
 # ╔═╡ d6626d78-a9ba-4c42-bd0f-66230ecbe99e
 let
-	max_delay = 300
-	n_retrievals = 10
-	delays = 0.01:0.01:max_delay
-	d = .5
-	blc = 1.5
-	noise = false
-	Ns = [1,5,10]
-	sim(N) = activation_dynamics(delays, N; blc, d,fixed_parms..., noise)
-	activations = map(n->sim(n), Ns)
-	plot(delays, activations, grid=false, xlabel="Delay (seconds)", ylabel="Activation", size(800,400), linewidth=1.5,
-	    xaxis=font(12), yaxis=font(12), legendfont=font(9), labeltitle="N", labels=["1" "5" "10"])
+    max_delay = 300
+    n_retrievals = 10
+    delays = 0.01:0.01:max_delay
+    d = 0.5
+    blc = 1.5
+    noise = false
+    Ns = [1, 5, 10]
+    sim(N) = activation_dynamics(delays, N; blc, d, fixed_parms..., noise)
+    activations = map(n -> sim(n), Ns)
+    plot(delays, activations, grid = false, xlabel = "Delay (seconds)",
+        ylabel = "Activation", size(800, 400), linewidth = 1.5,
+        xaxis = font(12), yaxis = font(12), legendfont = font(9), labeltitle = "N",
+        labels = ["1" "5" "10"])
 end
 
 # ╔═╡ bd69f1e0-9f65-4ab1-bded-20f23ca68b89
@@ -542,7 +545,6 @@ Myung, J. I., Cavagnaro, D. R., and Pitt, M. A. (2013). A tutorial on adaptive d
 
 Yang, J., Pitt, M. A., Ahn, W., & Myung, J. I. (2020). ADOpy: A Python Package for Adaptive Design Optimization. Behavior Research Methods, 1--24. https://doi.org/10.3758/s13428-020-01386-4
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

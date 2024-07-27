@@ -31,26 +31,27 @@ data = map(s -> simulate(fixed_parms, s, n_reps; blc, δ), stimuli)
 #######################################################################################
 priors = (
     blc = (Normal(1.5, 1),),
-    δ = (Truncated(Normal(1.0, .5), 0.0, Inf),)
-  )
-bounds = ((-Inf,Inf),(eps(),Inf))
+    δ = (Truncated(Normal(1.0, 0.5), 0.0, Inf),)
+)
+bounds = ((-Inf, Inf), (eps(), Inf))
 #######################################################################################
 #                                 Estimate Parameters
 #######################################################################################
-model = DEModel(fixed_parms; priors, model=loglike, data)
-de = DE(;bounds, burnin=1000, priors, n_groups=2, Np=4)
+model = DEModel(fixed_parms; priors, model = loglike, data)
+de = DE(; bounds, burnin = 1000, priors, n_groups = 2, Np = 4)
 n_iter = 2000
-chains = sample(model, de, MCMCThreads(), n_iter, progress=true)
+chains = sample(model, de, MCMCThreads(), n_iter, progress = true)
 #######################################################################################
 #                                         Plot
 #######################################################################################
 pyplot()
-posteriors = plot(chains, seriestype=:pooleddensity, grid=false, titlefont=font(10),
-     xaxis=font(8), yaxis=font(8), color=:grey, size=(300,250))
+posteriors = plot(chains, seriestype = :pooleddensity, grid = false, titlefont = font(10),
+    xaxis = font(8), yaxis = font(8), color = :grey, size = (300, 250))
 #######################################################################################
 #                                  Posterior Predictive
 #######################################################################################
-rt_preds(s) = posterior_predictive(x -> simulate(fixed_parms, s, n_reps; x...), chains, 1000)
+rt_preds(s) =
+    posterior_predictive(x -> simulate(fixed_parms, s, n_reps; x...), chains, 1000)
 temp_preds = map(s -> rt_preds(s), stimuli)
 preds = merge.(temp_preds)
 grid_plot(preds, stimuli)

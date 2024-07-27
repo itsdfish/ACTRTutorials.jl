@@ -11,11 +11,11 @@ function get_retrieval_prob(parms, n_trials; τ)
     # Create a chunk object
     chunk = Chunk()
     # Create a declarative memory object
-    memory = Declarative(;memory=[chunk])
+    memory = Declarative(; memory = [chunk])
     # Create an ACTR object
-    actr = ACTR(;declarative=memory, parms..., τ)
+    actr = ACTR(; declarative = memory, parms..., τ)
     # Compute the retrieval probability of the chunk
-    θ,_ = retrieval_prob(actr, chunk)
+    θ, _ = retrieval_prob(actr, chunk)
     return θ
 end
 

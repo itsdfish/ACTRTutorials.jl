@@ -6,16 +6,17 @@ using InteractiveUtils
 
 # ╔═╡ 7ec2da8e-0bf9-11ed-1f84-6dfe87a9d83b
 begin
-	# load the required packages
-	using Turing, StatsPlots, Revise, PlutoUI, Random
-	using VisualSearchACTR
-	using DataFrames
-	using VisualSearchACTR: bottomup_activations!
-	using VisualSearchACTR: initialize_model, compute_angular_size!, update_finst!, attend_object!
-	using VisualSearchACTR: update_threshold!, get_iconic_memory, relevant_object
-	# seed random number generator
-	Random.seed!(2050);
-	TableOfContents()
+    # load the required packages
+    using Turing, StatsPlots, Revise, PlutoUI, Random
+    using VisualSearchACTR
+    using DataFrames
+    using VisualSearchACTR: bottomup_activations!
+    using VisualSearchACTR:
+        initialize_model, compute_angular_size!, update_finst!, attend_object!
+    using VisualSearchACTR: update_threshold!, get_iconic_memory, relevant_object
+    # seed random number generator
+    Random.seed!(2050)
+    TableOfContents()
 end
 
 # ╔═╡ d1592c9c-3516-4b59-9ba3-fe33c2274bf7
@@ -112,33 +113,47 @@ We will define three functions. The function `place_on_circle` returns a set of 
 
 # ╔═╡ 5549bd89-1220-4d71-9cd7-c5b286d4ffd9
 begin
-	function place_on_circle(r, n_objects, target)
-	    πs = range(0, stop=2*π, length=n_objects) 
-	    x = r*cos.(πs)
-	    y = r*sin.(πs)
-	    features = (color=Feature(visible=true, value=:blue), shape=Feature(visible=true, value=:x) )
-	    vos = [VisualObject(;location=[v...], features) for v in zip(x, y)]
-	    target_features = (color=Feature(visible=true, value=target.color), shape=Feature(visible=true, value=target.shape))
-	    target_vo = VisualObject(;features=target_features)
-	    push!(vos, target_vo)
-	    return vos,target_vo
-	end
-	
-	function target_bottomup_activation(r, n_objects, target)
-	    vos,target_vo = place_on_circle(r, n_objects, target)
-	    experiment = Experiment()
-	    actr = initialize_model(experiment, target, vos);
-	    bottomup_activations!(vos)
-	    return target_vo.bottomup_activation
-	end
-	
-	function to_dataframe(vos)
-	    df = DataFrame(x=Float64[], y=Float64[], color=Symbol[], shape=Symbol[])
-	    for vo in vos
-	        push!(df, [vo.location[1],vo.location[2],vo.features.color.value,vo.features.shape.value])
-	    end
-	    return df
-	end
+    function place_on_circle(r, n_objects, target)
+        πs = range(0, stop = 2 * π, length = n_objects)
+        x = r * cos.(πs)
+        y = r * sin.(πs)
+        features = (
+            color = Feature(visible = true, value = :blue),
+            shape = Feature(visible = true, value = :x)
+        )
+        vos = [VisualObject(; location = [v...], features) for v in zip(x, y)]
+        target_features = (
+            color = Feature(visible = true, value = target.color),
+            shape = Feature(visible = true, value = target.shape)
+        )
+        target_vo = VisualObject(; features = target_features)
+        push!(vos, target_vo)
+        return vos, target_vo
+    end
+
+    function target_bottomup_activation(r, n_objects, target)
+        vos, target_vo = place_on_circle(r, n_objects, target)
+        experiment = Experiment()
+        actr = initialize_model(experiment, target, vos)
+        bottomup_activations!(vos)
+        return target_vo.bottomup_activation
+    end
+
+    function to_dataframe(vos)
+        df = DataFrame(x = Float64[], y = Float64[], color = Symbol[], shape = Symbol[])
+        for vo in vos
+            push!(
+                df,
+                [
+                    vo.location[1],
+                    vo.location[2],
+                    vo.features.color.value,
+                    vo.features.shape.value
+                ]
+            )
+        end
+        return df
+    end
 end
 
 # ╔═╡ f7302a7d-9042-4c58-9850-3153ea813f57
@@ -148,20 +163,22 @@ The plots below show the red target surrounded by blue distractors with differen
 
 # ╔═╡ ccb4199f-9883-4ac8-b85d-21b91fa7534b
 let
-	target = (color=:red, shape=:x)
-	vos,_ = place_on_circle(15, 8, target)
-	df1 = to_dataframe(vos)
-	
-	p1 = @df df1 scatter(:x, :y, group=:color, grid=false, leg=false, xlims=(-30,30), ylims=(-30,30), color=[:blue :darkred],
-	    markersize=10, aspect_ratio=1)
-	
-	target = (color=:red, shape=:x)
-	vos,_ = place_on_circle(5, 8, target)
-	df2 = to_dataframe(vos)
-	
-	p2 = @df df2 scatter(:x, :y, group=:color, grid=false, leg=false, xlims=(-30,30), ylims=(-30,30), color=[:blue :darkred], 
-	        markersize=10, aspect_ratio=1)
-	plot(p1, p2, layout=(1,2))
+    target = (color = :red, shape = :x)
+    vos, _ = place_on_circle(15, 8, target)
+    df1 = to_dataframe(vos)
+
+    p1 = @df df1 scatter(:x, :y, group = :color, grid = false, leg = false,
+        xlims = (-30, 30), ylims = (-30, 30), color = [:blue :darkred],
+        markersize = 10, aspect_ratio = 1)
+
+    target = (color = :red, shape = :x)
+    vos, _ = place_on_circle(5, 8, target)
+    df2 = to_dataframe(vos)
+
+    p2 = @df df2 scatter(:x, :y, group = :color, grid = false, leg = false,
+        xlims = (-30, 30), ylims = (-30, 30), color = [:blue :darkred],
+        markersize = 10, aspect_ratio = 1)
+    plot(p1, p2, layout = (1, 2))
 end
 
 # ╔═╡ d4bd28d6-6896-4bf0-a32c-f5df709985d4
@@ -171,22 +188,24 @@ The plot below shows bottomup activation as a function the number of distractors
 
 # ╔═╡ 174ee895-7085-4e88-b533-fd33560ed542
 let
-	# radii
-	rs = range(20, stop=100, length=10)
-	# number objects surrounding the target
-	n_objects = 4
-	# target color and shape, distractors are blue x's
-	target = (color=:red, shape=:x)
-	bu_acts = []
-	temp = target_bottomup_activation.(rs, n_objects, (target,))
-	push!(bu_acts, temp)
-	# number objects surrounding the target
-	n_objects = 8
-	temp = target_bottomup_activation.(rs, n_objects, (target,))
-	push!(bu_acts, temp)
-	plot(rs, bu_acts, grid=false, xlabel="Distance from central target (px)", ylabel="Bottomup Activation", 
-	    labeltitle = "distractors", label=[4 8], linewidth=2, xaxis=font(12), yaxis=font(12), labelegendtitlefont=10,
-	    line_width=2.0, color=[:black :darkred])
+    # radii
+    rs = range(20, stop = 100, length = 10)
+    # number objects surrounding the target
+    n_objects = 4
+    # target color and shape, distractors are blue x's
+    target = (color = :red, shape = :x)
+    bu_acts = []
+    temp = target_bottomup_activation.(rs, n_objects, (target,))
+    push!(bu_acts, temp)
+    # number objects surrounding the target
+    n_objects = 8
+    temp = target_bottomup_activation.(rs, n_objects, (target,))
+    push!(bu_acts, temp)
+    plot(rs, bu_acts, grid = false, xlabel = "Distance from central target (px)",
+        ylabel = "Bottomup Activation",
+        labeltitle = "distractors", label = [4 8], linewidth = 2, xaxis = font(12),
+        yaxis = font(12), labelegendtitlefont = 10,
+        line_width = 2.0, color = [:black :darkred])
 end
 
 # ╔═╡ 8c482bbd-a003-481e-a9ca-105b3b62c85d
@@ -226,12 +245,12 @@ We will generate an experiment object that contains parameters for the experimen
 
 # ╔═╡ a5b70459-4012-4680-b55f-90fd54e43f88
 begin
-	import_gui()
-	nothing
+    import_gui()
+    nothing
 end
 
 # ╔═╡ 4a3596e4-4039-4230-8a95-a214f1a4648e
-experiment = Experiment(trace=true, visible=true, speed=.3);
+experiment = Experiment(trace = true, visible = true, speed = 0.3);
 
 # ╔═╡ 8a48ef8c-8beb-4bf8-9239-6b7ac80aaa9f
 md"""
@@ -250,9 +269,9 @@ In the following code block, the model will perform a single trial. It will run 
 
 # ╔═╡ 74333dac-08fc-4999-b814-cfeaa6c1fde8
 let
-	topdown_weight = 0.66
-	noise = true
-	run_trial!(experiment, stimuli_temp...; topdown_weight, noise);
+    topdown_weight = 0.66
+    noise = true
+    run_trial!(experiment, stimuli_temp...; topdown_weight, noise)
 end
 
 # ╔═╡ 7da555f9-74aa-457d-96c7-88d8d1443c8e
@@ -299,91 +318,90 @@ Finally, the function `_search!` is responsible for performing the search and at
 
 # ╔═╡ 8ae9b964-3f84-4533-b160-31f2df6795cb
 begin
-	function simulate(experiment; parms...)
-	    # generate stimuli, consisting of visual array and target for each trial
-	    stimuli = map(_-> generate_stimuli(experiment), 1:experiment.n_trials)
-	    # generate data for each trial
-	    run_condition!(experiment, stimuli; parms...);
-	    # return stimuli and fixation data
-	    return stimuli, experiment.fixations
-	end
-	
-	function search!(actr, ex)
-	    status = :searching
-	    # search until target found or termination threshold met
-	    while status == :searching
-	        # update decay values of objects in iconic memory 
-	        update_decay!(actr)
-	        # update the finst values for return of inhabition
-	        update_finst!(actr)
-	        # update which items are in iconic memory based on what is currently visible 
-	        update_visibility!(actr, ex.ppi)
-	        # update the activations 
-	        compute_activations!(actr)
-	        ex.visible ? update_window!(actr, ex) : nothing
-	        # perform search sequence
-	        status = _search!(actr, ex)
-	        ex.visible ? update_window!(actr, ex) : nothing
-	    end
-	    # add data for trial 
-	    add_data!(ex)
-	    # add fixations for trial 
-	    push!(ex.fixations, ex.trial_fixations)
-	    return nothing
-	end
-	
-	function _search!(actr, ex)
-	    ex.trace ? print_trial(ex) : nothing
-	    data = ex.trial_data
-	    # production cycle
-	    cycle_time!(actr, ex)
-	    # select visual object with highest activation
-	    status = find_object!(actr, ex)
-	    if status == :error
-	        # if not objects are found, add respond time
-	        cycle_time!(actr, ex)
-	        motor_time!(actr, ex)
-	        # add fixation data
-	        add_no_fixation!(ex, actr)
-	        ex.trace ? print_response(actr, "absent") : nothing
-	        # add response to data
-	        add_response!(actr, data, :absent)
-	        return status
-	    end
-	    # Attending object in abstract-location
-	    # add cycle time
-	    cycle_time!(actr, ex)
-	    # add attend time
-	    attend_time!(actr, ex)
-	    # place object in visual buffer and update attend time 
-	    attend_object!(actr, ex)
-	    # add fixation to fixation data
-	    add_fixation!(ex, actr)
-	    # cycle time before response
-	    cycle_time!(actr, ex)
-	    # check if current object matches target
-	    status = check_object(actr, ex)
-	    if status == :present
-	        # if matches, respond present and collect data
-	        cycle_time!(actr, ex)
-	        motor_time!(actr, ex)
-	        ex.trace ? print_response(actr, "present") : nothing
-	        add_response!(actr, data, status)
-	        return status
-	    end
-	    # if does not match, return "searching" and continue
-	    return status
-	end
+    function simulate(experiment; parms...)
+        # generate stimuli, consisting of visual array and target for each trial
+        stimuli = map(_ -> generate_stimuli(experiment), 1:(experiment.n_trials))
+        # generate data for each trial
+        run_condition!(experiment, stimuli; parms...)
+        # return stimuli and fixation data
+        return stimuli, experiment.fixations
+    end
 
-	function reset!(visual_objects)
-	    for vo in visual_objects
-	        vo.attended = false
-	        vo.visible = false
-	        vo.attend_time = 0.0
-	    end
-	    return nothing
-	end
-	
+    function search!(actr, ex)
+        status = :searching
+        # search until target found or termination threshold met
+        while status == :searching
+            # update decay values of objects in iconic memory 
+            update_decay!(actr)
+            # update the finst values for return of inhabition
+            update_finst!(actr)
+            # update which items are in iconic memory based on what is currently visible 
+            update_visibility!(actr, ex.ppi)
+            # update the activations 
+            compute_activations!(actr)
+            ex.visible ? update_window!(actr, ex) : nothing
+            # perform search sequence
+            status = _search!(actr, ex)
+            ex.visible ? update_window!(actr, ex) : nothing
+        end
+        # add data for trial 
+        add_data!(ex)
+        # add fixations for trial 
+        push!(ex.fixations, ex.trial_fixations)
+        return nothing
+    end
+
+    function _search!(actr, ex)
+        ex.trace ? print_trial(ex) : nothing
+        data = ex.trial_data
+        # production cycle
+        cycle_time!(actr, ex)
+        # select visual object with highest activation
+        status = find_object!(actr, ex)
+        if status == :error
+            # if not objects are found, add respond time
+            cycle_time!(actr, ex)
+            motor_time!(actr, ex)
+            # add fixation data
+            add_no_fixation!(ex, actr)
+            ex.trace ? print_response(actr, "absent") : nothing
+            # add response to data
+            add_response!(actr, data, :absent)
+            return status
+        end
+        # Attending object in abstract-location
+        # add cycle time
+        cycle_time!(actr, ex)
+        # add attend time
+        attend_time!(actr, ex)
+        # place object in visual buffer and update attend time 
+        attend_object!(actr, ex)
+        # add fixation to fixation data
+        add_fixation!(ex, actr)
+        # cycle time before response
+        cycle_time!(actr, ex)
+        # check if current object matches target
+        status = check_object(actr, ex)
+        if status == :present
+            # if matches, respond present and collect data
+            cycle_time!(actr, ex)
+            motor_time!(actr, ex)
+            ex.trace ? print_response(actr, "present") : nothing
+            add_response!(actr, data, status)
+            return status
+        end
+        # if does not match, return "searching" and continue
+        return status
+    end
+
+    function reset!(visual_objects)
+        for vo in visual_objects
+            vo.attended = false
+            vo.visible = false
+            vo.attend_time = 0.0
+        end
+        return nothing
+    end
 end
 
 # ╔═╡ 84ad44fb-9d3d-4e8a-a9c0-25096f69cbce
@@ -394,15 +412,15 @@ The following code will generate fixations for 10 trials using a topdown activat
 
 # ╔═╡ 18c4cb64-8b97-4e69-b6f2-ea4285905244
 begin
-	# number of trials
-	n_trials = 10
-	# fixed parameters
-	fixed_parms = (noise=false, rnd_time=false)
-	# weight for topdown activation
-	topdown_weight = 0.66
+    # number of trials
+    n_trials = 10
+    # fixed parameters
+    fixed_parms = (noise = false, rnd_time = false)
+    # weight for topdown activation
+    topdown_weight = 0.66
     # create an experiment object containing experiment parameters
-	_experiment = Experiment(;n_trials)
-	stimuli,all_fixations = simulate(_experiment ; topdown_weight, fixed_parms...);
+    _experiment = Experiment(; n_trials)
+    stimuli, all_fixations = simulate(_experiment; topdown_weight, fixed_parms...)
 end
 
 # ╔═╡ 232d202c-6585-440f-b936-6a6ca6ccb7b4
@@ -435,93 +453,98 @@ The function `loglikelihood_fixation` computes the log likelihood of a given fix
 
 # ╔═╡ 628432fc-e4f0-4be5-927c-b6404097da81
 begin
-	import Distributions: logpdf, rand, loglikelihood
-	
-	struct VisualSearch{T1,T2} <: ContinuousUnivariateDistribution
-	    topdown_weight::T1
-	    stimuli::T2
-	end
-	
-	VisualSearch(;topdown_weight, stimuli) = VisualSearch(topdown_weight, stimuli)
-	
-	loglikelihood(d::VisualSearch, data::Vector{Vector{Fixation}}) = logpdf(d, data)
-	
-	function logpdf(d::VisualSearch, data::Vector{Vector{Fixation}})
-	    LL = computeLL(d.stimuli, data; topdown_weight = d.topdown_weight)
-	    return LL
-	end
-	
-	
-	function loglikelihood_trial(ex, target, visicon, fixations; parms...)
-	    # reset attend time, visibility etc. 
-	    reset!(visicon)
-	    # create a model based on target, visual objects and parameters
-	    actr = initialize_model(ex, target, visicon; noise=false, parms...)
-	    # compute the angular size of objects in visicon
-	    compute_angular_size!(actr, ex.ppi)
-	    # initialize visual attention in center of screen
-	    orient!(actr, ex)
-	    LL = 0.0
-	    for fixation in fixations
-	        # increment model time 
-	        actr.time += 0.05
-	        # compute log likelihood of fixation 
-	        LL += loglikelihood_fixation(ex, actr, visicon, fixation)
-	        # if the model terminates search, break. Otherwise update attention and threshold
-	        fixation.stop ? (break) : nothing
-	        vo = visicon[fixation.idx]
-	        actr.time = fixation.attend_time
-	        # update model fixation to new visual object
-	        attend_object!(actr, ex, vo)
-	        # update termination threshold
-	        update_threshold!(actr)
-	    end
-	    return LL 
-	end
-	
-	function loglikelihood_fixation(ex, actr, visicon, fixation)
-	    # before computing fixation probability, update decay in iconic memory, finst, visibliity and activaiton values
-	    update_decay!(actr)
-	    update_finst!(actr)
-	    update_visibility!(actr, ex.ppi)
-	    compute_activations!(actr)
-	    # get all visible objects, which factor in the the fixation probability
-	    visible_objects = filter(x->relevant_object(actr, x), get_iconic_memory(actr))
-	    # get activation values
-	    act = map(x->x.activation, visible_objects)
-	    # add termination threshold to activation values
-	    push!(act, actr.parms.τₐ)
-	    # compute the probability of the fixation
-	    p = fixation_prob(actr, visicon, visible_objects, fixation)
-	    return log(p)
-	end
-	
-	function computeLL(stimuli, all_fixations; topdown_weight)
-	    ex = Experiment()
-	    LL = 0.0
-	    # copy and reset fields in visual array
-	    _stimuli = set_stimuli(stimuli, topdown_weight)
-	    for i in 1:length(all_fixations)
-	       LL += loglikelihood_trial(ex, _stimuli[i][1], _stimuli[i][3], all_fixations[i]; topdown_weight)
-	    end
-	    return LL
-	end
-	
-	function set_stimuli(stimuli, parm)
-	    return [copy_data(s, parm) for s in stimuli]
-	end
-	
-	function copy_vo(vo, parm)
-	    VisualObject(;features=vo.features, location=vo.location,
-	     activation=zero(parm))
-	end
-	
-	function copy_data(s, parm)
-	    target = s[1]
-	    present = s[2]
-	    vos = [copy_vo(vo, parm) for vo in s[3]]
-	    return (target, present,vos)
-	end
+    import Distributions: logpdf, rand, loglikelihood
+
+    struct VisualSearch{T1, T2} <: ContinuousUnivariateDistribution
+        topdown_weight::T1
+        stimuli::T2
+    end
+
+    VisualSearch(; topdown_weight, stimuli) = VisualSearch(topdown_weight, stimuli)
+
+    loglikelihood(d::VisualSearch, data::Vector{Vector{Fixation}}) = logpdf(d, data)
+
+    function logpdf(d::VisualSearch, data::Vector{Vector{Fixation}})
+        LL = computeLL(d.stimuli, data; topdown_weight = d.topdown_weight)
+        return LL
+    end
+
+    function loglikelihood_trial(ex, target, visicon, fixations; parms...)
+        # reset attend time, visibility etc. 
+        reset!(visicon)
+        # create a model based on target, visual objects and parameters
+        actr = initialize_model(ex, target, visicon; noise = false, parms...)
+        # compute the angular size of objects in visicon
+        compute_angular_size!(actr, ex.ppi)
+        # initialize visual attention in center of screen
+        orient!(actr, ex)
+        LL = 0.0
+        for fixation in fixations
+            # increment model time 
+            actr.time += 0.05
+            # compute log likelihood of fixation 
+            LL += loglikelihood_fixation(ex, actr, visicon, fixation)
+            # if the model terminates search, break. Otherwise update attention and threshold
+            fixation.stop ? (break) : nothing
+            vo = visicon[fixation.idx]
+            actr.time = fixation.attend_time
+            # update model fixation to new visual object
+            attend_object!(actr, ex, vo)
+            # update termination threshold
+            update_threshold!(actr)
+        end
+        return LL
+    end
+
+    function loglikelihood_fixation(ex, actr, visicon, fixation)
+        # before computing fixation probability, update decay in iconic memory, finst, visibliity and activaiton values
+        update_decay!(actr)
+        update_finst!(actr)
+        update_visibility!(actr, ex.ppi)
+        compute_activations!(actr)
+        # get all visible objects, which factor in the the fixation probability
+        visible_objects = filter(x -> relevant_object(actr, x), get_iconic_memory(actr))
+        # get activation values
+        act = map(x -> x.activation, visible_objects)
+        # add termination threshold to activation values
+        push!(act, actr.parms.τₐ)
+        # compute the probability of the fixation
+        p = fixation_prob(actr, visicon, visible_objects, fixation)
+        return log(p)
+    end
+
+    function computeLL(stimuli, all_fixations; topdown_weight)
+        ex = Experiment()
+        LL = 0.0
+        # copy and reset fields in visual array
+        _stimuli = set_stimuli(stimuli, topdown_weight)
+        for i = 1:length(all_fixations)
+            LL += loglikelihood_trial(
+                ex,
+                _stimuli[i][1],
+                _stimuli[i][3],
+                all_fixations[i];
+                topdown_weight
+            )
+        end
+        return LL
+    end
+
+    function set_stimuli(stimuli, parm)
+        return [copy_data(s, parm) for s in stimuli]
+    end
+
+    function copy_vo(vo, parm)
+        VisualObject(; features = vo.features, location = vo.location,
+            activation = zero(parm))
+    end
+
+    function copy_data(s, parm)
+        target = s[1]
+        present = s[2]
+        vos = [copy_vo(vo, parm) for vo in s[3]]
+        return (target, present, vos)
+    end
 end
 
 # ╔═╡ 18bc23ae-b756-41b4-aa50-53aa760e767f
@@ -548,7 +571,7 @@ In computer code, the model is specified as follows:
 
 # ╔═╡ a529d9bd-4c2f-4c7c-876d-92de641d0d1f
 @model model(stimuli, all_fixations) = begin
-    topdown_weight ~ Normal(.66, 0.5)
+    topdown_weight ~ Normal(0.66, 0.5)
     all_fixations ~ VisualSearch(topdown_weight, stimuli)
 end
 
@@ -561,15 +584,22 @@ Now that the priors, likelihood, and Turing model have been specified, we can no
 
 # ╔═╡ 0a88a2da-e01a-4be5-a96b-93bfe7412d3f
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(model(stimuli, all_fixations), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(stimuli, all_fixations),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 220a60fc-3592-40af-90c8-0ceb26289122
@@ -583,11 +613,11 @@ Compared to other models, parameter estimation for this model is longer. The rea
 
 # ╔═╡ 31145414-42c1-4baa-b72b-e8dde26df98f
 begin
-	ch = group(chain, :topdown_weight)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcblc = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    ch = group(chain, :topdown_weight)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcblc = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 6e8bc618-8e24-4fc3-b549-af0209f4649c
@@ -597,7 +627,6 @@ Nyamsuren, E., & Taatgen, N. A. (2013). Pre-attentive and attentive vision modul
 
 Moran, R., Zehetleitner, M., Müller, H. J., & Usher, M. (2013). Competitive guided search: Meeting the challenge of benchmark RT distributions. Journal of Vision, 13(8), 24-24.
 """
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

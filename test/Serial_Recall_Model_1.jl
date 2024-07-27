@@ -1,5 +1,5 @@
 cd(@__DIR__)
-using Pkg 
+using Pkg
 Pkg.activate("../")
 using SafeTestsets
 
@@ -10,12 +10,12 @@ using SafeTestsets
     δ = 1.0
     n_blocks = 100
     n_items = 10
-    parms = (s = .3,τ=-100.0,mmp = true,noise = true,mmpFun = penalty)
-    data = map(x -> simulate(parms, n_items; δ=δ), 1:n_blocks)
+    parms = (s = 0.3, τ = -100.0, mmp = true, noise = true, mmpFun = penalty)
+    data = map(x -> simulate(parms, n_items; δ = δ), 1:n_blocks)
 
-    x = range(δ*.8, δ*1.2, length=100)
-    y = map(x -> computeLL(parms, data, n_items; δ=x), x)
-    mxv,mxi = findmax(y)
+    x = range(δ * 0.8, δ * 1.2, length = 100)
+    y = map(x -> computeLL(parms, data, n_items; δ = x), x)
+    mxv, mxi = findmax(y)
     δ′ = x[mxi]
     @test δ′ ≈ δ atol = 3e-1
 end

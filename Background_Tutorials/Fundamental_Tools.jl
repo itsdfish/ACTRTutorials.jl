@@ -6,9 +6,9 @@ using InteractiveUtils
 
 # ╔═╡ 316338aa-6ed6-11ec-2405-91a54cf8d599
 begin
-	using PlutoUI, Distributions, Plots, Random
-	using StatsPlots, Statistics, Random
-	TableOfContents()
+    using PlutoUI, Distributions, Plots, Random
+    using StatsPlots, Statistics, Random
+    TableOfContents()
 end
 
 # ╔═╡ 9ea38182-2a3f-4e0a-a2a6-cc9542f7b28a
@@ -39,22 +39,29 @@ $\begin{align}
 \end{align}$
 "
 
-
 # ╔═╡ b9b62087-2825-4af0-9346-e0f586b8cfbc
-let 
-	μ = 1.0
-	σ = 2.0
-	n = 4
-	x = rand(Normal(μ,σ),100_000, n)
-	sum_x = sum(x, dims=2)
-	
-	histogram(sum_x, norm=true, grid=false, legend=false, xlabel= "Sum of $n Normal(μ=$μ,σ=$σ)", yaxis="Density", color=:grey)
-	
-	xmin,xmax = minimum(sum_x),maximum(sum_x)
-	xvals = range(xmin, xmax, length=100)
-	density = pdf.(Normal(μ * n,sqrt(n * σ^2)), xvals)
-	
-	plot!(xvals, density, color=:darkorange, linewidth=3)
+let
+    μ = 1.0
+    σ = 2.0
+    n = 4
+    x = rand(Normal(μ, σ), 100_000, n)
+    sum_x = sum(x, dims = 2)
+
+    histogram(
+        sum_x,
+        norm = true,
+        grid = false,
+        legend = false,
+        xlabel = "Sum of $n Normal(μ=$μ,σ=$σ)",
+        yaxis = "Density",
+        color = :grey
+    )
+
+    xmin, xmax = minimum(sum_x), maximum(sum_x)
+    xvals = range(xmin, xmax, length = 100)
+    density = pdf.(Normal(μ * n, sqrt(n * σ^2)), xvals)
+
+    plot!(xvals, density, color = :darkorange, linewidth = 3)
 end
 
 # ╔═╡ cc03dba0-9e36-47b9-a4f2-1107aa08d528
@@ -79,79 +86,80 @@ $\begin{align}
 where $f_{i}$ is the probability density function for random variable $i$, and $F_{i}$ is the cumulative density function for random variable $i$.
 
 ACT-R's memory retrieval process is one example of minimum processing time. In ACT-R, chunks compete for retrieval based on their activation levels such that the chunk with the highest activation is retrieved. Retrieval time is an inverse function of activation, which is described statistically as minimum processing time. ACT-R's memory retrieval can be described in terms of the [Lognormal Race Model](Lognormal%20Race%20Process.ipynb)(LNR). A simple example of using the LNR model to define the likelihood function of an ACT-R model is the [Simple RT Model 2](../Tutorial_Models/Unit2/Simple_RT_2/Simple_RT_Model_2.ipynb)
-"	
+"
 
 # ╔═╡ b3e4e7db-6ebc-4875-b11d-1547a545c7d3
 begin
-	n_samples(μs, σs) = @. rand(Normal(μs, σs))
+    n_samples(μs, σs) = @. rand(Normal(μs, σs))
 
-	function sim_min(μs, σs, c , n_sim)
-		vals = Float64[]
-		for _ in 1:n_sim
-			x = n_samples(μs, σs)
-			mv,mi = findmin(x)
-			if mi == c
-				push!(vals, mv)
-			end
-		end
-		return vals
-	end
-	# simulate maximum time process
-	# μs: a vector  σs, c , n_sim
-	function sim_max(μs, σs, c , n_sim)
-	    vals = Float64[]
-	    for _ in 1:n_sim
-	        x = n_samples(μs, σs)
-	        mv,mi = findmax(x)
-	        if mi == c
-	            push!(vals, mv)
-	        end
-	    end
-	    return vals
-	end
+    function sim_min(μs, σs, c, n_sim)
+        vals = Float64[]
+        for _ = 1:n_sim
+            x = n_samples(μs, σs)
+            mv, mi = findmin(x)
+            if mi == c
+                push!(vals, mv)
+            end
+        end
+        return vals
+    end
+    # simulate maximum time process
+    # μs: a vector  σs, c , n_sim
+    function sim_max(μs, σs, c, n_sim)
+        vals = Float64[]
+        for _ = 1:n_sim
+            x = n_samples(μs, σs)
+            mv, mi = findmax(x)
+            if mi == c
+                push!(vals, mv)
+            end
+        end
+        return vals
+    end
 
-	function f_max(x, c, μs, σs)
-	    y = pdf(Normal(μs[c], σs[c]), x)
-	    for i in 1:length(μs)
-	        if i != c
-	            y *= cdf(Normal(μs[i],σs[i]), x)
-	        end
-	    end
-	    return y
-	end
-	
-	function f_min(x, c, μs, σs)
-	    y = pdf(Normal(μs[c], σs[c]), x)
-	    for i in 1:length(μs)
-	        if i != c
-	            y *= (1-cdf(Normal(μs[i],σs[i]), x))
-	        end
-	    end
-	    return y
-	end
-	nothing
+    function f_max(x, c, μs, σs)
+        y = pdf(Normal(μs[c], σs[c]), x)
+        for i = 1:length(μs)
+            if i != c
+                y *= cdf(Normal(μs[i], σs[i]), x)
+            end
+        end
+        return y
+    end
+
+    function f_min(x, c, μs, σs)
+        y = pdf(Normal(μs[c], σs[c]), x)
+        for i = 1:length(μs)
+            if i != c
+                y *= (1 - cdf(Normal(μs[i], σs[i]), x))
+            end
+        end
+        return y
+    end
+    nothing
 end
 
 # ╔═╡ 79b20db2-83cc-4c0c-b110-255f998e9cf6
-let 
-	μ = 1
-	σ = 2
-	μs = [1.0,2.0,3.0]
-	σs = [0.5,1.0,1.5]
-	n_sim = 100_000
-	n_vars = length(μs)
-	min_x = sim_min(μs, σs, 1, n_sim)
-	p = length(min_x)/n_sim
-	
-	hist = histogram(min_x, norm=true, grid=false, legend=false, xlabel= "Minimum of $n_vars Normal(μ=$μ,σ=$σ)", 
-	    yaxis="Density", color=:grey)
-	hist.series_list[1][:y] *= p
-	
-	xmin,xmax = minimum(min_x),maximum(min_x)
-	xvals = range(xmin, xmax, length=100)
-	density = map(x->f_min(x, 1, μs, σs), xvals)
-	
-	plot!(hist, xvals, density, color=:darkorange, linewidth=3)
+let
+    μ = 1
+    σ = 2
+    μs = [1.0, 2.0, 3.0]
+    σs = [0.5, 1.0, 1.5]
+    n_sim = 100_000
+    n_vars = length(μs)
+    min_x = sim_min(μs, σs, 1, n_sim)
+    p = length(min_x) / n_sim
+
+    hist = histogram(min_x, norm = true, grid = false, legend = false,
+        xlabel = "Minimum of $n_vars Normal(μ=$μ,σ=$σ)",
+        yaxis = "Density", color = :grey)
+    hist.series_list[1][:y] *= p
+
+    xmin, xmax = minimum(min_x), maximum(min_x)
+    xvals = range(xmin, xmax, length = 100)
+    density = map(x -> f_min(x, 1, μs, σs), xvals)
+
+    plot!(hist, xvals, density, color = :darkorange, linewidth = 3)
 end
 
 # ╔═╡ c2f10fd4-6a93-446b-a636-c5a520d5c5a9
@@ -182,24 +190,25 @@ The function `f_max` evaluates the likelihood of data $x$ for the maximum proces
 "
 
 # ╔═╡ a8a05aa8-ef99-4126-8a75-7768303faab6
-let 
-	μ = 1
-	σ = 2
-	μs = [1.0,2.0,3.0]
-	σs = [0.5,1.0,1.5]
-	n_sim = 100_000
-	max_x = sim_max(μs, σs, 3, n_sim)
-	p = length(max_x)/n_sim
-	
-	hist = histogram(max_x, norm=true, grid=false, legend=false, xlabel= "Maximum of $(length(μs)) Normal(μ=$μ,σ=$σ)", 
-	    yaxis="Density", color=:grey)
-	hist.series_list[1][:y] *= p
-	
-	xmin,xmax = minimum(max_x),maximum(max_x)
-	xvals = range(xmin, xmax, length=100)
-	density = map(x->f_max(x, 3, μs, σs), xvals)
-	
-	plot!(hist, xvals, density, color=:darkorange, linewidth=3)
+let
+    μ = 1
+    σ = 2
+    μs = [1.0, 2.0, 3.0]
+    σs = [0.5, 1.0, 1.5]
+    n_sim = 100_000
+    max_x = sim_max(μs, σs, 3, n_sim)
+    p = length(max_x) / n_sim
+
+    hist = histogram(max_x, norm = true, grid = false, legend = false,
+        xlabel = "Maximum of $(length(μs)) Normal(μ=$μ,σ=$σ)",
+        yaxis = "Density", color = :grey)
+    hist.series_list[1][:y] *= p
+
+    xmin, xmax = minimum(max_x), maximum(max_x)
+    xvals = range(xmin, xmax, length = 100)
+    density = map(x -> f_max(x, 3, μs, σs), xvals)
+
+    plot!(hist, xvals, density, color = :darkorange, linewidth = 3)
 end
 
 # ╔═╡ 1ca8791f-c315-4734-a147-8d44eb488f23
@@ -246,41 +255,48 @@ where $R$ is a set of outcomes compatible with response $r$. In the following ex
 "
 
 # ╔═╡ 2a7b6ae6-e4bb-47d2-a5e5-5a41a23b2ed4
-let 
-	function sim_min_or(μs, σs, c , n_sim)
-	    vals = Float64[]
-	    for _ in 1:n_sim
-	        x = n_samples(μs, σs)
-	        mv,mi = findmin(x)
-	        if any(x->mi == x, c)
-	            push!(vals, mv)
-	        end
-	    end
-	    return vals 
-	end
+let
+    function sim_min_or(μs, σs, c, n_sim)
+        vals = Float64[]
+        for _ = 1:n_sim
+            x = n_samples(μs, σs)
+            mv, mi = findmin(x)
+            if any(x -> mi == x, c)
+                push!(vals, mv)
+            end
+        end
+        return vals
+    end
 
-	# set the parameters
-	μs = [1.0,2.0,3.0]
-	σs = [0.5,1.0,1.5]
-	# number of simulations
-	n_sim = 100_000
-	
-	# simulate cases where first and second normal R.V.s have the minimum
-	min_idx = [1,2]
-	min_x = sim_min_or(μs, σs, min_idx, n_sim)
-	min_x = vcat(min_x...)
-	p = length(min_x)/n_sim
-	
-	hist = histogram(min_x, norm=true, grid=false, legend=false, xlabel= "Minimum of Normal(μ=1,σ=.5) or Normal(2,1)", yaxis="Density", color=:grey)
-	hist.series_list[1][:y] *= p
-	
-	xmin,xmax = minimum(min_x),maximum(min_x)
-	xvals = range(xmin, xmax, length=100)
-	density = map(x->f_min(x, 1, μs, σs) + f_min(x, 2, μs, σs), xvals)
-	
-	plot!(hist, xvals, density, color=:darkorange, linewidth=3)
+    # set the parameters
+    μs = [1.0, 2.0, 3.0]
+    σs = [0.5, 1.0, 1.5]
+    # number of simulations
+    n_sim = 100_000
+
+    # simulate cases where first and second normal R.V.s have the minimum
+    min_idx = [1, 2]
+    min_x = sim_min_or(μs, σs, min_idx, n_sim)
+    min_x = vcat(min_x...)
+    p = length(min_x) / n_sim
+
+    hist = histogram(
+        min_x,
+        norm = true,
+        grid = false,
+        legend = false,
+        xlabel = "Minimum of Normal(μ=1,σ=.5) or Normal(2,1)",
+        yaxis = "Density",
+        color = :grey
+    )
+    hist.series_list[1][:y] *= p
+
+    xmin, xmax = minimum(min_x), maximum(min_x)
+    xvals = range(xmin, xmax, length = 100)
+    density = map(x -> f_min(x, 1, μs, σs) + f_min(x, 2, μs, σs), xvals)
+
+    plot!(hist, xvals, density, color = :darkorange, linewidth = 3)
 end
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

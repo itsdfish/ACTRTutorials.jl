@@ -7,8 +7,8 @@ function expose(file)
     """
 end
 
-
-function stanLL(d, blc, delta, gamma, k, L, N, s, tau, sa, mp, bll, n_chunks, n_slots, memory_slots, memory_values, 
+function stanLL(d, blc, delta, gamma, k, L, N, s, tau, sa, mp, bll, n_chunks, n_slots,
+    memory_slots, memory_values,
     stimulus_slots, stimulus_values, choice, choice_rep)
     LL = R"""
         computeLL($d, $blc, $delta, $gamma, $k, $L, $N, $s, $tau, $sa, $mp, $bll, $n_chunks, $n_slots, $memory_slots, $memory_values, 

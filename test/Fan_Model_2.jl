@@ -1,5 +1,5 @@
 cd(@__DIR__)
-using Pkg 
+using Pkg
 Pkg.activate("../")
 using SafeTestsets
 
@@ -13,21 +13,21 @@ using SafeTestsets
 
     Random.seed!(6112015)
 
-    δ = .5
+    δ = 0.5
     γ = 1.65
     n_blocks = 500
-    parms = (blc=0.0, s=.2, τ=-.5, ter=.845, mmp=true, sa=true, noise=true)
-    temp = simulate(stimuli, slots, parms, n_blocks; δ=δ, γ=γ)
+    parms = (blc = 0.0, s = 0.2, τ = -0.5, ter = 0.845, mmp = true, sa = true, noise = true)
+    temp = simulate(stimuli, slots, parms, n_blocks; δ = δ, γ = γ)
     data = vcat(temp...)
-    x = range(δ*.8, δ*1.2, length=50)
-    y = map(x -> computeLL(parms, slots, data; δ=x, γ=γ), x)
-    mxv,mxi = findmax(y)
+    x = range(δ * 0.8, δ * 1.2, length = 50)
+    y = map(x -> computeLL(parms, slots, data; δ = x, γ = γ), x)
+    mxv, mxi = findmax(y)
     δ′ = x[mxi]
-    @test δ′≈ δ atol=1e-1
+    @test δ′ ≈ δ atol = 1e-1
 
-    x = range(γ*.8, γ*1.2, length=50)
-    y = map(x -> computeLL(parms, slots, data; δ=δ, γ=x), x)
-    mxv,mxi = findmax(y)
+    x = range(γ * 0.8, γ * 1.2, length = 50)
+    y = map(x -> computeLL(parms, slots, data; δ = δ, γ = x), x)
+    mxv, mxi = findmax(y)
     γ′ = x[mxi]
-    @test γ′≈ γ atol=1e-1
+    @test γ′ ≈ γ atol = 1e-1
 end

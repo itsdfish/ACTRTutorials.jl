@@ -6,9 +6,9 @@ using InteractiveUtils
 
 # ╔═╡ 075380cc-6f0a-11ec-1349-835bd76094fb
 begin
-	using CmdStan, Distributions, Random, StatsPlots
-	using PlutoUI, ACTRModels, MCMCChains
-	TableOfContents()
+    using CmdStan, Distributions, Random, StatsPlots
+    using PlutoUI, ACTRModels, MCMCChains
+    TableOfContents()
 end
 
 # ╔═╡ a5289dc1-c39e-4bec-b4a2-b23fdbd6f3a5
@@ -122,15 +122,15 @@ Set the environment variable as the path to cmdstan on your computer.
 
 # ╔═╡ 532fc873-3fda-4e66-8ffc-e61cdf757d94
 begin
-	seed = 1058
-	# seed random number generator
-	Random.seed!(seed)
-	# number of trials
-	n = 20
-	# true probability of heads
-	θ = 0.5
-	# observed probability of heads
-	h = rand(Binomial(n, θ))
+    seed = 1058
+    # seed random number generator
+    Random.seed!(seed)
+    # number of trials
+    n = 20
+    # true probability of heads
+    θ = 0.5
+    # observed probability of heads
+    h = rand(Binomial(n, θ))
 end
 
 # ╔═╡ 86943baf-ead3-4fbd-81d3-63c99273e148
@@ -178,12 +178,12 @@ The following code block illustrates how to read a `.stan` file into a Julia ses
 
 # ╔═╡ afed6b3e-91fc-44d0-bb00-8081e8f9f9d8
 begin
-	# open an IO stream for the file, "r" instructs open to read
-	stream = open("Supporting/Coin_Flip_Model.stan", "r")
-	# read the IO stream and assign it to the variable Model
-	Model = read(stream, String)
-	# close the IO stream
-	close(stream)
+    # open an IO stream for the file, "r" instructs open to read
+    stream = open("Supporting/Coin_Flip_Model.stan", "r")
+    # read the IO stream and assign it to the variable Model
+    Model = read(stream, String)
+    # close the IO stream
+    close(stream)
 end
 
 # ╔═╡ b4d67bc6-0821-4a11-8885-982c3a177f19
@@ -192,12 +192,12 @@ The next step requires configuring the MCMC sampler. We will run four chains for
 "
 
 # ╔═╡ e3cd9438-7e2f-4d6c-95e8-faaed5be4313
-stan_model = Stanmodel(Sample(save_warmup=false, num_warmup=1000,
-  num_samples=1000, thin=1), nchains=4, name="Coin_Flip_Model", model=Model,
-  printsummary=false, output_format=:mcmcchains, random = CmdStan.Random(seed));
+stan_model = Stanmodel(Sample(save_warmup = false, num_warmup = 1000,
+        num_samples = 1000, thin = 1), nchains = 4, name = "Coin_Flip_Model", model = Model,
+    printsummary = false, output_format = :mcmcchains, random = CmdStan.Random(seed));
 
 # ╔═╡ e01d7db3-b230-459f-8845-f444e50faa39
-stan_input = Dict("h"=>h, "n"=>n);
+stan_input = Dict("h" => h, "n" => n);
 
 # ╔═╡ d7978ac6-04f7-4d83-804d-35a84e663242
 md"
@@ -208,8 +208,8 @@ The function `stan` performs the MCMC sampling. It requires at minimum the stan 
 
 # ╔═╡ 27948fb2-1c75-4b76-aae0-f3bfdba3dcf0
 begin
-	rc, chain, cnames = stan(stan_model, stan_input)
-	describe(chain)
+    rc, chain, cnames = stan(stan_model, stan_input)
+    describe(chain)
 end
 
 # ╔═╡ 15ff2ac5-9583-4277-ade8-37fcee7657b6
@@ -223,27 +223,31 @@ md"
 "
 
 # ╔═╡ f1fb7085-86c0-4a11-94c6-cd8c733e5cb8
-chain1 = replacenames(chain, Dict(:theta=>:θ))
+chain1 = replacenames(chain, Dict(:theta => :θ))
 
 # ╔═╡ bb8d0860-ea1b-47bd-b474-434e09ff21ca
 begin
-	ch = group(chain1, :θ)
-	font_size = 12
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    ch = group(chain1, :θ)
+    font_size = 12
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 760ed258-d371-45d7-b7e3-1e14be2489e7
 begin
-	f(θ) = rand(Binomial(n, θ))
-	preds = posterior_predictive(x -> f(x...), chain1, 1000)
-	histogram(preds, grid=false, color=:grey, legend=false, xlabel="Heads", ylabel="Probability", 
-	    xaxis=font(12), yaxis=font(12), normalize=:probability)
+    f(θ) = rand(Binomial(n, θ))
+    preds = posterior_predictive(x -> f(x...), chain1, 1000)
+    histogram(preds, grid = false, color = :grey, legend = false, xlabel = "Heads",
+        ylabel = "Probability",
+        xaxis = font(12), yaxis = font(12), normalize = :probability)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

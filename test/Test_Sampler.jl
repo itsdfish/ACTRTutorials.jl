@@ -1,5 +1,5 @@
 cd(@__DIR__)
-using Pkg 
+using Pkg
 Pkg.activate("../")
 using SafeTestsets
 

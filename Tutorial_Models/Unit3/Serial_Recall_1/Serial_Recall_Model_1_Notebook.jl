@@ -6,12 +6,12 @@ using InteractiveUtils
 
 # ╔═╡ 45ab4552-e6ac-11ec-36ed-5f38b60183c8
 begin
-	# load the required packages
-	using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
-	using StatsBase
-	# seed random number generator
-	Random.seed!(62102);
-	TableOfContents()
+    # load the required packages
+    using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
+    using StatsBase
+    # seed random number generator
+    Random.seed!(62102)
+    TableOfContents()
 end
 
 # ╔═╡ f1b4139b-a25d-40cc-8db2-f1f877e10c4b
@@ -129,14 +129,15 @@ Partial matching produces graded transposition errors because it is based on the
 
 # ╔═╡ a3f7b98b-d4c8-423e-be15-6d4b1384b50a
 begin
-	ρ(δ, x, v) = δ * abs(x - v)
-	position = 5
-	vs = 1:10
-	δs = [0,1,2]
-	y = map(δ -> ρ.(δ, position, vs), δs)
-	plot(vs, y, label = δs', legendtitle="δ", grid=false,xlabel="position", ylabel="Mismatch Penalty",
-	    xaxis=font(12), yaxis=font(12), xticks=1:10, legend = :outerright)
-	vline!([position], color=:grey, linestyle=:dash, label="correct")
+    ρ(δ, x, v) = δ * abs(x - v)
+    position = 5
+    vs = 1:10
+    δs = [0, 1, 2]
+    y = map(δ -> ρ.(δ, position, vs), δs)
+    plot(vs, y, label = δs', legendtitle = "δ", grid = false, xlabel = "position",
+        ylabel = "Mismatch Penalty",
+        xaxis = font(12), yaxis = font(12), xticks = 1:10, legend = :outerright)
+    vline!([position], color = :grey, linestyle = :dash, label = "correct")
 end
 
 # ╔═╡ 395debd9-d565-402b-8041-1afe22b2487a
@@ -146,12 +147,22 @@ The plot below shows that retrieval probability is a decreasing function of mism
 
 # ╔═╡ 5dc98906-62a5-4cc4-b4da-59798af327ed
 let
-	position = 5
-	y = map(δ -> ρ.(δ, position, vs), δs)
-	prob(a) = exp.(-a) / sum(exp.(-a))
-	probs = prob.(y)
-	plot(vs, probs, label = δs', legendtitle="δ", grid=false, xlabel="position", ylabel="Retrieval Probabiity", xticks=1:10, ylims=(0,1))
-	vline!([position], color=:grey, linestyle=:dash, label="correct")
+    position = 5
+    y = map(δ -> ρ.(δ, position, vs), δs)
+    prob(a) = exp.(-a) / sum(exp.(-a))
+    probs = prob.(y)
+    plot(
+        vs,
+        probs,
+        label = δs',
+        legendtitle = "δ",
+        grid = false,
+        xlabel = "position",
+        ylabel = "Retrieval Probabiity",
+        xticks = 1:10,
+        ylims = (0, 1)
+    )
+    vline!([position], color = :grey, linestyle = :dash, label = "correct")
 end
 
 # ╔═╡ 0d928354-9604-4c7c-b374-034d8f580f29
@@ -212,9 +223,9 @@ The fuction `penalize` computes the absolute difference between the slot value o
 """
 
 # ╔═╡ e6367e9b-382c-43dc-932d-91007a86cb23
-begin	
-	penalize(s, v1::Array{Bool,1}, v2::Array{Bool,1}) = sum(@. abs(v1 - v2) * 1.0)
-	penalize(s, v1, v2) = abs(v1 .- v2)
+begin
+    penalize(s, v1::Array{Bool, 1}, v2::Array{Bool, 1}) = sum(@. abs(v1 - v2) * 1.0)
+    penalize(s, v1, v2) = abs(v1 .- v2)
 end
 
 # ╔═╡ 6ee1e8e6-af15-4f05-904f-4d20e68904ef
@@ -224,116 +235,117 @@ Now that our `simulate` and `penalize` function have been defined, we can now ge
 
 # ╔═╡ fbabeb36-5565-4039-9d28-144f1649ed99
 begin
-	function populate_memory(n_items, act=0.0)
-	    chunks = [Chunk(;act=act, position=i, retrieved=[false]) for i in 1:n_items]
-	    return chunks
-	end
-	
-	function reset_memory!(chunks)
-	    for c in chunks
-	        modify!(c.slots, retrieved=false)
-	    end
-	    return nothing
-	end
+    function populate_memory(n_items, act = 0.0)
+        chunks = [Chunk(; act = act, position = i, retrieved = [false]) for i = 1:n_items]
+        return chunks
+    end
+
+    function reset_memory!(chunks)
+        for c in chunks
+            modify!(c.slots, retrieved = false)
+        end
+        return nothing
+    end
 end
 
 # ╔═╡ bcba93bd-9278-498b-bed7-bdcde445126f
 begin
-	using Distributions
-	import Distributions: logpdf, rand, loglikelihood
-	
-	struct SerialRecall{T1,T2} <: ContinuousUnivariateDistribution
-	    δ::T1
-	    parms::T2
-	    n_trials::Int
-	end
-	
-	Broadcast.broadcastable(x::SerialRecall) = Ref(x)
-	
-	SerialRecall(;δ, parms, n_trials) = SerialRecall(δ, parms)
-	
-	loglikelihood(d::SerialRecall, data::Array{<:Array{<:NamedTuple,1},1}) = logpdf(d, data)
-	
-	function logpdf(d::SerialRecall ,data::Array{<:Array{<:NamedTuple,1},1})
-	    return computeLL(d.parms, data, d.n_trials; δ=d.δ)
-	end
+    using Distributions
+    import Distributions: logpdf, rand, loglikelihood
 
-	function computeLL(parms, all_data, n_items; δ)
-	    act = zero(typeof(δ))
-	    chunks = populate_memory(n_items, act)
-	    # populate declarative memory with chunks
-	    memory = Declarative(;memory=chunks)
-	    # initialize the ACTR object and add parameters
-	    actr = ACTR(;declarative=memory, parms..., δ)
-	    # initialize log likelihood
-	    LL = 0.0
-	    # loop over each block of data
-	    for data in all_data
-	        # reset retrieval slot to false for all chunks
-	        reset_memory!(chunks)
-	        # compute log likelhood of block data
-	        LL += block_LL(actr, data)
-	    end
-	    return LL
-	end
-	
-	function block_LL(actr, data)
-	    # initialize block log likelihood for block
-	    LL = 0.0
-	    # iterate over each block trial
-	    for k in data 
-	        # get the retrieved trucked
-	        chunk = get_chunks(actr; position=k.resp, retrieved=[false])
-	        # compute the probability of the retrieved chunk
-	        θᵣ,_ = retrieval_prob(actr, chunk; position=k.position, retrieved=[false])
-	        # set retrieved = true for the retrieved chunk
-	        modify!(chunk[1].slots, retrieved=true)
-	        # increment the log likelihood LL
-	        LL += log(θᵣ)
-	    end
-	    return LL
-	end
+    struct SerialRecall{T1, T2} <: ContinuousUnivariateDistribution
+        δ::T1
+        parms::T2
+        n_trials::Int
+    end
+
+    Broadcast.broadcastable(x::SerialRecall) = Ref(x)
+
+    SerialRecall(; δ, parms, n_trials) = SerialRecall(δ, parms)
+
+    loglikelihood(d::SerialRecall, data::Array{<:Array{<:NamedTuple, 1}, 1}) =
+        logpdf(d, data)
+
+    function logpdf(d::SerialRecall, data::Array{<:Array{<:NamedTuple, 1}, 1})
+        return computeLL(d.parms, data, d.n_trials; δ = d.δ)
+    end
+
+    function computeLL(parms, all_data, n_items; δ)
+        act = zero(typeof(δ))
+        chunks = populate_memory(n_items, act)
+        # populate declarative memory with chunks
+        memory = Declarative(; memory = chunks)
+        # initialize the ACTR object and add parameters
+        actr = ACTR(; declarative = memory, parms..., δ)
+        # initialize log likelihood
+        LL = 0.0
+        # loop over each block of data
+        for data in all_data
+            # reset retrieval slot to false for all chunks
+            reset_memory!(chunks)
+            # compute log likelhood of block data
+            LL += block_LL(actr, data)
+        end
+        return LL
+    end
+
+    function block_LL(actr, data)
+        # initialize block log likelihood for block
+        LL = 0.0
+        # iterate over each block trial
+        for k in data
+            # get the retrieved trucked
+            chunk = get_chunks(actr; position = k.resp, retrieved = [false])
+            # compute the probability of the retrieved chunk
+            θᵣ, _ = retrieval_prob(actr, chunk; position = k.position, retrieved = [false])
+            # set retrieved = true for the retrieved chunk
+            modify!(chunk[1].slots, retrieved = true)
+            # increment the log likelihood LL
+            LL += log(θᵣ)
+        end
+        return LL
+    end
 end
 
 # ╔═╡ b90540cf-9d4d-4e5b-b604-e2999a7449f1
-function simulate(parms, n_items=10; δ)
+function simulate(parms, n_items = 10; δ)
     chunks = populate_memory(n_items)
     # populate declarative memory with chunks
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     # initialize the ACTR object and add parameters
-    actr = ACTR(;declarative=memory, parms..., δ)
+    actr = ACTR(; declarative = memory, parms..., δ)
     # initialize an array of data
-    np = NamedTuple{(:position, :resp),Tuple{Int64,Int64}}
-    data = Array{np,1}(undef,n_items)
+    np = NamedTuple{(:position, :resp), Tuple{Int64, Int64}}
+    data = Array{np, 1}(undef, n_items)
     #indices for each chunk. -100 is a retrieval failure
-    ω = [1:n_items;-100]
-    for i in 1:n_items
+    ω = [1:n_items; -100]
+    for i = 1:n_items
         # compute retrieval probabilities θ for retrieval request current position i 
         # and non-retrieved chunks
-        θ,request = retrieval_probs(actr; position=i, retrieved=[false])
+        θ, request = retrieval_probs(actr; position = i, retrieved = [false])
         # select a random chunk index weighted by retrieval probabilities
         resp = sample(ω, Weights(θ))
         # get the retrieved chunk
         chunk = request[resp]
         # set retrieved chunk to retrieved = true
-        modify!(chunk.slots, retrieved=true)
+        modify!(chunk.slots, retrieved = true)
         # add NamedTuple for current position and position of retrieved chunk
-        data[i] = (position=i,resp=chunk.slots.position)
+        data[i] = (position = i, resp = chunk.slots.position)
     end
     return data
 end
 
 # ╔═╡ fc799bd7-2f39-4833-92e4-f24abdda0367
 begin
-	# mismatch penalty parameter
-	δ = 1.0
-	# number of blocks
-	n_blocks = 10
-	# number of items per block
-	n_items = 10
-	# fixed parameters
-	parms = (s = 0.3, τ = -100.0, mmp = true, noise = true, dissim_func = penalize)
-	data = map(_ -> simulate(parms, n_items; δ), 1:n_blocks);
+    # mismatch penalty parameter
+    δ = 1.0
+    # number of blocks
+    n_blocks = 10
+    # number of items per block
+    n_items = 10
+    # fixed parameters
+    parms = (s = 0.3, τ = -100.0, mmp = true, noise = true, dissim_func = penalize)
+    data = map(_ -> simulate(parms, n_items; δ), 1:n_blocks)
 end
 
 # ╔═╡ 93a91615-83be-4382-9369-526173eaf3e0
@@ -380,13 +392,20 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ ce61291f-e099-40b5-9599-8e86578a11fc
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, 0.8)
-	# Start sampling.
-	chain = sample(model(data, parms, n_items), specs, MCMCThreads(), n_samples, n_chains, progress=true)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, 0.8)
+    # Start sampling.
+    chain = sample(
+        model(data, parms, n_items),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
 end
 
 # ╔═╡ 7f2537cb-cefc-48ec-81d5-8a1ba888de44
@@ -401,14 +420,20 @@ The first panel for each plot shows good mixing between the four chains. In the 
 """
 
 # ╔═╡ 1530dc8e-99ab-4daf-8950-e7e794309c75
-let  
-	font_size = 12
-	ch = group(chain, :δ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot),
-	  grid=false, titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=		(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+let
+    font_size = 12
+    ch = group(chain, :δ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot),
+        grid = false, titlefont = font(font_size))
+    p3 = plot(
+        ch,
+        xaxis = font(font_size),
+        yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false
+    )
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ dfe35cd9-5e3f-4625-9cf7-cbfb94fa7be8
@@ -420,25 +445,35 @@ The code block below generates the posterior distribution of transposition displ
 
 # ╔═╡ d242208c-d5d7-4abc-9266-cb4d13843d2c
 begin
-	function transpostions(parms, n_items; δ)
-	    data = simulate(parms, n_items; δ)
-	    positions = map(x->x.resp, data)
-	    return @. abs([1:n_items;] - positions)
-	end
-	
-	function serial_position(parms, n_items; δ)
-	    data = simulate(parms, n_items; δ)
-	    positions = map(x->x.resp, data)
-	    return @. 1:n_items .== positions
-	end
+    function transpostions(parms, n_items; δ)
+        data = simulate(parms, n_items; δ)
+        positions = map(x -> x.resp, data)
+        return @. abs([1:n_items;] - positions)
+    end
+
+    function serial_position(parms, n_items; δ)
+        data = simulate(parms, n_items; δ)
+        positions = map(x -> x.resp, data)
+        return @. 1:n_items .== positions
+    end
 end
 
 # ╔═╡ 8d06714c-b24d-4728-b389-c87b7cfcc867
 begin
-	preds = posterior_predictive(x -> serial_position(parms, n_items; x...), chain, 1000)
-	preds = hcat(preds...)
-	sp_effect = mean(preds, dims=2)
-	p5 = plot(1:n_items, sp_effect, xlabel="Position", ylims = (0,1), ylabel="Accuracy", grid=false, color=:grey, leg=false, linewidth=1.5)
+    preds = posterior_predictive(x -> serial_position(parms, n_items; x...), chain, 1000)
+    preds = hcat(preds...)
+    sp_effect = mean(preds, dims = 2)
+    p5 = plot(
+        1:n_items,
+        sp_effect,
+        xlabel = "Position",
+        ylims = (0, 1),
+        ylabel = "Accuracy",
+        grid = false,
+        color = :grey,
+        leg = false,
+        linewidth = 1.5
+    )
 end
 
 # ╔═╡ 9746e63b-d0cb-4899-8de6-8d423ae7164a
@@ -448,22 +483,42 @@ It turns out that inter-trial dependencies from inhabition of return can produce
 
 # ╔═╡ 74eb41c8-2973-448c-a101-e46c8f95815b
 let
-	preds = posterior_predictive(x -> serial_position(parms, n_items; x...), chain, 10000)
-	preds = hcat(preds...)
-	sp_effect = mean(preds, dims=2)
-	p5 = plot(1:n_items, sp_effect, xlabel="Position", ylims = (0,1), ylabel="Accuracy",  grid=false, color=:grey, leg=false, linewidth=1.5)
-	
-	# plot retrieval probability for item in first position
-	position = 1
-	vs = 1:10
-	δs = [0,1,2]
-	y = map(δ->ρ.(δ, position, vs), δs)
-	prob(a) = exp.(-a) / sum(exp.(-a))
-	probs = prob.(y)
-	p6 = plot(vs, probs, label = δs', legendtitle="δ", grid=false, xlabel="position", ylabel="Retrieval Probabiity", xticks=1:10, ylims=(0,1))
-	vline!([position], color=:grey, linestyle=:dash, label="correct")
-	# combine plots
-	plot(p5, p6, layout=(2,1))
+    preds = posterior_predictive(x -> serial_position(parms, n_items; x...), chain, 10000)
+    preds = hcat(preds...)
+    sp_effect = mean(preds, dims = 2)
+    p5 = plot(
+        1:n_items,
+        sp_effect,
+        xlabel = "Position",
+        ylims = (0, 1),
+        ylabel = "Accuracy",
+        grid = false,
+        color = :grey,
+        leg = false,
+        linewidth = 1.5
+    )
+
+    # plot retrieval probability for item in first position
+    position = 1
+    vs = 1:10
+    δs = [0, 1, 2]
+    y = map(δ -> ρ.(δ, position, vs), δs)
+    prob(a) = exp.(-a) / sum(exp.(-a))
+    probs = prob.(y)
+    p6 = plot(
+        vs,
+        probs,
+        label = δs',
+        legendtitle = "δ",
+        grid = false,
+        xlabel = "position",
+        ylabel = "Retrieval Probabiity",
+        xticks = 1:10,
+        ylims = (0, 1)
+    )
+    vline!([position], color = :grey, linestyle = :dash, label = "correct")
+    # combine plots
+    plot(p5, p6, layout = (2, 1))
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

@@ -6,9 +6,10 @@ using InteractiveUtils
 
 # ╔═╡ bee213aa-db64-4ae2-b65b-8ecbde45a0da
 begin
-	using CmdStan, Distributions, Random, StatsPlots, ACTRModels, CSV, DataFrames, MCMCChains
-	using PlutoUI
-	TableOfContents()
+    using CmdStan,
+        Distributions, Random, StatsPlots, ACTRModels, CSV, DataFrames, MCMCChains
+    using PlutoUI
+    TableOfContents()
 end
 
 # ╔═╡ c08fffe0-ecf8-11ec-05eb-15b906fa1db0
@@ -83,227 +84,247 @@ Utilities
 
 # ╔═╡ cf104abb-1d6b-4974-964d-85040a0415c2
 begin
-	people = [:hippie,:hippie,:hippie,:captain,:captain,:debutante,:fireman,:giant,
-	          :giant,:giant,:earl,:earl,:lawyer]
-	
-	places = [:park,:church,:bank,:park,:cave,:bank,:park,:beach,:castle,:dungeon,
-	  :castle,:forest,:store]
-	
-	  slots = (people=people,places=places)
+    people = [:hippie, :hippie, :hippie, :captain, :captain, :debutante, :fireman, :giant,
+        :giant, :giant, :earl, :earl, :lawyer]
 
-	trial = [:target,:target,:target,:target,:target,
-         :target,:target,:target,:target,:foil,:foil,:foil,:foil,
-         :foil,:foil,:foil,:foil,:foil]
-	pep = [:lawyer,:captain,:hippie,:debutante,:earl,:hippie,
-	          :fireman,:captain,:hippie,:fireman,:captain,:giant,
-	          :fireman,:captain,:giant,:lawyer,:earl,:giant]
-	pla = [:store,:cave,:church,:bank,:castle,:bank,:park,
-	          :park,:park,:store,:store,:store,
-	          :bank,:bank,:bank,:park,:park,:park]
-	
-	stimuli = [(trial=t,person=p,place=pl) for (t,p,pl) in zip(trial,pep,pla)]
+    places = [:park, :church, :bank, :park, :cave, :bank, :park, :beach, :castle, :dungeon,
+        :castle, :forest, :store]
 
-	"""
-	Computes the fan values for the stimulus set. Returns a NamedTuple
-	    for each trial.
-	"""
-	function count_fan(vals)
-	    un = (unique(vals)...,)
-	    uc = map(y->count(x->x==y, vals), un)
-	    return NamedTuple{un}(uc)
-	end
-	
-	"""
-	Returns fan values for a given person-place pair
-	"""
-	function get_fan(vals, person, place)
-	    return (fanPerson=vals[:people][person],fanPlace=vals[:places][place])
-	end
-	
-	"""
-	Computes mean RT for each fan condition. Used in posterior predictive
-	"""
-	summarize(vals) = summarize(DataFrame(vcat(vals...)))
-	
-	function summarize(df::DataFrame)
-	    g = groupby(df, [:trial,:resp,:fanPerson,:fanPlace])
-	    return combine(g, :rt=>mean=>:MeanRT)
-	end
-	
-	"""
-	Computes accuracy for each fan condition. Used in posterior predictive
-	"""
-	accuracy(vals) = accuracy(DataFrame(vcat(vals...)))
-	accuracy(df::DataFrame) = accuracy(df, [:trial,:fanPerson,:fanPlace])
-	
-	function accuracy(df::DataFrame, factors)
-	    g = groupby(df, factors)
-	    compute_correct!(df)
-	    pred_correct = combine(g, accuracy=:correct=>mean)
-	    return pred_correct
-	end
-	
-	function compute_correct!(df)
-	  df[:,:correct] = (df[:,:resp] .== :yes) .& (df[:,:trial] .== :target) .| (df[:,:resp] .== :no) .& (df[:,:trial] .== :foil)
-	end
-	
-	"""
-	Formats simulated data for Stan
-	"""
-	function parse_data_stan(data, uvals)
-	    df = DataFrame(data)
-	    Nrows = size(df,1)
-	    df = DataFrame(data)
-	    rts = df[!,:rt]
-	    idx = df[!,:resp] .== :yes
-	    resp = fill(1,Nrows)
-	    resp[idx] .+= 1
-	    person = fill(0.0,Nrows)
-	    for (i,u) in enumerate(uvals)
-	        idx = df[!,:person] .== u
-	        person[idx] .= i
-	    end
-	    place = fill(0.0,Nrows)
-	    for (i,u) in enumerate(uvals)
-	        idx = df[!,:place] .== u
-	        place[idx] .= i
-	    end
-	    stimuli_values = [person place]
-	    stimuli_slots = [fill(1.0,Nrows) fill(2.0,Nrows)]
-	    return rts,resp,stimuli_slots,stimuli_values
-	end
-	
-	"""
-	Transforms symbols into integer ids for person-place memory values
-	"""
-	function stan_memory_values(allVals, uvals)
-	  memory_values = fill(0.0, size(allVals))
-	  for (i,u) in enumerate(uvals)
-	      idx = allVals .== u
-	      memory_values[idx] .= i
-	  end
-	  return memory_values
-	end
-	
-	"""
-	Processes data so that it can be used with optimized Stan Full Fan model.
-	"""
-	function simplify_data(data, slots, parms; Θ...)
-	    df = DataFrame()
-	    for (i,d) in enumerate(data)
-	        temp = simplify_data_trial(i, d, slots, parms; Θ...)
-	        append!(df, temp)
-	    end
-	    return df
-	end
-	
-	function simplify_data_trial(trial_id, stimulus, slots, parms; Θ...)
-	    fanCount = map(x->count_fan(x), slots)
-	    request = (person=stimulus.person, place=stimulus.place)
-	    chunks = [Chunk(;person=pe, place=pl) for (pe,pl) in zip(slots...)]
-	    #Creates a declarative memory object that holds an array of chunks and model parameters
-	    memory = Declarative(;memory=chunks, parms..., Θ...)
-	    #Initialize imaginal buffer
-	    imaginal = Imaginal(chunk=chunks[1])
-	    #Creates an ACTR object that holds declarative memory and other modules as needed
-	    actr = ACTR(;declarative=memory, imaginal=imaginal)
-	    imaginal.chunk = Chunk(; request...)
-	    memory.parms.noise = false
-	    map(x->x.act_noise=0.0, chunks)
-	    computeActivation!(actr; request...)
-	    results = retrievalRequest(actr; request...)
-	    stimulus_fans = getFan(fanCount, stimulus.person, stimulus.place)
-	    get_penalty(c::Chunk, r) = get_penalty(c.slots, r)
-	    get_penalty(c, r) = mapreduce(k->count(c[k] != r[k]), +,  keys(r))
-	    resp = stimulus.resp == :yes ? 2 : 1
-	    g(;kwargs...) = (stimulus=request, trial_id=trial_id, trial=stimulus.trial, rt=stimulus.rt, resp=resp,
-	        stimulus_fans..., kwargs...)
-	    vals = map(x->g(;chunk=x.slots, activation=x.act, penalty=get_penalty(x, request), get_chunk_fan(x, request, stimulus_fans)...), results)
-	    return DataFrame(vals)
-	end
-	
-	"""
-	Computes the person and place fan values
-	"""
-	function get_chunk_fan(c, r, fans)
-	    personFan,placeFan = 0,0
-	    if c.person == r.person
-	        personFan = fans.fanPerson
-	    end
-	    if c.place == r.place
-	        placeFan = fans.fanPlace
-	    end
-	    return (chunkPersonFan=personFan, chunkPlaceFan=placeFan)
-	end
-	
-	get_chunk_fan(c::Chunk, r, fans) = get_chunk_fan(c.slots, r, fans)
-	
-	function add_activation_id!(df)
-	    n = unique([(row.activation) for row in eachrow(df)])
-	    df.activation_id = [findfirst(x -> (row.activation) == x, n)
-	        for row in eachrow(df)]
-	    return nothing
-	end
-	
-	function add_problem_id!(df)
-	    n = unique([(row.trial, row.fanPerson, row.fanPlace) for row in eachrow(df)])
-	    df.problem_id = [findfirst(x -> (row.trial, row.fanPerson, row.fanPlace) == x, n)
-	        for row in eachrow(df)]
-	    return nothing
-	end
-	
-	function add_production_id!(df)
-	    n = unique([(row.penalty) for row in eachrow(df)])
-	    df.production_id = [findfirst(x -> (row.penalty) == x, n)
-	        for row in eachrow(df)]
-	    return nothing
-	end
-	
-	function get_response_data(df)
-	    g = groupby(df, [:trial_id,:problem_id])
-	    f(x) = x[1]
-	    return combine(g, :rt => f=>:rt, :resp=>f=>:resp)
-	end
-	
-	# add response log prob id
-	function get_stimulus_info(df)
-	    g = groupby(df, [:trial_id,:problem_id,:activation_id,:production_id])
-	    temp = combine(g, :activation_id=>length=>:count)
-	    max_id = maximum(temp.activation_id)
-	    g = groupby(temp, :problem_id)
-	    thresholds = combine(g, :activation_id=>(x->max_id+1)=>:activation_id,
-	        :production_id=>(x->4)=>:production_id,
-	        :count=>(x->1)=>:counts)
-	    g = groupby(temp, [:problem_id,:activation_id,:production_id])
-	    f2(x) = Int(mean(x))
-	    stimulus_info = combine(g, :count=>f2=>:counts)
-	    append!(stimulus_info, thresholds)
-	    sort!(stimulus_info, [:problem_id,:activation_id,:production_id])
-	    return stimulus_info
-	end
-	
-	function get_activation_info(df)
-	    f(x) = x[1]
-	    g = groupby(df, :activation_id)
-	    temp = combine(g, :penalty=>f=>:penalty,
-	        :chunkPersonFan=>f=>:chunkPersonFan,
-	        :chunkPlaceFan=>f=>:chunkPlaceFan)
-	    max_id = maximum(temp.activation_id)
-	    push!(temp, (activation_id=max_id+1, penalty=0,chunkPersonFan=0, chunkPlaceFan=0))
-	    sort!(temp, :activation_id)
-	    return temp
-	end
-	
-	function get_production_info(df)
-	    g = groupby(df, :production_id)
-	    temp = combine(g, :penalty=>(x->x[1])=>:penalty)
-	    max_id = maximum(temp.production_id)
-	    # case for retrieval failure.
-	    push!(temp, (production_id=max_id+1, penalty=-100,))
-	    sort!(temp, :production_id)
-	    return temp
-	end
+    slots = (people = people, places = places)
 
+    trial = [:target, :target, :target, :target, :target,
+        :target, :target, :target, :target, :foil, :foil, :foil, :foil,
+        :foil, :foil, :foil, :foil, :foil]
+    pep = [:lawyer, :captain, :hippie, :debutante, :earl, :hippie,
+        :fireman, :captain, :hippie, :fireman, :captain, :giant,
+        :fireman, :captain, :giant, :lawyer, :earl, :giant]
+    pla = [:store, :cave, :church, :bank, :castle, :bank, :park,
+        :park, :park, :store, :store, :store,
+        :bank, :bank, :bank, :park, :park, :park]
+
+    stimuli = [(trial = t, person = p, place = pl) for (t, p, pl) in zip(trial, pep, pla)]
+
+    """
+    Computes the fan values for the stimulus set. Returns a NamedTuple
+        for each trial.
+    """
+    function count_fan(vals)
+        un = (unique(vals)...,)
+        uc = map(y -> count(x -> x == y, vals), un)
+        return NamedTuple{un}(uc)
+    end
+
+    """
+    Returns fan values for a given person-place pair
+    """
+    function get_fan(vals, person, place)
+        return (fanPerson = vals[:people][person], fanPlace = vals[:places][place])
+    end
+
+    """
+    Computes mean RT for each fan condition. Used in posterior predictive
+    """
+    summarize(vals) = summarize(DataFrame(vcat(vals...)))
+
+    function summarize(df::DataFrame)
+        g = groupby(df, [:trial, :resp, :fanPerson, :fanPlace])
+        return combine(g, :rt => mean => :MeanRT)
+    end
+
+    """
+    Computes accuracy for each fan condition. Used in posterior predictive
+    """
+    accuracy(vals) = accuracy(DataFrame(vcat(vals...)))
+    accuracy(df::DataFrame) = accuracy(df, [:trial, :fanPerson, :fanPlace])
+
+    function accuracy(df::DataFrame, factors)
+        g = groupby(df, factors)
+        compute_correct!(df)
+        pred_correct = combine(g, accuracy = :correct => mean)
+        return pred_correct
+    end
+
+    function compute_correct!(df)
+        df[:, :correct] =
+            (df[:, :resp] .== :yes) .& (df[:, :trial] .== :target) .|
+            (df[:, :resp] .== :no) .& (df[:, :trial] .== :foil)
+    end
+
+    """
+    Formats simulated data for Stan
+    """
+    function parse_data_stan(data, uvals)
+        df = DataFrame(data)
+        Nrows = size(df, 1)
+        df = DataFrame(data)
+        rts = df[!, :rt]
+        idx = df[!, :resp] .== :yes
+        resp = fill(1, Nrows)
+        resp[idx] .+= 1
+        person = fill(0.0, Nrows)
+        for (i, u) in enumerate(uvals)
+            idx = df[!, :person] .== u
+            person[idx] .= i
+        end
+        place = fill(0.0, Nrows)
+        for (i, u) in enumerate(uvals)
+            idx = df[!, :place] .== u
+            place[idx] .= i
+        end
+        stimuli_values = [person place]
+        stimuli_slots = [fill(1.0, Nrows) fill(2.0, Nrows)]
+        return rts, resp, stimuli_slots, stimuli_values
+    end
+
+    """
+    Transforms symbols into integer ids for person-place memory values
+    """
+    function stan_memory_values(allVals, uvals)
+        memory_values = fill(0.0, size(allVals))
+        for (i, u) in enumerate(uvals)
+            idx = allVals .== u
+            memory_values[idx] .= i
+        end
+        return memory_values
+    end
+
+    """
+    Processes data so that it can be used with optimized Stan Full Fan model.
+    """
+    function simplify_data(data, slots, parms; Θ...)
+        df = DataFrame()
+        for (i, d) in enumerate(data)
+            temp = simplify_data_trial(i, d, slots, parms; Θ...)
+            append!(df, temp)
+        end
+        return df
+    end
+
+    function simplify_data_trial(trial_id, stimulus, slots, parms; Θ...)
+        fanCount = map(x -> count_fan(x), slots)
+        request = (person = stimulus.person, place = stimulus.place)
+        chunks = [Chunk(; person = pe, place = pl) for (pe, pl) in zip(slots...)]
+        #Creates a declarative memory object that holds an array of chunks and model parameters
+        memory = Declarative(; memory = chunks, parms..., Θ...)
+        #Initialize imaginal buffer
+        imaginal = Imaginal(chunk = chunks[1])
+        #Creates an ACTR object that holds declarative memory and other modules as needed
+        actr = ACTR(; declarative = memory, imaginal = imaginal)
+        imaginal.chunk = Chunk(; request...)
+        memory.parms.noise = false
+        map(x -> x.act_noise = 0.0, chunks)
+        computeActivation!(actr; request...)
+        results = retrievalRequest(actr; request...)
+        stimulus_fans = getFan(fanCount, stimulus.person, stimulus.place)
+        get_penalty(c::Chunk, r) = get_penalty(c.slots, r)
+        get_penalty(c, r) = mapreduce(k -> count(c[k] != r[k]), +, keys(r))
+        resp = stimulus.resp == :yes ? 2 : 1
+        g(; kwargs...) = (stimulus = request, trial_id = trial_id, trial = stimulus.trial,
+            rt = stimulus.rt, resp = resp,
+            stimulus_fans..., kwargs...)
+        vals = map(
+            x -> g(;
+                chunk = x.slots,
+                activation = x.act,
+                penalty = get_penalty(x, request),
+                get_chunk_fan(x, request, stimulus_fans)...
+            ),
+            results
+        )
+        return DataFrame(vals)
+    end
+
+    """
+    Computes the person and place fan values
+    """
+    function get_chunk_fan(c, r, fans)
+        personFan, placeFan = 0, 0
+        if c.person == r.person
+            personFan = fans.fanPerson
+        end
+        if c.place == r.place
+            placeFan = fans.fanPlace
+        end
+        return (chunkPersonFan = personFan, chunkPlaceFan = placeFan)
+    end
+
+    get_chunk_fan(c::Chunk, r, fans) = get_chunk_fan(c.slots, r, fans)
+
+    function add_activation_id!(df)
+        n = unique([(row.activation) for row in eachrow(df)])
+        df.activation_id = [findfirst(x -> (row.activation) == x, n)
+                            for row in eachrow(df)]
+        return nothing
+    end
+
+    function add_problem_id!(df)
+        n = unique([(row.trial, row.fanPerson, row.fanPlace) for row in eachrow(df)])
+        df.problem_id = [
+            findfirst(x -> (row.trial, row.fanPerson, row.fanPlace) == x, n)
+            for row in eachrow(df)
+        ]
+        return nothing
+    end
+
+    function add_production_id!(df)
+        n = unique([(row.penalty) for row in eachrow(df)])
+        df.production_id = [findfirst(x -> (row.penalty) == x, n)
+                            for row in eachrow(df)]
+        return nothing
+    end
+
+    function get_response_data(df)
+        g = groupby(df, [:trial_id, :problem_id])
+        f(x) = x[1]
+        return combine(g, :rt => f => :rt, :resp => f => :resp)
+    end
+
+    # add response log prob id
+    function get_stimulus_info(df)
+        g = groupby(df, [:trial_id, :problem_id, :activation_id, :production_id])
+        temp = combine(g, :activation_id => length => :count)
+        max_id = maximum(temp.activation_id)
+        g = groupby(temp, :problem_id)
+        thresholds = combine(g, :activation_id => (x -> max_id + 1) => :activation_id,
+            :production_id => (x -> 4) => :production_id,
+            :count => (x -> 1) => :counts)
+        g = groupby(temp, [:problem_id, :activation_id, :production_id])
+        f2(x) = Int(mean(x))
+        stimulus_info = combine(g, :count => f2 => :counts)
+        append!(stimulus_info, thresholds)
+        sort!(stimulus_info, [:problem_id, :activation_id, :production_id])
+        return stimulus_info
+    end
+
+    function get_activation_info(df)
+        f(x) = x[1]
+        g = groupby(df, :activation_id)
+        temp = combine(g, :penalty => f => :penalty,
+            :chunkPersonFan => f => :chunkPersonFan,
+            :chunkPlaceFan => f => :chunkPlaceFan)
+        max_id = maximum(temp.activation_id)
+        push!(
+            temp,
+            (
+                activation_id = max_id + 1,
+                penalty = 0,
+                chunkPersonFan = 0,
+                chunkPlaceFan = 0
+            )
+        )
+        sort!(temp, :activation_id)
+        return temp
+    end
+
+    function get_production_info(df)
+        g = groupby(df, :production_id)
+        temp = combine(g, :penalty => (x -> x[1]) => :penalty)
+        max_id = maximum(temp.production_id)
+        # case for retrieval failure.
+        push!(temp, (production_id = max_id + 1, penalty = -100))
+        sort!(temp, :production_id)
+        return temp
+    end
 end
 
 # ╔═╡ 07eeccba-9e2d-4b9a-9f00-b38383cb8930
@@ -435,51 +456,58 @@ For each stimulus, the function `simulate_block` performs the following operatio
 
 # ╔═╡ b3808ebd-6969-4830-950e-2ec4dde2df2a
 begin
-	function simulate(stimuli, slots, parms, n_blocks; δ, γ)
-	    #Creates an array of chunks for declarative memory
-	    chunks = [Chunk(;person=pe, place=pl) for (pe,pl) in zip(slots...)]
-	    #Creates a declarative memory object that holds an array of chunks and model parameters
-	    memory = Declarative(;memory=chunks)
-	    #Initialize imaginal buffer
-	    imaginal = Imaginal(buffer=chunks[1])
-	    #Creates an ACTR object that holds declarative memory and other modules as needed
-	    actr = ACTR(;declarative=memory, imaginal=imaginal, parms..., δ, γ)
-	    data = Array{Array{<:NamedTuple, 1}, 1}(undef,n_blocks)
-	    for b in 1:n_blocks
-	        data[b] = simulate_block(actr, stimuli, slots)
-	    end
-	    return vcat(data...)
-	end
-	
-	function simulate_block(actr, stimuli, slots)
-	    @unpack declarative,imaginal = actr
-	    #Extract ter parameter for encoding and motor response
-	    ter = get_parm(actr, :ter)
-	    resp = :_
-	    data = Array{NamedTuple, 1}(undef,length(stimuli))
-	    i = 0
-	    #Counts the fan for each person-place pair
-	    fanCount = map(x->count_fan(x), slots)
-	    for (trial,person,place) in stimuli
-	        i += 1
-	        #Encode stimulus into imaginal buffer
-	        imaginal.buffer[1] = Chunk(;person, place)
-	        #Retrieve chunk given person-place retrieval request
-	        chunk = retrieve(actr; person, place)
-	        #Compute the retrieval time of the retrieved chunk and add ter
-	        rt = compute_RT(actr, chunk) + ter
-	        if isempty(chunk) || !match(chunk[1]; person, place)
-	            resp = :no
-	        else
-	            resp = :yes
-	        end
-	        #Get the fan for the person and place
-	        fan = get_fan(fanCount, person, place)
-	        #Record all of the simulation output for the ith trial
-	        data[i] = (trial=trial,person=person,place=place,fan...,rt=rt,resp=resp)
-	    end
-	    return data
-	end
+    function simulate(stimuli, slots, parms, n_blocks; δ, γ)
+        #Creates an array of chunks for declarative memory
+        chunks = [Chunk(; person = pe, place = pl) for (pe, pl) in zip(slots...)]
+        #Creates a declarative memory object that holds an array of chunks and model parameters
+        memory = Declarative(; memory = chunks)
+        #Initialize imaginal buffer
+        imaginal = Imaginal(buffer = chunks[1])
+        #Creates an ACTR object that holds declarative memory and other modules as needed
+        actr = ACTR(; declarative = memory, imaginal = imaginal, parms..., δ, γ)
+        data = Array{Array{<:NamedTuple, 1}, 1}(undef, n_blocks)
+        for b = 1:n_blocks
+            data[b] = simulate_block(actr, stimuli, slots)
+        end
+        return vcat(data...)
+    end
+
+    function simulate_block(actr, stimuli, slots)
+        @unpack declarative, imaginal = actr
+        #Extract ter parameter for encoding and motor response
+        ter = get_parm(actr, :ter)
+        resp = :_
+        data = Array{NamedTuple, 1}(undef, length(stimuli))
+        i = 0
+        #Counts the fan for each person-place pair
+        fanCount = map(x -> count_fan(x), slots)
+        for (trial, person, place) in stimuli
+            i += 1
+            #Encode stimulus into imaginal buffer
+            imaginal.buffer[1] = Chunk(; person, place)
+            #Retrieve chunk given person-place retrieval request
+            chunk = retrieve(actr; person, place)
+            #Compute the retrieval time of the retrieved chunk and add ter
+            rt = compute_RT(actr, chunk) + ter
+            if isempty(chunk) || !match(chunk[1]; person, place)
+                resp = :no
+            else
+                resp = :yes
+            end
+            #Get the fan for the person and place
+            fan = get_fan(fanCount, person, place)
+            #Record all of the simulation output for the ith trial
+            data[i] = (
+                trial = trial,
+                person = person,
+                place = place,
+                fan...,
+                rt = rt,
+                resp = resp
+            )
+        end
+        return data
+    end
 end
 
 # ╔═╡ 2b4092e2-005c-4c38-9dc7-540d54dbaff2
@@ -489,20 +517,20 @@ In the code block below, we will generate 5 blocks of simulated data, producing 
 
 # ╔═╡ 07bc0184-b1c2-4297-b60c-06451038c1f0
 begin
-	seed = 684478
-	Random.seed!(seed)
-	# true value for mismatch penalty parameter 
-	δ = 0.5
-	# true value for maximum association strength
-	γ = 1.6
-	n_reps = 5
-	# fixed parameters used in the model
-	parms = (blc=0.3, τ=-0.5, noise=true, sa=true, mmp=true, s=0.2, ter=.845)
-	# Generates data for Nblocks. Slots contains the slot-value pairs to populate memory
-	#stimuli contains the target and foil trials.
-	temp = simulate(stimuli, slots, parms, n_reps; γ, δ)
-	#Forces the data into a concrete type for improved performance
-	data = vcat(temp...);
+    seed = 684478
+    Random.seed!(seed)
+    # true value for mismatch penalty parameter 
+    δ = 0.5
+    # true value for maximum association strength
+    γ = 1.6
+    n_reps = 5
+    # fixed parameters used in the model
+    parms = (blc = 0.3, τ = -0.5, noise = true, sa = true, mmp = true, s = 0.2, ter = 0.845)
+    # Generates data for Nblocks. Slots contains the slot-value pairs to populate memory
+    #stimuli contains the target and foil trials.
+    temp = simulate(stimuli, slots, parms, n_reps; γ, δ)
+    #Forces the data into a concrete type for improved performance
+    data = vcat(temp...)
 end
 
 # ╔═╡ e0485b53-47ab-488a-b5e4-d0df84f7295a
@@ -510,14 +538,13 @@ md"""
 Next, the data must be reformatted for Stan
 """
 
-
 # ╔═╡ 717e576c-6900-4cd6-b8b2-fc8eb58f4b5d
 begin
-	allVals = [people places]
-	uvals = unique(allVals)
-	memory_values = stan_memory_values(allVals, uvals)
-	memory_slots = [fill(1.0,length(places)) fill(2.0,length(places))]
-	rts,resp,stimuli_slots,stimuli_values = parse_data_stan(data, uvals);
+    allVals = [people places]
+    uvals = unique(allVals)
+    memory_values = stan_memory_values(allVals, uvals)
+    memory_slots = [fill(1.0, length(places)) fill(2.0, length(places))]
+    rts, resp, stimuli_slots, stimuli_values = parse_data_stan(data, uvals)
 end
 
 # ╔═╡ 787aa115-592b-42e9-b29a-5634686d30d2
@@ -542,9 +569,12 @@ All of the variables declared in the data block are collected in a `Dictionary` 
 """
 
 # ╔═╡ dce50f6a-3dce-4009-8f20-20962c4727f8
-stan_input = Dict("mp"=>1, "bll"=>0,"sa"=>1, "ter"=>parms.ter, "s"=>parms.s, "tau"=>parms.τ, "blc"=>parms.blc, 
-  "resp"=>resp, "rts"=>rts, "n_obs"=>length(data),"memory_slots"=>memory_slots, "memory_values"=>memory_values,
-   "n_slots"=>2, "stimuli_slots"=>stimuli_slots,"stimuli_values"=>stimuli_values, "n_chunks"=>length(slots.people))
+stan_input = Dict("mp" => 1, "bll" => 0, "sa" => 1, "ter" => parms.ter, "s" => parms.s,
+    "tau" => parms.τ, "blc" => parms.blc,
+    "resp" => resp, "rts" => rts, "n_obs" => length(data),
+    "memory_slots" => memory_slots, "memory_values" => memory_values,
+    "n_slots" => 2, "stimuli_slots" => stimuli_slots,
+    "stimuli_values" => stimuli_values, "n_chunks" => length(slots.people))
 
 # ╔═╡ cae7c912-cf39-4433-8f05-c23e7f855f62
 md"""
@@ -1043,14 +1073,16 @@ Now that the priors, likelihood, and Turing model have been specified, we can no
 
 # ╔═╡ c8c79ae7-cc10-4d91-880d-55c388e61a19
 begin
-	n_chains = 4
-	proj_dir = pwd()
-	stanmodel = Stanmodel(Sample(save_warmup=false, num_warmup=1000,
-	  num_samples=1000, thin=1), nchains=n_chains, name="Fan_Model_2", model=Model,
-	  printsummary=false, output_format=:mcmcchains, random = CmdStan.Random(seed))
-	
-	rc, chain, cnames = stan(stanmodel, stan_input, proj_dir)
-	chain = replacenames(chain, Dict("gamma"=>"γ", "delta"=>"δ"))
+    n_chains = 4
+    proj_dir = pwd()
+    stanmodel = Stanmodel(
+        Sample(save_warmup = false, num_warmup = 1000,
+            num_samples = 1000, thin = 1), nchains = n_chains, name = "Fan_Model_2", model = Model,
+        printsummary = false, output_format = :mcmcchains, random = CmdStan.Random(seed)
+    )
+
+    rc, chain, cnames = stan(stanmodel, stan_input, proj_dir)
+    chain = replacenames(chain, Dict("gamma" => "γ", "delta" => "δ"))
 end
 
 # ╔═╡ db6571fc-d2ff-4216-b0a6-8b1a88f9183f
@@ -1061,21 +1093,21 @@ A summary of the parameter estimates can be found in the output above. The diagn
 """
 
 # ╔═╡ 70d5e905-c063-4758-83ea-38486963aba3
-let 
-	ch = group(chain, :γ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    ch = group(chain, :γ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ e89e6689-bbe5-4fe4-8d8e-a9f8f68bacbc
-let 
-	ch = group(chain, :δ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    ch = group(chain, :δ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 253b8bf6-67a3-4d44-9a31-406674f0b97a
@@ -1086,19 +1118,33 @@ The code block below plots the posterior predictive distributions for correct rt
 """
 
 # ╔═╡ 84c3fee7-302a-430d-992b-e4dd8f21d1b5
-let 
-	sim(p) = simulate(stimuli, slots, parms, n_reps; p...)
-	preds = posterior_predictive(x->sim(x), chain, 1000, summarize)
-	df = vcat(preds...)
-	fan_effect = filter(x->x.resp == :yes && x.trial == :target, df)
-	df_data = DataFrame(data)
-	filter!(x->x.resp == :yes && x.trial == :target, df_data)
-	groups = groupby(df_data, [:fanPlace,:fanPerson])
-	data_means = combine(groups, :rt=>mean).rt_mean
-	title = [string("place: ",i," ","person: ",j) for i in 1:3 for j in 1:3]
-	title = reshape(title, 1, 9)
-	p4 = @df fan_effect histogram(:MeanRT,group=(:fanPlace,:fanPerson), ylabel="Density", grid=false, norm=true, color=:grey, leg=false, xticks=[1.0,1.3,1.6,1.9], title=title, layout=9, xlims=(1.0,2.0), ylims=(0,8), bins=15)
-	vline!(p4, data_means', color=:darkred)
+let
+    sim(p) = simulate(stimuli, slots, parms, n_reps; p...)
+    preds = posterior_predictive(x -> sim(x), chain, 1000, summarize)
+    df = vcat(preds...)
+    fan_effect = filter(x -> x.resp == :yes && x.trial == :target, df)
+    df_data = DataFrame(data)
+    filter!(x -> x.resp == :yes && x.trial == :target, df_data)
+    groups = groupby(df_data, [:fanPlace, :fanPerson])
+    data_means = combine(groups, :rt => mean).rt_mean
+    title = [string("place: ", i, " ", "person: ", j) for i = 1:3 for j = 1:3]
+    title = reshape(title, 1, 9)
+    p4 = @df fan_effect histogram(
+        :MeanRT,
+        group = (:fanPlace, :fanPerson),
+        ylabel = "Density",
+        grid = false,
+        norm = true,
+        color = :grey,
+        leg = false,
+        xticks = [1.0, 1.3, 1.6, 1.9],
+        title = title,
+        layout = 9,
+        xlims = (1.0, 2.0),
+        ylims = (0, 8),
+        bins = 15
+    )
+    vline!(p4, data_means', color = :darkred)
 end
 
 # ╔═╡ 533cb6fe-b615-4e4e-8153-9a10f2412b46

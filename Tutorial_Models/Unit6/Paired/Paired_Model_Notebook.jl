@@ -6,18 +6,24 @@ using InteractiveUtils
 
 # ╔═╡ 14a21f14-8d86-11ec-3ff5-3b82018ee28c
 begin
-	using Turing, StatsPlots, Revise, ACTRModels, Random
-	using PlutoUI, DataFrames, CommonMark, SequentialSamplingModels
-	# seed random number generator
-	Random.seed!(2340);
-	TableOfContents()
+    using Turing, StatsPlots, Revise, ACTRModels, Random
+    using PlutoUI, DataFrames, CommonMark, SequentialSamplingModels
+    # seed random number generator
+    Random.seed!(2340)
+    TableOfContents()
 end
 
 # ╔═╡ 49a9b5c2-1bba-4d75-b0c5-cadfc8c802d4
 begin
-	path_u1_1 = joinpath(pwd(), "../Tutorial_Models/Unit1/Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl")
-	path_u1_2= joinpath(pwd(), "../Tutorial_Models/Unit1/Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
-	nothing
+    path_u1_1 = joinpath(
+        pwd(),
+        "../Tutorial_Models/Unit1/Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl"
+    )
+    path_u1_2 = joinpath(
+        pwd(),
+        "../Tutorial_Models/Unit1/Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl"
+    )
+    nothing
 end
 
 # ╔═╡ c27f77d1-b6a8-42e1-9049-cf4a16a9cd6d
@@ -208,116 +214,133 @@ We will also need to define the stimuli. Expand the cell below to see the code f
 
 # ╔═╡ 4a80c315-e4c7-4b7b-a133-81ea0f5d5db6
 begin
-	all_stimuli = [
-	    (word=:bank, number=0), (word=:card, number=1), (word=:dart, number=2), (word=:face, number=3), 
-	    (word=:game, number=4), (word=:hand, number=5), (word=:jack, number=6), (word=:king, number=7), 
-	    (word=:lamb, number=8), (word=:mask,number= 9), (word=:neck, number=0), (word=:pipe, number=1), 
-	    (word=:quip, number=2), (word=:rope, number=3), (word=:sock, number=4), (word=:tent,number=5), 
-	    (word=:vent, number=6), (word=:wall, number=7), (word=:xray,number= 8), (word=:zinc, number=9)
-	]
-	
-	function sample_stimuli(stimuli, N)
-	    return stimuli[1:N]
-	end
+    all_stimuli = [
+        (word = :bank, number = 0), (word = :card, number = 1),
+        (word = :dart, number = 2), (word = :face, number = 3),
+        (word = :game, number = 4), (word = :hand, number = 5),
+        (word = :jack, number = 6), (word = :king, number = 7),
+        (word = :lamb, number = 8), (word = :mask, number = 9),
+        (word = :neck, number = 0), (word = :pipe, number = 1),
+        (word = :quip, number = 2), (word = :rope, number = 3),
+        (word = :sock, number = 4), (word = :tent, number = 5),
+        (word = :vent, number = 6), (word = :wall, number = 7),
+        (word = :xray, number = 8), (word = :zinc, number = 9)
+    ]
+
+    function sample_stimuli(stimuli, N)
+        return stimuli[1:N]
+    end
 end
 
 # ╔═╡ 2418ef00-c75b-4654-a235-5f51587da8ba
 begin
-	
-	function simulate(all_stimuli, fixed_parms, n_blocks, n_trials, deadline=5.0, isi=5.0; d)
-	    # sample unique stimului for the simulation
-	    stimuli = sample_stimuli(all_stimuli, n_trials)
-	    # initialize declarative memory
-	    chunks = [Chunk(word=:_,number=1)] |> empty!
-	    memory = Declarative(;memory=chunks)
-	    # create act-r object
-	    actr = ACTR(;declarative=memory, fixed_parms..., d)
-	    # preallocate data
-	    data = Array{NamedTuple,1}()
-	    # initialize time
-	    cur_time = 0.0
-	    # iterate through all blocks
-	    for block in 1:n_blocks
-	        # randomize stimulus order
-	        shuffle!(stimuli)
-	        temp,cur_time = simulate_block(actr, stimuli, cur_time, block, deadline, isi)
-	        push!(data, temp...)
-	    end
-	    return vcat(data...)
-	end
-	
-	function simulate_block(actr, stimuli, cur_time, block, deadline=5.0, isi=5.0)
-	    # initialize data for the current block
-	    data = Array{NamedTuple,1}()
-	    for stimulus in stimuli
-	        temp = simulate_trial(actr, stimulus, cur_time, block, deadline)
-	        push!(data, temp)
-	        # 5 second response deadline + additional 5 seconds
-	        cur_time += (deadline + isi) 
-	    end
-	    return data,cur_time
-	end
-	
-	function simulate_trial(actr, stimulus, cur_time, block, deadline=5.0)
-	    N=0;L=0.0;recent=Float64[];retrieved=:failed;time_created=0.0
-	    trial_start = cur_time
-	    # encode and conflict resolution time
-	    e_time = 0.085 + 0.05 + 0.05
-	    cur_time += e_time
-	    # retrieve paired associate based on word
-	    chunk = retrieve(actr, cur_time; word=stimulus.word)
-	    # retrieval time 
-	    r_time = compute_RT(actr, chunk)
-	    # add encoding time and retrieval time to reaction time
-	    rt = e_time + r_time + .05 + 0.300
-	    # interrupt retrieval if exceeds deadline
-	    if rt > deadline
-	        # set to truncated value
-	        rt = deadline
-	        # advance current time to deadline
-	        cur_time  = trial_start + deadline
-	        retrieved = :truncated
-	        # retrieval info if no chunk is retrieved
-	        chunk = get_chunks(actr; stimulus...)
-	        if !isempty(chunk)
-	            # get chunk state at time of retrieval
-	            (;N,L,recent,time_created) = chunk[1]
-	            recent = copy(recent)
-	        end
-	    elseif !isempty(chunk)
-	        # add retreival time to current time
-	        cur_time += r_time 
-	        # next conflict resolution
-	        cur_time += .05
-	        retrieved = :retrieved
-	        # get chunk state at time of retrieval
-	        (;N,L,recent,time_created) = chunk[1]
-	        recent = copy(recent)
-	        # add chunk if new, or update N and time stamps
-	        add_chunk!(actr, cur_time; stimulus...)
-	    else
-	        # add retreival failure time to current time
-	        cur_time += r_time 
-	        # next conflict resolution
-	        cur_time += .05
-	        # retrieval info if no chunk is retrieved
-	        chunk = get_chunks(actr; stimulus...)
-	        if !isempty(chunk)
-	            # get chunk state at time of retrieval
-	            (;N,L,recent,time_created) = chunk[1]
-	            recent = copy(recent)
-	        end
-	    end
-	    # feedback is always presented after the deadline
-	    cur_time = trial_start + deadline
-	    #encode feedback
-	    cur_time += (0.05 + 0.05 + 0.085)
-	    # add chunk: create new chunk if does not exist, otherwise increment N and add time stamp
-	    add_chunk!(actr, cur_time; stimulus...)
-	    data = (stimulus=stimulus,N=N,L=L,block=block,time_created=time_created,
-	        recent=recent,rt=rt,retrieved=retrieved)
-	    return data
-	end
+    function simulate(
+        all_stimuli,
+        fixed_parms,
+        n_blocks,
+        n_trials,
+        deadline = 5.0,
+        isi = 5.0;
+        d
+    )
+        # sample unique stimului for the simulation
+        stimuli = sample_stimuli(all_stimuli, n_trials)
+        # initialize declarative memory
+        chunks = [Chunk(word = :_, number = 1)] |> empty!
+        memory = Declarative(; memory = chunks)
+        # create act-r object
+        actr = ACTR(; declarative = memory, fixed_parms..., d)
+        # preallocate data
+        data = Array{NamedTuple, 1}()
+        # initialize time
+        cur_time = 0.0
+        # iterate through all blocks
+        for block = 1:n_blocks
+            # randomize stimulus order
+            shuffle!(stimuli)
+            temp, cur_time = simulate_block(actr, stimuli, cur_time, block, deadline, isi)
+            push!(data, temp...)
+        end
+        return vcat(data...)
+    end
+
+    function simulate_block(actr, stimuli, cur_time, block, deadline = 5.0, isi = 5.0)
+        # initialize data for the current block
+        data = Array{NamedTuple, 1}()
+        for stimulus in stimuli
+            temp = simulate_trial(actr, stimulus, cur_time, block, deadline)
+            push!(data, temp)
+            # 5 second response deadline + additional 5 seconds
+            cur_time += (deadline + isi)
+        end
+        return data, cur_time
+    end
+
+    function simulate_trial(actr, stimulus, cur_time, block, deadline = 5.0)
+        N = 0
+        L = 0.0
+        recent = Float64[]
+        retrieved = :failed
+        time_created = 0.0
+        trial_start = cur_time
+        # encode and conflict resolution time
+        e_time = 0.085 + 0.05 + 0.05
+        cur_time += e_time
+        # retrieve paired associate based on word
+        chunk = retrieve(actr, cur_time; word = stimulus.word)
+        # retrieval time 
+        r_time = compute_RT(actr, chunk)
+        # add encoding time and retrieval time to reaction time
+        rt = e_time + r_time + 0.05 + 0.300
+        # interrupt retrieval if exceeds deadline
+        if rt > deadline
+            # set to truncated value
+            rt = deadline
+            # advance current time to deadline
+            cur_time = trial_start + deadline
+            retrieved = :truncated
+            # retrieval info if no chunk is retrieved
+            chunk = get_chunks(actr; stimulus...)
+            if !isempty(chunk)
+                # get chunk state at time of retrieval
+                (; N, L, recent, time_created) = chunk[1]
+                recent = copy(recent)
+            end
+        elseif !isempty(chunk)
+            # add retreival time to current time
+            cur_time += r_time
+            # next conflict resolution
+            cur_time += 0.05
+            retrieved = :retrieved
+            # get chunk state at time of retrieval
+            (; N, L, recent, time_created) = chunk[1]
+            recent = copy(recent)
+            # add chunk if new, or update N and time stamps
+            add_chunk!(actr, cur_time; stimulus...)
+        else
+            # add retreival failure time to current time
+            cur_time += r_time
+            # next conflict resolution
+            cur_time += 0.05
+            # retrieval info if no chunk is retrieved
+            chunk = get_chunks(actr; stimulus...)
+            if !isempty(chunk)
+                # get chunk state at time of retrieval
+                (; N, L, recent, time_created) = chunk[1]
+                recent = copy(recent)
+            end
+        end
+        # feedback is always presented after the deadline
+        cur_time = trial_start + deadline
+        #encode feedback
+        cur_time += (0.05 + 0.05 + 0.085)
+        # add chunk: create new chunk if does not exist, otherwise increment N and add time stamp
+        add_chunk!(actr, cur_time; stimulus...)
+        data =
+            (stimulus = stimulus, N = N, L = L, block = block, time_created = time_created,
+                recent = recent, rt = rt, retrieved = retrieved)
+        return data
+    end
 end
 
 # ╔═╡ 8229314d-2272-43f4-bf0b-835e2b654e5d
@@ -336,24 +359,24 @@ Now that we have defined the data generating functions, we will generate 8 block
 
 # ╔═╡ 38439c4f-9af9-4d0b-a9ea-c42ae0fef725
 begin
-	# true decay parameter
-	d = 0.5
-	# number of block repetitions
-	n_blocks = 8
-	# number of trials within a block
-	n_trials = 20
-	# fixed parameters
-	fixed_parms = (
-	    τ = -2.5,        # retrieval threshold
-	    noise = true,    # noise "on"
-	    bll = true,      # base-level learning "on"
-	    s = 0.2,         # scale parameter for activation noise
-	    lf = 0.4,        # latency factor
-	    ter = 0.535      # encoding, motor and conflict resolution time
-	)
-	# generate data
-	data = simulate(all_stimuli, fixed_parms, n_blocks, n_trials; d)
-	data[1]
+    # true decay parameter
+    d = 0.5
+    # number of block repetitions
+    n_blocks = 8
+    # number of trials within a block
+    n_trials = 20
+    # fixed parameters
+    fixed_parms = (
+        τ = -2.5,        # retrieval threshold
+        noise = true,    # noise "on"
+        bll = true,      # base-level learning "on"
+        s = 0.2,         # scale parameter for activation noise
+        lf = 0.4,        # latency factor
+        ter = 0.535      # encoding, motor and conflict resolution time
+    )
+    # generate data
+    data = simulate(all_stimuli, fixed_parms, n_blocks, n_trials; d)
+    data[1]
 end
 
 # ╔═╡ 642cf881-4216-426e-82ad-08ab094a654b
@@ -385,87 +408,104 @@ The code below shows the log likelihood function for the paired model. The funct
 
 # ╔═╡ 444dc0c5-dc5f-4cd8-a70c-d0f74290eea4
 begin
-	begin
-		import Distributions: logpdf, loglikelihood
-		
-		struct Paired{T1,T2} <: ContinuousUnivariateDistribution
-		    d::T1
-		    parms::T2
-		end
-		
-		Paired(;d, parms) = Paired(d, parms)
-		
-		loglikelihood(d::Paired, data::Array{<:NamedTuple,1}) = logpdf(d, data)
-		
-		function logpdf(d::Paired, data::Array{<:NamedTuple,1})
-		    LL = computeLL(data, d.parms; d=d.d)
-		    return LL
-		end
-		
-		function computeLL(data, fixed_parms; d)
-		    chunk = Chunk(act=zero(d))
-		    # initialize declarative memory
-		    memory = Declarative(;memory=[chunk])
-		    # create ACTR object with declarative memory and parameters
-		    actr = ACTR(;declarative=memory, fixed_parms..., d)
-		    # extract parameters
-		    (;s,lf,τ,ter) = actr.parms
-		    # do not add noise activation values
-		    actr.parms.noise = false
-		    σ = fill(s * pi / sqrt(3), 2)
-		    # initialize log likelihood
-		    LL = 0.0
-		    for k in data
-		        cur_time = k.L + k.time_created
-		        if k.retrieved == :retrieved
-		            # reproduce the memory state right before retrieval
-		            modify!(chunk; N=k.N, recent=k.recent, time_created=k.time_created)
-		            # compute activation
-		            compute_activation!(actr, chunk, cur_time)
-		            # adjust activation values for latency factor
-		            v = [chunk.act,τ] .- log(lf)
-		            # log normal race distribution object
-		            dist = LNR(-v, σ, ter)
-		            # compute log likelihood of retrieving chunk at time k.rt
-		            LL += logpdf(dist, 1, k.rt)
-		        elseif k.retrieved == :truncated
-		            # special case in which chunk has not been created yet
-		            if k.N == 0
-		                v = τ .- log(lf)
-		                # compute log likelihood of failing to respond within deadline
-		                LL += logccdf(LogNormal(-v, σ[1]), 5)
-		            else
-		                # reproduce the memory state right before retrieval
-		                modify!(chunk; N=k.N, recent=k.recent, time_created=k.time_created)
-		                # compute activation
-		                compute_activation!(actr, chunk, cur_time)
-		                # adjust activation values for latency factor
-		                v = [chunk.act,τ] .- log(lf)
-		                # compute log likelihood of failing to respond within deadline
-		                LL += logccdf(LogNormal(-v[1], σ[1]), 5) + logccdf(LogNormal(-v[2], σ[1]), 5)
-		            end
-		        else
-		            # retrieval failure for novel pair
-		            if k.N == 0
-		                dist = LNR(-[τ-log(lf)], σ, ter)
-		                LL += logpdf(dist, 1, k.rt)
-		            else
-		                # reproduce the memory state immediately prior to retrieval
-		                modify!(chunk; N=k.N, recent=k.recent, time_created=k.time_created)
-		                # compute activation 
-		                compute_activation!(actr, chunk, cur_time)
-		                # mean activation values
-		                v = [chunk.act,τ] .- log(lf)
-		                # log normal race distribution object
-		                dist = LNR(-v, σ, ter)
-		                # compute log likelihood of failing to retrieve chunk at time k.rt
-		                LL += logpdf(dist, 2, k.rt)
-		            end
-		        end
-		    end
-		    return LL
-		end
-	end
+    begin
+        import Distributions: logpdf, loglikelihood
+
+        struct Paired{T1, T2} <: ContinuousUnivariateDistribution
+            d::T1
+            parms::T2
+        end
+
+        Paired(; d, parms) = Paired(d, parms)
+
+        loglikelihood(d::Paired, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
+
+        function logpdf(d::Paired, data::Array{<:NamedTuple, 1})
+            LL = computeLL(data, d.parms; d = d.d)
+            return LL
+        end
+
+        function computeLL(data, fixed_parms; d)
+            chunk = Chunk(act = zero(d))
+            # initialize declarative memory
+            memory = Declarative(; memory = [chunk])
+            # create ACTR object with declarative memory and parameters
+            actr = ACTR(; declarative = memory, fixed_parms..., d)
+            # extract parameters
+            (; s, lf, τ, ter) = actr.parms
+            # do not add noise activation values
+            actr.parms.noise = false
+            σ = fill(s * pi / sqrt(3), 2)
+            # initialize log likelihood
+            LL = 0.0
+            for k in data
+                cur_time = k.L + k.time_created
+                if k.retrieved == :retrieved
+                    # reproduce the memory state right before retrieval
+                    modify!(
+                        chunk;
+                        N = k.N,
+                        recent = k.recent,
+                        time_created = k.time_created
+                    )
+                    # compute activation
+                    compute_activation!(actr, chunk, cur_time)
+                    # adjust activation values for latency factor
+                    v = [chunk.act, τ] .- log(lf)
+                    # log normal race distribution object
+                    dist = LNR(-v, σ, ter)
+                    # compute log likelihood of retrieving chunk at time k.rt
+                    LL += logpdf(dist, 1, k.rt)
+                elseif k.retrieved == :truncated
+                    # special case in which chunk has not been created yet
+                    if k.N == 0
+                        v = τ .- log(lf)
+                        # compute log likelihood of failing to respond within deadline
+                        LL += logccdf(LogNormal(-v, σ[1]), 5)
+                    else
+                        # reproduce the memory state right before retrieval
+                        modify!(
+                            chunk;
+                            N = k.N,
+                            recent = k.recent,
+                            time_created = k.time_created
+                        )
+                        # compute activation
+                        compute_activation!(actr, chunk, cur_time)
+                        # adjust activation values for latency factor
+                        v = [chunk.act, τ] .- log(lf)
+                        # compute log likelihood of failing to respond within deadline
+                        LL +=
+                            logccdf(LogNormal(-v[1], σ[1]), 5) +
+                            logccdf(LogNormal(-v[2], σ[1]), 5)
+                    end
+                else
+                    # retrieval failure for novel pair
+                    if k.N == 0
+                        dist = LNR(-[τ - log(lf)], σ, ter)
+                        LL += logpdf(dist, 1, k.rt)
+                    else
+                        # reproduce the memory state immediately prior to retrieval
+                        modify!(
+                            chunk;
+                            N = k.N,
+                            recent = k.recent,
+                            time_created = k.time_created
+                        )
+                        # compute activation 
+                        compute_activation!(actr, chunk, cur_time)
+                        # mean activation values
+                        v = [chunk.act, τ] .- log(lf)
+                        # log normal race distribution object
+                        dist = LNR(-v, σ, ter)
+                        # compute log likelihood of failing to retrieve chunk at time k.rt
+                        LL += logpdf(dist, 2, k.rt)
+                    end
+                end
+            end
+            return LL
+        end
+    end
 end
 
 # ╔═╡ fb25b64a-615a-42df-b0a8-84d5b4912d9f
@@ -500,18 +540,25 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ d47d3419-61f2-4fca-9535-b12198e0e733
 begin
-	# number of samples
-	n_samples = 1000
-	delta = 0.85
-	# number of adaption samples 
-	n_adapt = 1000
-	# number of independent chains
-	n_chains = 4
-	# sampler object
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(model(data, fixed_parms), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # number of samples
+    n_samples = 1000
+    delta = 0.85
+    # number of adaption samples 
+    n_adapt = 1000
+    # number of independent chains
+    n_chains = 4
+    # sampler object
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(data, fixed_parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 956d094f-d77c-4c09-aa1c-b76ea9717ceb
@@ -523,17 +570,20 @@ In the summary output above, `rhat` for the decay parameter is very close to 1, 
 
 # ╔═╡ d7a18054-98f5-4d7c-85cf-7569ac76cace
 begin
-	font_size = 12
-	let
-		ch = group(chain, :d)
-		p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		pcδ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
-	end
+    font_size = 12
+    let
+        ch = group(chain, :d)
+        p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:traceplot),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:autocorplot),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:mixeddensity),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        pcδ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
+    end
 end
 
 # ╔═╡ 83ef9196-2442-43e9-82a5-2434079dfa8a
@@ -545,64 +595,75 @@ The plot below shows mean reaction time across blocks for 100 posterior samples.
 
 # ╔═╡ 6d7007f3-b0b3-4eb6-8d9f-66d8b78e5995
 begin
-	function rt_histogram(df, stimuli; kwargs...)
-	    vals = NamedTuple[]
-	    for (num1,num2) in stimuli
-	        idx = @. ((df[:,:num1] == num1 ) & (df[:,:num2] == num2)) | ((df[:,:num1] == num2) & (df[:,:num2] == num1))
-	        subdf = df[idx,:]
-	        str = string(num1, "+", num2)
-	        temp = filter(x -> x[:resp] != -100, subdf)
-	        g = groupby(temp, :resp)
-	        rt_resp = combine(g, :rt => mean)
-	        push!(vals, (title = str, data = rt_resp))
-	    end
-	    p = bar(layout=(2,3), leg=false, xlims=(0,10), xlabel="Response", ylabel="Mean RT",
-	        size=(600,600), xaxis=font(6), yaxis=font(6), titlefont=font(7), grid=false; kwargs...)
-	    for (i,v) in enumerate(vals)
-	        @df v.data bar!(p, :resp, :rt_mean, subplot=i, title=v.title, bar_width=1, color=:grey,
-	            grid=false, ylims=(0,4.5), xlims=(-.5,9))
-	    end
-	    return p
-	end
-	
-	function response_histogram(df, stimuli; kwargs...)
-	    vals = NamedTuple[]
-	    for (num1,num2) in stimuli
-	        idx = @. ((df[:,:num1] == num1 ) & (df[:,:num2] == num2)) | ((df[:,:num1] == num2) & (df[:,:num2] == num1))
-	        subdf = df[idx,:]
-	        str = string(num1, "+", num2)
-	        v = filter(x -> x != -100, subdf[:,:resp])
-	        push!(vals, (title = str, data = v))
-	    end
-	    p = histogram(layout=(2,3), leg=false, xlims=(0,10), xlabel="Response",ylabel="Proportion",
-	        size=(600,600), xaxis=font(6), yaxis=font(6), titlefont=font(7), grid=false; kwargs...)
-	    for (i,v) in enumerate(vals)
-	        histogram!(p, v.data, subplot=i, title=v.title, bar_width=1, color=:grey, grid=false,
-	        normalize=:probability, ylims=(0,1))
-	    end
-	    return p
-	end
-	nothing
+    function rt_histogram(df, stimuli; kwargs...)
+        vals = NamedTuple[]
+        for (num1, num2) in stimuli
+            idx = @. ((df[:, :num1] == num1) & (df[:, :num2] == num2)) |
+               ((df[:, :num1] == num2) & (df[:, :num2] == num1))
+            subdf = df[idx, :]
+            str = string(num1, "+", num2)
+            temp = filter(x -> x[:resp] != -100, subdf)
+            g = groupby(temp, :resp)
+            rt_resp = combine(g, :rt => mean)
+            push!(vals, (title = str, data = rt_resp))
+        end
+        p = bar(layout = (2, 3), leg = false, xlims = (0, 10), xlabel = "Response",
+            ylabel = "Mean RT",
+            size = (600, 600), xaxis = font(6), yaxis = font(6), titlefont = font(7),
+            grid = false; kwargs...)
+        for (i, v) in enumerate(vals)
+            @df v.data bar!(p, :resp, :rt_mean, subplot = i, title = v.title, bar_width = 1,
+                color = :grey,
+                grid = false, ylims = (0, 4.5), xlims = (-0.5, 9))
+        end
+        return p
+    end
+
+    function response_histogram(df, stimuli; kwargs...)
+        vals = NamedTuple[]
+        for (num1, num2) in stimuli
+            idx = @. ((df[:, :num1] == num1) & (df[:, :num2] == num2)) |
+               ((df[:, :num1] == num2) & (df[:, :num2] == num1))
+            subdf = df[idx, :]
+            str = string(num1, "+", num2)
+            v = filter(x -> x != -100, subdf[:, :resp])
+            push!(vals, (title = str, data = v))
+        end
+        p = histogram(layout = (2, 3), leg = false, xlims = (0, 10), xlabel = "Response",
+            ylabel = "Proportion",
+            size = (600, 600), xaxis = font(6), yaxis = font(6), titlefont = font(7),
+            grid = false; kwargs...)
+        for (i, v) in enumerate(vals)
+            histogram!(p, v.data, subplot = i, title = v.title, bar_width = 1,
+                color = :grey, grid = false,
+                normalize = :probability, ylims = (0, 1))
+        end
+        return p
+    end
+    nothing
 end
 
 # ╔═╡ e242c6bd-38e4-476b-9bd7-e3fd0e769aa9
-function show_learning(all_stimuli, parms, n_blocks=8, n_trials=20; d)
+function show_learning(all_stimuli, parms, n_blocks = 8, n_trials = 20; d)
     data = simulate(all_stimuli, parms, n_blocks, n_trials; d)
     df = DataFrame(data)
-    groups = groupby(df, [:block,:retrieved])
-    return combine(groups, :rt=>mean=>:rt)
+    groups = groupby(df, [:block, :retrieved])
+    return combine(groups, :rt => mean => :rt)
 end
 
 # ╔═╡ 4e028eb3-cf7c-4a10-ac85-0c2fac25acb4
 let
-	preds = posterior_predictive(x -> show_learning(all_stimuli, fixed_parms; x...), chain, 100)
-	preds = vcat(preds..., source=:rep)
-	groups = groupby(preds, [:rep,:retrieved,:block])
-	mean_rts = combine(groups, :rt=>mean=>:mean_rt)
-	sort!(mean_rts, [:rep,:block,:retrieved])
-	fmean_rts = filter(x->x.retrieved != :truncated, mean_rts)
-	p4 = @df fmean_rts plot(:block, :mean_rt, group=(:rep,:retrieved), xlabel="Block", ylabel="Mean RT", color=[:darkred :black], grid=false, linewidth=.5,
-	    labeltitle="Retrieved", legendtitlefontsize=8, ylims=(0,5.1), leg=false, alpha=.5)
+    preds =
+        posterior_predictive(x -> show_learning(all_stimuli, fixed_parms; x...), chain, 100)
+    preds = vcat(preds..., source = :rep)
+    groups = groupby(preds, [:rep, :retrieved, :block])
+    mean_rts = combine(groups, :rt => mean => :mean_rt)
+    sort!(mean_rts, [:rep, :block, :retrieved])
+    fmean_rts = filter(x -> x.retrieved != :truncated, mean_rts)
+    p4 = @df fmean_rts plot(:block, :mean_rt, group = (:rep, :retrieved), xlabel = "Block",
+        ylabel = "Mean RT", color = [:darkred :black], grid = false, linewidth = 0.5,
+        labeltitle = "Retrieved", legendtitlefontsize = 8, ylims = (0, 5.1),
+        leg = false, alpha = 0.5)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

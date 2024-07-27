@@ -6,10 +6,10 @@ using InteractiveUtils
 
 # ╔═╡ 22144b76-6eec-11ec-1f72-2b766e29b7c0
 begin
-	using PlutoUI, DifferentialEvolutionMCMC, Random, Parameters
-	using Distributions, MCMCChains, CommonMark
-	Random.seed!(88484)
-	TableOfContents()
+    using PlutoUI, DifferentialEvolutionMCMC, Random, Parameters
+    using Distributions, MCMCChains, CommonMark
+    Random.seed!(88484)
+    TableOfContents()
 end
 
 # ╔═╡ e70e535a-44d3-444e-8afc-9e6669cf6eea
@@ -34,63 +34,62 @@ PlutoUI.LocalResource("Supporting/DEMCMC.png")
 
 # ╔═╡ e77a5695-b188-41c4-a93e-500b6af0bd4b
 let
-	# using Plots, StatsBase
-	# Random.seed!(985)
-	
-	# n_steps = 50
-	# n_chains = 10
-	# pause = .2
-	# chains = [rand(Uniform(-3,3), 2) for _ in 1:n_chains]
-	# fitness = fill(-Inf, n_chains)
-	
-	# # bivariate normal, no correlation
-	# fun(x) = sum(logpdf.(Normal(0,1), x))
-	
-	# function cross_over(chains, chain)
-	#     Np = length(chain)
-	#     # exclude chain 
-	#     chain_diff = setdiff(chains, [chain])
-	#     # sample two random chains 
-	#     Pm,Pn = sample(chain_diff, 2, replace=false)
-	#     γ = 2.38 / sqrt(2 * Np)
-	#     # compute proposal value
-	#     proposal = chain + γ * (Pm - Pn) .+ rand(Uniform(-.01,.01), Np)
-	#     return proposal
-	# end
-	
-	# function step!(chains, fitness, func)
-	#     for c in 1:length(chains)
-	#         proposal = cross_over(chains, chains[c])
-	#         fit_proposal = func(proposal)
-	#         if fit_proposal > fitness[c]
-	#             chains[c] = proposal
-	#             fitness[c] = fit_proposal 
-	#         end
-	#     end
-	#     return nothing 
-	# end
-	
-	
-	# for s in 1:n_steps 
-	#     step!(chains, fitness, fun)
-	#     points = mapreduce(permutedims, vcat, chains)
-	#     p = scatter(
-	#         points[:,1], 
-	#         points[:,2],
-	#         color = 1:n_chains,
-	#         xlims=(-3,3), 
-	#         ylims=(-3,3),
-	#         leg = false,
-	#         grid = false
-	#     )
-	#     hline!([0], color=:black, linestyle=:dash)
-	#     vline!([0], color=:black, linestyle=:dash)
-	#     display(p)
-	#     sleep(pause)
-	# end
-	
-	# _,best_idx = findmax(fitness)
-	# println("best fit: ", chains[best_idx])
+    # using Plots, StatsBase
+    # Random.seed!(985)
+
+    # n_steps = 50
+    # n_chains = 10
+    # pause = .2
+    # chains = [rand(Uniform(-3,3), 2) for _ in 1:n_chains]
+    # fitness = fill(-Inf, n_chains)
+
+    # # bivariate normal, no correlation
+    # fun(x) = sum(logpdf.(Normal(0,1), x))
+
+    # function cross_over(chains, chain)
+    #     Np = length(chain)
+    #     # exclude chain 
+    #     chain_diff = setdiff(chains, [chain])
+    #     # sample two random chains 
+    #     Pm,Pn = sample(chain_diff, 2, replace=false)
+    #     γ = 2.38 / sqrt(2 * Np)
+    #     # compute proposal value
+    #     proposal = chain + γ * (Pm - Pn) .+ rand(Uniform(-.01,.01), Np)
+    #     return proposal
+    # end
+
+    # function step!(chains, fitness, func)
+    #     for c in 1:length(chains)
+    #         proposal = cross_over(chains, chains[c])
+    #         fit_proposal = func(proposal)
+    #         if fit_proposal > fitness[c]
+    #             chains[c] = proposal
+    #             fitness[c] = fit_proposal 
+    #         end
+    #     end
+    #     return nothing 
+    # end
+
+    # for s in 1:n_steps 
+    #     step!(chains, fitness, fun)
+    #     points = mapreduce(permutedims, vcat, chains)
+    #     p = scatter(
+    #         points[:,1], 
+    #         points[:,2],
+    #         color = 1:n_chains,
+    #         xlims=(-3,3), 
+    #         ylims=(-3,3),
+    #         leg = false,
+    #         grid = false
+    #     )
+    #     hline!([0], color=:black, linestyle=:dash)
+    #     vline!([0], color=:black, linestyle=:dash)
+    #     display(p)
+    #     sleep(pause)
+    # end
+
+    # _,best_idx = findmax(fitness)
+    # println("best fit: ", chains[best_idx])
 end
 
 # ╔═╡ 47934c34-718d-4942-a750-635c1dba2cd9
@@ -107,9 +106,9 @@ We will first generate some random data to which we can apply the model. The cod
 
 # ╔═╡ 10c872b4-27dd-4f2d-b226-abf14b0362ae
 begin
-	n = 10
-	k = rand(Binomial(n, .5))
-	data = k
+    n = 10
+    k = rand(Binomial(n, 0.5))
+    data = k
 end
 
 # ╔═╡ 1bfaadc0-e321-48c1-ae24-1c7bcb29be8b
@@ -144,7 +143,7 @@ In addition, each parameter has an allowable range consisting of a lower and upp
 "
 
 # ╔═╡ 78de01aa-6a56-4c97-89df-0125668f253f
-bounds = ((0,1),)
+bounds = ((0, 1),)
 
 # ╔═╡ 1c4c62a6-5134-410b-8644-9b96b8d29b95
 md"
@@ -181,10 +180,10 @@ The code block creates a model object for the DEMCMC algorithm. The inputs are:
 
 # ╔═╡ 3ab68e5d-9a92-495c-a465-fac4fbb7f3b6
 model = DEModel(
-	n; 
-    sample_prior, 
-    prior_loglike, 
-    loglike, 
+    n;
+    sample_prior,
+    prior_loglike,
+    loglike,
     data,
     names
 )
@@ -204,10 +203,10 @@ In the sampler object below, we pass the function `sample_prior`, the parameter 
 
 # ╔═╡ 82611bda-a0b1-4819-8495-a8481f51e5d3
 de = DE(;
-	sample_prior,
-	bounds,
-	burnin = 1000,
-	Np = 6
+    sample_prior,
+    bounds,
+    burnin = 1000,
+    Np = 6
 )
 
 # ╔═╡ 49182640-0aee-4be3-aa3f-0dcfc546a0b9
@@ -221,14 +220,14 @@ The code block below runs DEMCMC for $2,000$ iterations and removes the first $1
 
 # ╔═╡ f8669959-403e-4624-bc60-29b808736f70
 begin
-	n_iter = 2000
-	chains = sample(
-		model,
-		de,
-		MCMCThreads(),
-		n_iter
-	)
-	describe(chains)
+    n_iter = 2000
+    chains = sample(
+        model,
+        de,
+        MCMCThreads(),
+        n_iter
+    )
+    describe(chains)
 end
 
 # ╔═╡ f186e2c4-6641-40ea-bb48-b1e1377ec308
@@ -238,8 +237,8 @@ To verify that the sampler worked as expected, we can compare the chain summary 
 
 # ╔═╡ 0b50f20b-1205-47aa-8e1e-6d0f4dece8d4
 begin
-	solution = Beta(k + 1, n - k + 1)
-	nothing
+    solution = Beta(k + 1, n - k + 1)
+    nothing
 end
 
 # ╔═╡ 00e84584-1006-415d-be6e-59d6b8e3cc19

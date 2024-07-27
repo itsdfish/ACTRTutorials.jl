@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,9 +23,9 @@ end
 
 # ╔═╡ f9656808-55d8-11ec-2a4e-61876419364a
 begin
-	using LinearAlgebra, Plots,PlutoUI
-	using CommonMark, PlutoTest, Distributions, Random
-	TableOfContents()
+    using LinearAlgebra, Plots, PlutoUI
+    using CommonMark, PlutoTest, Distributions, Random
+    TableOfContents()
 end
 
 # ╔═╡ 8d9e47c2-2d5c-46cb-a741-288439510e3e
@@ -89,31 +96,31 @@ Reparameterizing the beta distribution can make it easier to intepret. A more co
 "
 
 # ╔═╡ dc057cde-75a3-4bf0-8ef5-71094350722f
-np = @bind np Slider(1:1:50, default=2.0, show_value=true)
+np = @bind np Slider(1:1:50, default = 2.0, show_value = true)
 
 # ╔═╡ 8e6baca1-47e6-49e5-8006-71bf52becb79
-μθ = @bind μθ Slider(0:.1:1, default=.5, show_value = true)
+μθ = @bind μθ Slider(0:0.1:1, default = 0.5, show_value = true)
 
 # ╔═╡ 0315846f-ef0b-4eaa-aad6-945cdb645c44
 begin
-	θs = range(0, 1, length=200)
-	let
-		α = np * μθ
-		β = np * (1 - μθ)
-		y = pdf.(Beta.(α, β), θs)
-		
-		plot(
-			θs, 
-			y, 
-			grid = false, 
-			xlabel = "θ", 
-			ylabel = "density", 
-			linewidth = 2.5,
-			leg = false,
-			ylims = (0,10),
-			title = "Prior distribution of θ"
-		)
-	end
+    θs = range(0, 1, length = 200)
+    let
+        α = np * μθ
+        β = np * (1 - μθ)
+        y = pdf.(Beta.(α, β), θs)
+
+        plot(
+            θs,
+            y,
+            grid = false,
+            xlabel = "θ",
+            ylabel = "density",
+            linewidth = 2.5,
+            leg = false,
+            ylims = (0, 10),
+            title = "Prior distribution of θ"
+        )
+    end
 end
 
 # ╔═╡ 0a6078d9-e3bd-4e53-93a0-3c35314aa48c
@@ -132,10 +139,10 @@ where $h$ is the number of observes heads out of $n$ trials, $\theta$ is probabi
 "
 
 # ╔═╡ 2029f0c1-f64c-4560-90da-a3e25bfc1541
-n = @bind n Slider(1:1:50, default=10, show_value = true)
+n = @bind n Slider(1:1:50, default = 10, show_value = true)
 
 # ╔═╡ 79f05dc5-12c9-4068-bd63-00fc3514055c
-h = @bind h Slider(0:1:50, default=5, show_value = true)
+h = @bind h Slider(0:1:50, default = 5, show_value = true)
 
 # ╔═╡ 2a0236bf-1600-4b07-a9d2-77c2b22fa62d
 Markdown.parse("
@@ -144,27 +151,27 @@ The plot below shows how the likelihood changes as a function of \$\\theta\$ wit
 
 # ╔═╡ fb8d57b5-db9d-428f-be18-c195d2fc50d7
 begin
-	peak = round(h / n, digits=3)
-	let 
-		y = pdf.(Binomial.(n, θs), h)
-		plot(
-			θs,
-			y,
-			ylims = (0, .5),
-			grid = false,
-			label = "",
-			xlabel = "θ", 
-			ylabel = "Likelihood",
-			linewidth = 2.5,
-		)
-		
-		vline!(
-			[peak], 
-			color = :black, 
-			linestyle = :dash,
-			label = "h/n"
-		)
-	end
+    peak = round(h / n, digits = 3)
+    let
+        y = pdf.(Binomial.(n, θs), h)
+        plot(
+            θs,
+            y,
+            ylims = (0, 0.5),
+            grid = false,
+            label = "",
+            xlabel = "θ",
+            ylabel = "Likelihood",
+            linewidth = 2.5
+        )
+
+        vline!(
+            [peak],
+            color = :black,
+            linestyle = :dash,
+            label = "h/n"
+        )
+    end
 end
 
 # ╔═╡ 687841b2-c025-4bfa-8df2-17cfc664065d
@@ -226,16 +233,16 @@ Let's break down the right hand side. Starting on the left,
 "
 
 # ╔═╡ 2df92994-05e1-4d4d-a16e-7ef55439eeac
-np1 = @bind np1 Slider(1:1:50, default=2.0, show_value = true)
+np1 = @bind np1 Slider(1:1:50, default = 2.0, show_value = true)
 
 # ╔═╡ e2ecf6c0-ce66-409a-ad15-35f24a7f0bea
-μθ1 = @bind μθ1 Slider(0.0:.01:1, default=.5, show_value = true)
+μθ1 = @bind μθ1 Slider(0.0:0.01:1, default = 0.5, show_value = true)
 
 # ╔═╡ 8b3f7011-e3ef-417d-9060-2cc24b9348d1
-n1 = @bind n1 Slider(1:1:50, default=10, show_value = true)
+n1 = @bind n1 Slider(1:1:50, default = 10, show_value = true)
 
 # ╔═╡ ea501b09-35d9-4624-8ca1-34f036a04fc4
-h1 = @bind h1 Slider(1:1:50, default=5, show_value = true)
+h1 = @bind h1 Slider(1:1:50, default = 5, show_value = true)
 
 # ╔═╡ 1115655f-9e47-4a49-8741-e8734dab4994
 Markdown.parse("
@@ -244,31 +251,31 @@ The interactive plot below allows you to explore the relationship between the pr
 
 # ╔═╡ 564ce612-c702-481b-9aad-189cd1f22d1d
 let
-	α = μθ1 * np1
-	β = (1 - μθ1) * np1
-	y_prior = pdf.(Beta.(α, β), θs)
-	
-	plot(
-		θs, 
-		y_prior, 
-		grid = false, 
-		xlabel = "θ", 
-		ylabel = "density", 
-		linewidth = 2.5,
-		ylims = (0,10),
-		label = "prior",
-		title = "Prior vs. Posterior Distribution of θ"
-	)
+    α = μθ1 * np1
+    β = (1 - μθ1) * np1
+    y_prior = pdf.(Beta.(α, β), θs)
 
-	y_posterior = pdf.(Beta.(α + h1, β + n1 - h1), θs)
-	
-	plot!(
-		θs, 
-		y_posterior, 
-		linewidth = 2.5,
-		label = "posterior"
-	)
-	vline!([h1/n1], color=:black, linestyle=:dash, label = "h/n")
+    plot(
+        θs,
+        y_prior,
+        grid = false,
+        xlabel = "θ",
+        ylabel = "density",
+        linewidth = 2.5,
+        ylims = (0, 10),
+        label = "prior",
+        title = "Prior vs. Posterior Distribution of θ"
+    )
+
+    y_posterior = pdf.(Beta.(α + h1, β + n1 - h1), θs)
+
+    plot!(
+        θs,
+        y_posterior,
+        linewidth = 2.5,
+        label = "posterior"
+    )
+    vline!([h1 / n1], color = :black, linestyle = :dash, label = "h/n")
 end
 
 # ╔═╡ e0e5b5c0-883f-4169-824c-4bcc79f3dff0
@@ -281,58 +288,57 @@ $f(k \mid n,\alpha, \beta) = \int_0^1 \mathcal{L}(\theta; k)\pi(\theta \mid \alp
 "
 
 # ╔═╡ 9b38a855-f52b-4a4e-a9d9-60a9fc8c4228
-μθ2 = @bind μθ2 Slider(0:.01:1, default=.5, show_value = true)
+μθ2 = @bind μθ2 Slider(0:0.01:1, default = 0.5, show_value = true)
 
 # ╔═╡ 01c45abd-1722-4ea9-95a5-bc08a47f0094
-np2 = @bind np2 Slider(1:1:100, default=2.0, show_value = true)
+np2 = @bind np2 Slider(1:1:100, default = 2.0, show_value = true)
 
 # ╔═╡ e15a0478-b02b-491a-83ca-49bfe725b794
-n2 = @bind n2 Slider(1:1:50, default=10, show_value = true)
+n2 = @bind n2 Slider(1:1:50, default = 10, show_value = true)
 
 # ╔═╡ 8ee8d2aa-eee8-45dc-9fdf-9c04845efea6
-h2 = @bind h2 Slider(1:1:50, default=5, show_value = true)
+h2 = @bind h2 Slider(1:1:50, default = 5, show_value = true)
 
 # ╔═╡ a35dd0f6-b4f4-41d4-b02a-357b9f33c3b1
-begin 
-	let
-		α2 = μθ2 * np2
-		β2 = (1 - μθ2) * np2
-		ks = 0:1n2
-		post_pred = @. pdf(BetaBinomial(n2, α2 + h2, β2 + n2 - h2), ks)
-		sampling_dist = @. pdf(Binomial(n2, h2 / n2), ks)
-		
-		bar(
-			ks,
-			post_pred,
-			grid = false,
-			xlabel = "h",
-			ylabel = "probability",
-			label = "posterior predictive distribution",
-			title = "Posterior Predictive Distribution", 
-		    color = :grey,
-			alpha = .7,
-			ylims = (0, .3),
-		)
+begin
+    let
+        α2 = μθ2 * np2
+        β2 = (1 - μθ2) * np2
+        ks = 0:(1n2)
+        post_pred = @. pdf(BetaBinomial(n2, α2 + h2, β2 + n2 - h2), ks)
+        sampling_dist = @. pdf(Binomial(n2, h2 / n2), ks)
 
-		bar!(
-			ks,
-			sampling_dist,
-			grid = false,
-			xlabel = "h",
-			ylabel = "probability",
-			title = "Posterior Predictive Distribution", 
-			alpha = .5,
-		    color = :darkred,
-			label = "sampling distribution"
-		)
-	end
+        bar(
+            ks,
+            post_pred,
+            grid = false,
+            xlabel = "h",
+            ylabel = "probability",
+            label = "posterior predictive distribution",
+            title = "Posterior Predictive Distribution",
+            color = :grey,
+            alpha = 0.7,
+            ylims = (0, 0.3)
+        )
+
+        bar!(
+            ks,
+            sampling_dist,
+            grid = false,
+            xlabel = "h",
+            ylabel = "probability",
+            title = "Posterior Predictive Distribution",
+            alpha = 0.5,
+            color = :darkred,
+            label = "sampling distribution"
+        )
+    end
 end
 
 # ╔═╡ 3b5a48f0-ce27-41e7-aa99-4d4145481fa1
 Markdown.parse("
 The plot above compares the sampling distribution and the posterior predictive distribution for \$h=\$ $(h2) heads out of \$n=\$ $(n2) trials. The sampling distribution, as shown in red, represents the distribution of data with \$\\theta\$ fixed at the maximum likelihood estimate of \$\\theta_{\\textrm{mle}} = \\frac{h}{n} = \\frac{$(h1)}{$(n1)}\$. The maximum likelihood estimate is the estimate typically obtained with non-Bayesian methods. By contrast, the posterior predictive distribution, as shown in grey, is the predicted distribution of data taking into account uncertainty in the parameter. Typically, the posterior distribution will be more variable compared to the sampling distribution as a result of uncertainty in the value of \$\\theta\$. By increasing the value of \$n_p\$ (representing prior confidence in \$\\mu_{\\theta}\$) with the slider `np2`, you will see that the posterior predictive distribution begins to converge on the sampling distribution. What this illustrates is that the sampling distribution implicitly assumes that the maximum likelihood estimation is known with perfect knowledge and does not take into account uncertainty in the estimate.
 ")
-
 
 # ╔═╡ 5b1eeedf-5f45-4e1e-8b72-dacd8abebc94
 md"
@@ -348,7 +354,6 @@ Kruschke, J. (2014). Doing Bayesian data analysis: A tutorial with R, JAGS, and 
 
 Wagenmakers, E. J., Marsman, M., Jamil, T., Ly, A., Verhagen, J., Love, J., ... & Matzke, D. (2018). Bayesian inference for psychology. Part I: Theoretical advantages and practical ramifications. Psychonomic bulletin & review, 25(1), 35-57.
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

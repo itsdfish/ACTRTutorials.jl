@@ -6,18 +6,17 @@ using InteractiveUtils
 
 # ╔═╡ 06340c7a-d97f-4230-895c-e9472bb8c010
 begin
-	using StatsPlots, Random, ACTRModels, CSV, FFTDists
-	using DifferentialEvolutionMCMC, PlutoUI, Distributions
-	using MCMCChains
-	Random.seed!(761531)
-	TableOfContents()
+    using StatsPlots, Random, ACTRModels, CSV, FFTDists
+    using DifferentialEvolutionMCMC, PlutoUI, Distributions
+    using MCMCChains
+    Random.seed!(761531)
+    TableOfContents()
 end
 
 # ╔═╡ 64c0de14-7de0-11ec-18f1-67c4342fcd10
 begin
-
-path_u4_1 = joinpath(pwd(), "../Count/Count_Model_Notebook.jl")
-nothing
+    path_u4_1 = joinpath(pwd(), "../Count/Count_Model_Notebook.jl")
+    nothing
 end
 
 # ╔═╡ d2be931a-ddbd-420b-85bc-1a153616852e
@@ -193,14 +192,12 @@ Add `simulate` function in the code block below.
 
 # ╔═╡ e805a267-f9d4-47d7-b438-5405a7124bbb
 
-
 # ╔═╡ 302a5e2c-ca49-4608-a41e-23791116d907
 md"
 In the code block below, generate 50 trials of data below using s=0.3 and blc = 1.5.
 "
 
 # ╔═╡ 6ca2bfe7-161b-415e-9357-4aa37a875c8b
-
 
 # ╔═╡ 473c279a-9e2b-493f-88c1-2125fb5c4399
 md"
@@ -211,7 +208,6 @@ Define the likelihood function in the code block below
 
 # ╔═╡ afc6377d-d100-46ee-a3bf-6c5bf64535af
 
-
 # ╔═╡ c837924f-fd56-469b-a1f1-72d4e932ded7
 md"
 
@@ -221,16 +217,23 @@ The code below should overlay likelihood function over the histogram if `simulat
 "
 
 # ╔═╡ 722c8a6a-daa6-447f-952c-dbbf0ceeaf08
-let 
-	n_trials = 10_000
-	s = 0.3
-	blc = 1.5
-	times = 1:0.01:3.0
-	sim_data = simulate(n_trials; s, blc);
-	histogram(sim_data, color=:darkgrey, grid=false, norm=true, leg=false, size=(800,400))
-	density = map(x-> loglike(blc, s, x) |> exp, times)
-	# plot density 
-	plot!(times, density, linewidth=2)
+let
+    n_trials = 10_000
+    s = 0.3
+    blc = 1.5
+    times = 1:0.01:3.0
+    sim_data = simulate(n_trials; s, blc)
+    histogram(
+        sim_data,
+        color = :darkgrey,
+        grid = false,
+        norm = true,
+        leg = false,
+        size = (800, 400)
+    )
+    density = map(x -> loglike(blc, s, x) |> exp, times)
+    # plot density 
+    plot!(times, density, linewidth = 2)
 end
 
 # ╔═╡ f5627e9a-e022-4120-a498-bb645ae59d3d
@@ -242,7 +245,6 @@ In the block below, define the priors, bounds, model and the object for the Diff
 
 # ╔═╡ bdf8cf53-ce84-4357-97e7-950458829151
 
-
 # ╔═╡ 6aa7a2f7-0c82-4109-b429-ce748ea30ba5
 md"
 ## Estimate Parameters
@@ -251,7 +253,6 @@ Estimate the parameters in the code block below.
 "
 
 # ╔═╡ 27e54cbc-daf6-4788-b158-68dec4bd5dc7
-
 
 # ╔═╡ 6ccbf073-33f9-4208-acc6-f54b622b939b
 md"
@@ -262,16 +263,19 @@ Plot and inspect the MCMC samples. This should work if `chains` object is define
 "
 
 # ╔═╡ 5f1d16b4-b526-4767-a1e3-5120d4b6a0f5
-let 
-	ch = group(chains,:blc)
-	font_size = 12
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    ch = group(chains, :blc)
+    font_size = 12
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ aa91f452-c598-4b10-88bf-f1c8ae1fa0d0
@@ -283,9 +287,6 @@ Generate the posterior distribution in the code block below
 "
 
 # ╔═╡ 6893a0da-559c-4dac-b418-eba242ac4af5
-
-
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

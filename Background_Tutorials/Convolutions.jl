@@ -6,11 +6,11 @@ using InteractiveUtils
 
 # ╔═╡ 3723094c-6ee6-11ec-2e3d-c5f66a737727
 begin
-	using FFTDists, Distributions, Plots
-	using Plots.Measures, Random
-	using PlutoUI
-	Random.seed!(7595);
-	TableOfContents()
+    using FFTDists, Distributions, Plots
+    using Plots.Measures, Random
+    using PlutoUI
+    Random.seed!(7595)
+    TableOfContents()
 end
 
 # ╔═╡ 62783f86-3d8b-4153-881a-5ef8fe05c127
@@ -33,26 +33,26 @@ The convolution in this case can be expressed in terms of the the parameters of 
 
 # ╔═╡ b9c29be4-d3f3-44d4-b8fb-e5469902a5b5
 begin
-	# mean of component distributions
-	μ = 1.0
-	# standard deviation of component distributions
-	σ = 2.0
-	# number of component distributions
-	n = 3
-	# an 10^5 by n array of normally distributed values
-	x = rand(Normal(μ, σ), 10^5, n)
-	# sum across rows to create the sum of component distributions
-	xt = sum(x, dims=2)
-	# analytic solution for μ
-	μt = n*μ
-	# analytic solution for σ
-	σt = sqrt(n*σ^2)
-	# plot the summed values
-	histogram(xt, norm=true, grid=false, leg= false, color=:grey)
-	v = -10.01:15
-	# overlay the analytic solution
-	density = pdf.(Normal(μt, σt), v)
-	plot!(v, density, color=:darkorange, linewidth=2)
+    # mean of component distributions
+    μ = 1.0
+    # standard deviation of component distributions
+    σ = 2.0
+    # number of component distributions
+    n = 3
+    # an 10^5 by n array of normally distributed values
+    x = rand(Normal(μ, σ), 10^5, n)
+    # sum across rows to create the sum of component distributions
+    xt = sum(x, dims = 2)
+    # analytic solution for μ
+    μt = n * μ
+    # analytic solution for σ
+    σt = sqrt(n * σ^2)
+    # plot the summed values
+    histogram(xt, norm = true, grid = false, leg = false, color = :grey)
+    v = -10.01:15
+    # overlay the analytic solution
+    density = pdf.(Normal(μt, σt), v)
+    plot!(v, density, color = :darkorange, linewidth = 2)
 end
 
 # ╔═╡ fa90a3aa-105a-4c9f-a4cb-a33d38cac3a8
@@ -108,7 +108,7 @@ Below, we will illustrate how to perform fast Fourier transform with the custom 
 "
 
 # ╔═╡ afc1fb56-7f35-4a1f-acbb-32de8fc7b151
-model = Gamma(5, 0.05) + LogNormal(-1, .7)
+model = Gamma(5, 0.05) + LogNormal(-1, 0.7)
 
 # ╔═╡ 82ed65c2-5a8e-40fd-9e73-69f79fb91508
 md"
@@ -156,12 +156,13 @@ The model can be validated by comparing the pdf against a histogram of simulated
 
 # ╔═╡ f0f7d01c-6a1e-4132-96cf-f0b99763e918
 begin
-	true_values = rand(model, 10^5)
-	histogram(true_values, color=:grey, bins=200, norm=true, legend=false, ylabel="Density", xlabel="RT", 
-	    grid=false, xlims=(0,2.5))
-	x1 = 0:0.01:2.5
-	density1 = pdf.(model, x1)
-	plot!(x1, density1, linewidth=2)
+    true_values = rand(model, 10^5)
+    histogram(true_values, color = :grey, bins = 200, norm = true, legend = false,
+        ylabel = "Density", xlabel = "RT",
+        grid = false, xlims = (0, 2.5))
+    x1 = 0:0.01:2.5
+    density1 = pdf.(model, x1)
+    plot!(x1, density1, linewidth = 2)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

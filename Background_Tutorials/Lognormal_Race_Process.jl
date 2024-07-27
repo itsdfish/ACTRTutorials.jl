@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,9 +23,9 @@ end
 
 # ╔═╡ 7396e418-6ed8-11ec-0921-452cc5cdf6fb
 begin
-	using PlutoUI, Distributions, Plots, Random, ACTRModels
-	using CommonMark, SequentialSamplingModels
-	TableOfContents()
+    using PlutoUI, Distributions, Plots, Random, ACTRModels
+    using CommonMark, SequentialSamplingModels
+    TableOfContents()
 end
 
 # ╔═╡ fbbd81b6-5a5d-4ca2-a732-2a9682680982
@@ -42,9 +49,9 @@ The figure (Tseng, et al., 2014) below illustrates the evidence accumulation pro
 
 # ╔═╡ 87470312-d8e7-4ee3-a197-bb9441c78380
 let
-	url = "https://i.imgur.com/4iTriQc.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/png"(), data)
+    url = "https://i.imgur.com/4iTriQc.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/png"(), data)
 end
 
 # ╔═╡ 2e267229-4106-4ece-a65c-d52db0163cb4
@@ -56,9 +63,9 @@ Alternatively, the Linear Ballistic Accumulator (LBA) assumes evidence in multip
 
 # ╔═╡ 7a63acc6-049b-44ff-bdca-4a9041b4410a
 let
-	url = "https://i.imgur.com/tA6OFb8.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/png"(), data)
+    url = "https://i.imgur.com/tA6OFb8.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/png"(), data)
 end
 
 # ╔═╡ 5314d721-07b9-4800-98d3-72da18e80bdf
@@ -71,9 +78,9 @@ As detailed in Fisher et al. (2020) and  Nicenboim & Vasishth (2018), memory ret
 
 # ╔═╡ 5bf690a1-fdb0-4a83-97db-46ea84baa69a
 let
-	url = "https://i.imgur.com/AR9ryCi.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/png"(), data)
+    url = "https://i.imgur.com/AR9ryCi.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/png"(), data)
 end
 
 # ╔═╡ 2bc82ee2-39b9-47d2-b66b-9ad0229387b4
@@ -97,19 +104,20 @@ such that $\epsilon_m \sim \rm normal(0, \sigma)$ and the expected value $E[a_m]
 # ╔═╡ e509ef18-e48e-463a-81af-49f7b2e41f0a
 begin
 
-	# base level constant
-	_blc = 1.5
-	# standard deviation in log space
-	σ = 0.4
-	# number of activation samples
-	n = 10_000
-	# normally distributed activation noise
-	ϵ = rand(Normal(0, σ), n)
-	# activation values
-	a = _blc .+ ϵ
-	# create histogram of activations
-	histogram(a, leg=false, grid=false,color=:grey, size=(600,400), xlabel="Activation", ylabel="Frequency",
-		xaxis=font(12), yaxis=font(12))# activation values
+    # base level constant
+    _blc = 1.5
+    # standard deviation in log space
+    σ = 0.4
+    # number of activation samples
+    n = 10_000
+    # normally distributed activation noise
+    ϵ = rand(Normal(0, σ), n)
+    # activation values
+    a = _blc .+ ϵ
+    # create histogram of activations
+    histogram(a, leg = false, grid = false, color = :grey, size = (600, 400),
+        xlabel = "Activation", ylabel = "Frequency",
+        xaxis = font(12), yaxis = font(12))# activation values
 end
 
 # ╔═╡ b6a43593-83eb-4989-bf08-2b4f7c7b8a8c
@@ -128,11 +136,12 @@ where $t_m$ is the retrieval time for chunk $m$, and $a_m$ is the activation for
 
 # ╔═╡ 71408957-8a04-4891-b8b2-0a90c461b7de
 begin
-	# transform activation to retrieval time
-	t  = exp.(-a)
-	# create histogram of retrieval times
-	histogram(t, leg=false, grid=false,color=:grey, size=(600,400), xlabel="Retrieval Time (seconds)", ylabel="Frequency",
-	    xaxis=font(12), yaxis=font(12))
+    # transform activation to retrieval time
+    t = exp.(-a)
+    # create histogram of retrieval times
+    histogram(t, leg = false, grid = false, color = :grey, size = (600, 400),
+        xlabel = "Retrieval Time (seconds)", ylabel = "Frequency",
+        xaxis = font(12), yaxis = font(12))
 end
 
 # ╔═╡ 4a4bdbf0-bba8-4052-bd21-9436efa5756d
@@ -163,15 +172,16 @@ The following code block overlays the Lognormal PDF over the histogram to demons
 
 # ╔═╡ b3b2905a-6d49-4004-8ba6-62ce78b7644b
 let
-	x = 0.0:0.01:.8
-		# base level constant
-	_blc = 1.5
-	# standard deviation in log space
-	σ = 0.4
-	densities = pdf.(LogNormal(-_blc, σ), x)
-	histogram(t, leg=false, grid=false,color=:grey, size=(600,400), xlabel="Retrieval Time (seconds)", ylabel="Density",
-	    xaxis=font(12), yaxis=font(12), norm=true)
-	plot!(x, densities, linewidth=2)
+    x = 0.0:0.01:0.8
+    # base level constant
+    _blc = 1.5
+    # standard deviation in log space
+    σ = 0.4
+    densities = pdf.(LogNormal(-_blc, σ), x)
+    histogram(t, leg = false, grid = false, color = :grey, size = (600, 400),
+        xlabel = "Retrieval Time (seconds)", ylabel = "Density",
+        xaxis = font(12), yaxis = font(12), norm = true)
+    plot!(x, densities, linewidth = 2)
 end
 
 # ╔═╡ e553ab0e-bd89-496d-99f4-a8142cca4b47
@@ -246,7 +256,7 @@ We are often interested in computing the likelihood of retrieving chunk 1 at .5.
 "
 
 # ╔═╡ 1886ac89-dfb0-4f30-bd8f-bf23ea4fab84
-likelihood_c1_won = pdf(LogNormal(-1, .3), .5)
+likelihood_c1_won = pdf(LogNormal(-1, 0.3), 0.5)
 
 # ╔═╡ 66da7473-fd53-49aa-a087-b7c5e65c8ab1
 md"
@@ -258,7 +268,7 @@ where $T$ is a random variable for the finishing time of chunk 2, $t=.5$ is the 
 "
 
 # ╔═╡ c2b0efd3-6d38-45f3-8ac4-92212d65ecab
-likelihood_c2_still_racing = 1 - cdf(LogNormal(-.5, .3), .5)
+likelihood_c2_still_racing = 1 - cdf(LogNormal(-0.5, 0.3), 0.5)
 
 # ╔═╡ 638702b5-ed28-40ed-818b-4974ff8f3a8a
 md"
@@ -271,7 +281,7 @@ Since these events occured together and we assume each chunk races independently
 likelihood_c1_won * likelihood_c2_still_racing
 
 # ╔═╡ a2f97cee-2a9d-4158-a97a-c827af385271
-win_time = @bind win_time Slider(0.0:.05:2.0, default=.50, show_value=true)
+win_time = @bind win_time Slider(0.0:0.05:2.0, default = 0.50, show_value = true)
 
 # ╔═╡ 8d707e66-515b-4867-b029-b65f9def793f
 cm"""
@@ -279,119 +289,150 @@ The interactive plot below visualizes the calculation of the likelihood. The den
 """
 
 # ╔═╡ 1e63eae6-bec5-444d-b8cd-81223464ba72
-winner = @bind winner Slider(1:2, default=1, show_value=true)
+winner = @bind winner Slider(1:2, default = 1, show_value = true)
 
 # ╔═╡ 08255ef6-79ba-4cd5-9026-43690c82e997
-μ₁ = @bind μ₁ Slider(-1:.1:2, default=1, show_value=true)
+μ₁ = @bind μ₁ Slider(-1:0.1:2, default = 1, show_value = true)
 
 # ╔═╡ 06aa45ef-adb4-45c7-bbee-fd98d0d76da9
 begin
-	p_win = 0.0
-	p_lose = 0.0
-	let
-		blc = μ₁
-		τ = 0.5
-		σ = .3
-		# range of rt values for x-axis
-		times = 0.01:0.005:1.8
-		# density for correct rts
-		density_correct = @. pdf(LogNormal(-blc, σ), times)
-		# plot correct density
-		p = plot(
-			layout = (2,1), 
-			leg = false, 
-			xlabel = "Finish Time (seconds)", 
-			ylabel = "Density", 
-			xlims = (0,2.5),
-			ylims = (0,6)
-		)
-		plot!(times, density_correct, linewidth=2, color=:darkorange, grid=false,
-		title="chunk 1")
-	
-		density_incorrect = map(x-> pdf(LogNormal(-τ, σ), x), times)
-		plot!(times, color=:darkorange, density_incorrect, linewidth=2, subplot=2,
-			title="chunk 2")
-	
-		if winner == 1
-			ix = times .> win_time
-			plot!(times[ix], density_incorrect[ix], fillrange = zero(times[ix]), fc=:blues, subplot=2)
-			vline!([win_time], color=:black, linestyle=:dash, subplot=1)
-			
-			p_win = round(pdf(LogNormal(-blc, σ),win_time), digits=3)
-			p_lose = round(1 - cdf(LogNormal(-τ, σ), win_time), digits=3)
-			annotate!(2.5, 4, text("g($(win_time) | $(blc)) = $(p_win)", :black, :right, 12), subplot=1)
-			annotate!(2.5, 4, text("1 - G($(win_time) | $(τ)) = $(p_lose)", :black, :right, 12), subplot=2)
-		else
-			ix = times .> win_time
-			plot!(times[ix], density_correct[ix], fillrange = zero(times[ix]), fc=:blues, subplot=1)
-			vline!([win_time], color=:black, linestyle=:dash, subplot=2)
-			
-			p_win = round(pdf(LogNormal(-τ, σ), win_time), digits=3)
-			p_lose = round(1 - cdf(LogNormal(-blc, σ), win_time), digits=3)
-			annotate!(2.5, 4, text("g($(win_time) | $(τ)) = $(p_win)", :black, :right, 12), subplot=2)
-			annotate!(2.5, 4, text("1 - G($(win_time) | $(blc)) = $(p_lose)", :black, :right, 12), subplot=1)
-		end
-	end
+    p_win = 0.0
+    p_lose = 0.0
+    let
+        blc = μ₁
+        τ = 0.5
+        σ = 0.3
+        # range of rt values for x-axis
+        times = 0.01:0.005:1.8
+        # density for correct rts
+        density_correct = @. pdf(LogNormal(-blc, σ), times)
+        # plot correct density
+        p = plot(
+            layout = (2, 1),
+            leg = false,
+            xlabel = "Finish Time (seconds)",
+            ylabel = "Density",
+            xlims = (0, 2.5),
+            ylims = (0, 6)
+        )
+        plot!(times, density_correct, linewidth = 2, color = :darkorange, grid = false,
+            title = "chunk 1")
+
+        density_incorrect = map(x -> pdf(LogNormal(-τ, σ), x), times)
+        plot!(times, color = :darkorange, density_incorrect, linewidth = 2, subplot = 2,
+            title = "chunk 2")
+
+        if winner == 1
+            ix = times .> win_time
+            plot!(
+                times[ix],
+                density_incorrect[ix],
+                fillrange = zero(times[ix]),
+                fc = :blues,
+                subplot = 2
+            )
+            vline!([win_time], color = :black, linestyle = :dash, subplot = 1)
+
+            p_win = round(pdf(LogNormal(-blc, σ), win_time), digits = 3)
+            p_lose = round(1 - cdf(LogNormal(-τ, σ), win_time), digits = 3)
+            annotate!(
+                2.5,
+                4,
+                text("g($(win_time) | $(blc)) = $(p_win)", :black, :right, 12),
+                subplot = 1
+            )
+            annotate!(
+                2.5,
+                4,
+                text("1 - G($(win_time) | $(τ)) = $(p_lose)", :black, :right, 12),
+                subplot = 2
+            )
+        else
+            ix = times .> win_time
+            plot!(
+                times[ix],
+                density_correct[ix],
+                fillrange = zero(times[ix]),
+                fc = :blues,
+                subplot = 1
+            )
+            vline!([win_time], color = :black, linestyle = :dash, subplot = 2)
+
+            p_win = round(pdf(LogNormal(-τ, σ), win_time), digits = 3)
+            p_lose = round(1 - cdf(LogNormal(-blc, σ), win_time), digits = 3)
+            annotate!(
+                2.5,
+                4,
+                text("g($(win_time) | $(τ)) = $(p_win)", :black, :right, 12),
+                subplot = 2
+            )
+            annotate!(
+                2.5,
+                4,
+                text("1 - G($(win_time) | $(blc)) = $(p_lose)", :black, :right, 12),
+                subplot = 1
+            )
+        end
+    end
 end
 
 # ╔═╡ bd08d115-f1d0-4f73-8519-7210e1863f02
 if winner == 1
-cm"""
+    cm"""
 
 
-<div align="center">
+    <div align="center">
 
 
-``f_{\textrm{LNR}}(\Theta; t=`` $(win_time)``) = g(t=``$(win_time) ``\mid μ_1 =`` $(μ₁)``,\sigma=``$(.3)``) [1 - G(t=``$(win_time)``; \mu_2 = ``$(.5)``,\sigma=``$(.3)``) ] = ``$(string(round.(p_win * p_lose, digits=3)))
+    ``f_{\textrm{LNR}}(\Theta; t=`` $(win_time)``) = g(t=``$(win_time) ``\mid μ_1 =`` $(μ₁)``,\sigma=``$(.3)``) [1 - G(t=``$(win_time)``; \mu_2 = ``$(.5)``,\sigma=``$(.3)``) ] = ``$(string(round.(p_win * p_lose, digits=3)))
 
-</div>
-"""
+    </div>
+    """
 else
-
-cm"""
-
-
-<div align="center">
+    cm"""
 
 
-``f_{\textrm{LNR}}(\Theta; t=`` $(win_time)``) = g(t=``$(win_time) ``\mid μ_2 =`` $(.5)``,\sigma=``$(.3)``) [1 - G(t=``$(win_time)``; \mu_1 = ``$(μ₁)``,\sigma=``$(.3)``) ] = ``$(string(round.(p_win * p_lose, digits=3)))
+    <div align="center">
 
-</div>
-"""
+
+    ``f_{\textrm{LNR}}(\Theta; t=`` $(win_time)``) = g(t=``$(win_time) ``\mid μ_2 =`` $(.5)``,\sigma=``$(.3)``) [1 - G(t=``$(win_time)``; \mu_1 = ``$(μ₁)``,\sigma=``$(.3)``) ] = ``$(string(round.(p_win * p_lose, digits=3)))
+
+    </div>
+    """
 end
 
 # ╔═╡ d369444c-0583-445c-981b-acada9f89ef3
 begin
-	function simulate(parms; blc, τ)
-	    # Create chunk
-	    chunks = [Chunk()]
-	    # add chunk to declarative memory
-	    memory = Declarative(;memory=chunks)
-	    # create ACTR object and pass parameters
-	    actr = ACTR(;declarative=memory, parms..., blc, τ)
-	    # retrieve chunk
-	    chunk = retrieve(actr)
-	    # 2 if empty, 1 otherwise
-	    resp = isempty(chunk) ? resp = 2 : 1
-	    # compute reaction time 
-	    rt = compute_RT(actr, chunk) + actr.parms.ter
-	    return (resp = resp,rt = rt)
-	end
-	
-	function computeLL(blc, τ, parms, data)
-		(;s,ter) = parms
-		LL = 0.0
-		σ = s * pi / sqrt(3)
-		# define distribution object
-		dist = LNR(;μ=-[blc,τ], σ, ϕ=ter)
-		# compute log likelihood for each data point
-		for d in data
-			LL += logpdf(dist, d...)
-		end
-		return LL
-	end
-	
-	nothing
+    function simulate(parms; blc, τ)
+        # Create chunk
+        chunks = [Chunk()]
+        # add chunk to declarative memory
+        memory = Declarative(; memory = chunks)
+        # create ACTR object and pass parameters
+        actr = ACTR(; declarative = memory, parms..., blc, τ)
+        # retrieve chunk
+        chunk = retrieve(actr)
+        # 2 if empty, 1 otherwise
+        resp = isempty(chunk) ? resp = 2 : 1
+        # compute reaction time 
+        rt = compute_RT(actr, chunk) + actr.parms.ter
+        return (resp = resp, rt = rt)
+    end
+
+    function computeLL(blc, τ, parms, data)
+        (; s, ter) = parms
+        LL = 0.0
+        σ = s * pi / sqrt(3)
+        # define distribution object
+        dist = LNR(; μ = -[blc, τ], σ, ϕ = ter)
+        # compute log likelihood for each data point
+        for d in data
+            LL += logpdf(dist, d...)
+        end
+        return LL
+    end
+
+    nothing
 end
 
 # ╔═╡ 60cb549e-e82d-4ea1-bc47-8af4c3b0a7b3
@@ -425,7 +466,11 @@ We will begin by defining a model based on three addition facts. The function `C
 
 # ╔═╡ 8a2b5327-a73d-4bb9-a2b5-4d4934976107
 # create a vector of chunks representing addition facts
-chunks = [Chunk(num1=2,num2=1,sum=3),Chunk(num1=2,num2=2,sum=4),Chunk(num1=1,num2=1,sum=2)]
+chunks = [
+    Chunk(num1 = 2, num2 = 1, sum = 3),
+    Chunk(num1 = 2, num2 = 2, sum = 4),
+    Chunk(num1 = 1, num2 = 1, sum = 2)
+]
 
 # ╔═╡ 2c056b06-680c-4a7f-837b-0fbed56dd34e
 md"
@@ -435,7 +480,7 @@ Next, we add the chunks to the declarative memory object
 
 # ╔═╡ 5eb3f63b-d88f-4f93-a5d2-2399835e3a67
 # create a declarative memory object
-declarative = Declarative(memory=chunks);
+declarative = Declarative(memory = chunks);
 
 # ╔═╡ 82847c7f-788d-48ad-9c61-eee718df1cd2
 md"
@@ -445,11 +490,11 @@ To create the ACT-R model, we pass the declarative memory object and list of par
 
 # ╔═╡ c80f1bf1-42f8-4362-9b3b-8198397b941e
 begin
-	s = 0.3
-	ter = 0.4
-	# define the ACTR object and pass the parameters
-	actr = ACTR(;declarative, blc=2.0, mmp=true, δ=.5, s, τ=-10);
-	nothing# suppress output
+    s = 0.3
+    ter = 0.4
+    # define the ACTR object and pass the parameters
+    actr = ACTR(; declarative, blc = 2.0, mmp = true, δ = 0.5, s, τ = -10)
+    nothing# suppress output
 end
 
 # ╔═╡ 7bd9a066-1513-4f88-ab32-e6838796c99b
@@ -461,14 +506,14 @@ In the following code block, we will compute the activation for the retrieval re
 
 # ╔═╡ a9200acb-4c8c-4872-88e7-30b05b91c77b
 begin
-	# compute the activation with given retrieval request for 2 + 2
-	compute_activation!(actr; num1 = 2, num2 = 2)
-	# extract the activation values
-	μs = map(x->x.act, chunks)
-	# compute sigma
-	σ1 = fill(s * pi / sqrt(3), length(μs))
-	# create the LNR distribution object
-	lnr = LNR(; ν = -μs, σ = σ1, τ = ter);
+    # compute the activation with given retrieval request for 2 + 2
+    compute_activation!(actr; num1 = 2, num2 = 2)
+    # extract the activation values
+    μs = map(x -> x.act, chunks)
+    # compute sigma
+    σ1 = fill(s * pi / sqrt(3), length(μs))
+    # create the LNR distribution object
+    lnr = LNR(; ν = -μs, σ = σ1, τ = ter)
 end
 
 # ╔═╡ 29e801c6-b3ec-4e34-8574-f87f7ba2b668
@@ -480,14 +525,15 @@ Now that the model and `LNR` objects have been defined, we can plot densities. A
 
 # ╔═╡ 2ac4adf8-b68c-4db0-9d76-27adf934d4b9
 let
-	x = ter:0.005:1.0
-	choice_idx = 1:3
-	dens = map(c->pdf.(lnr, c, x), choice_idx)
-	to_string(x) = [string(k, " = ", v) for (k,v) in pairs(x)]
-	labels = map(c->to_string(c.slots), chunks)
-	labels = reshape(labels, 1, 3)
-	plot(x, dens, grid=false, xlabel="RT", ylabel="Density", xlims=(0,1), xaxis=font(12), yaxis=font(12), 
-	    linewidth=2, labels=labels, size=(700,400), leg=:topright)
+    x = ter:0.005:1.0
+    choice_idx = 1:3
+    dens = map(c -> pdf.(lnr, c, x), choice_idx)
+    to_string(x) = [string(k, " = ", v) for (k, v) in pairs(x)]
+    labels = map(c -> to_string(c.slots), chunks)
+    labels = reshape(labels, 1, 3)
+    plot(x, dens, grid = false, xlabel = "RT", ylabel = "Density", xlims = (0, 1),
+        xaxis = font(12), yaxis = font(12),
+        linewidth = 2, labels = labels, size = (700, 400), leg = :topright)
 end
 
 # ╔═╡ dfcfec52-10d9-48c3-b9df-85390a61ddc1
@@ -512,7 +558,6 @@ Tseng, Y. C., Glaser, J. I., Caddigan, E., & Lleras, A. (2014). Modeling the eff
 
 van Maanen, L., & Miletić, S. (2020). The interpretation of behavior-model correlations in unidentified cognitive models. Psychonomic Bulletin & Review, 1-10.
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

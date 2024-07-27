@@ -21,10 +21,10 @@ function posterior(f; br, tp, fp, N)
     return v
 end
 
-parms = (br = (.01,1000),fp = (.096,500),tp = (.80,500))
-samples1 = posterior(β; parms..., N=10^5)
+parms = (br = (0.01, 1000), fp = (0.096, 500), tp = (0.80, 500))
+samples1 = posterior(β; parms..., N = 10^5)
 pyplot()
-histogram(samples1, grid=false, color=:grey, norm=true, xlims=(0,1), bins=30,
-    leg=false, xlabel="Theta", ylabel="Density", xaxis=font(8), yaxis=font(8),
-    size=(300,150))
+histogram(samples1, grid = false, color = :grey, norm = true, xlims = (0, 1), bins = 30,
+    leg = false, xlabel = "Theta", ylabel = "Density", xaxis = font(8), yaxis = font(8),
+    size = (300, 150))
 savefig("PosteriorBC.eps")

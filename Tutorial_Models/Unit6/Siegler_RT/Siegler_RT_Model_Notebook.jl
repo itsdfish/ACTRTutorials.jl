@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,19 +23,25 @@ end
 
 # ╔═╡ 14a21f14-8d86-11ec-3ff5-3b82018ee28c
 begin
-	using Turing, StatsPlots, Revise, ACTRModels, Random
-	using PlutoUI, DataFrames, CommonMark, Distributions
-	using SequentialSamplingModels, StatsFuns
-	# seed random number generator
-	Random.seed!(2340);
-	TableOfContents()
+    using Turing, StatsPlots, Revise, ACTRModels, Random
+    using PlutoUI, DataFrames, CommonMark, Distributions
+    using SequentialSamplingModels, StatsFuns
+    # seed random number generator
+    Random.seed!(2340)
+    TableOfContents()
 end
 
 # ╔═╡ 49a9b5c2-1bba-4d75-b0c5-cadfc8c802d4
 begin
-	path_u1_1 = joinpath(pwd(), "../Tutorial_Models/Unit1/Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl")
-	path_u1_2= joinpath(pwd(), "../Tutorial_Models/Unit1/Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
-	nothing
+    path_u1_1 = joinpath(
+        pwd(),
+        "../Tutorial_Models/Unit1/Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl"
+    )
+    path_u1_2 = joinpath(
+        pwd(),
+        "../Tutorial_Models/Unit1/Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl"
+    )
+    nothing
 end
 
 # ╔═╡ c27f77d1-b6a8-42e1-9049-cf4a16a9cd6d
@@ -128,9 +141,9 @@ The default mismatch penalty function in ACTRModels.jl simply counts the number 
 "
 
 # ╔═╡ 8a8b43ac-342b-4e88-ba4a-5850da4917ec
-begin	
-	penalize(s, v1::Array{Bool,1}, v2::Array{Bool,1}) = sum(@. abs(v1 - v2) * 1.0)
-	penalize(s, v1, v2) = .10 * abs(v1 .- v2)
+begin
+    penalize(s, v1::Array{Bool, 1}, v2::Array{Bool, 1}) = sum(@. abs(v1 - v2) * 1.0)
+    penalize(s, v1, v2) = 0.10 * abs(v1 .- v2)
 end
 
 # ╔═╡ ebe3e33f-a7f0-4e2c-965f-128ec62586c1
@@ -201,7 +214,7 @@ As an example, suppose that a subject is given the question "What is 1 + 2?" and
 """
 
 # ╔═╡ cc7a988d-a85a-46ff-b130-4131b3c79389
-win_time = @bind win_time Slider(0.0:.05:2.0, default=.80, show_value=true)
+win_time = @bind win_time Slider(0.0:0.05:2.0, default = 0.80, show_value = true)
 
 # ╔═╡ 7e008bf3-a32a-4665-8234-8fa1459ba676
 cm"""
@@ -214,7 +227,7 @@ The sliders below allow you to change the the time of the winning chunk and the 
 """
 
 # ╔═╡ 04faf645-359b-4b1c-97c9-85278942dc9d
-δ₁ = @bind δ₁ Slider(0.0:.2:20.0, default=16.0, show_value=true)
+δ₁ = @bind δ₁ Slider(0.0:0.2:20.0, default = 16.0, show_value = true)
 
 # ╔═╡ 01ee1e34-3448-4fa8-aa6e-47d7ca6860dc
 md"
@@ -236,22 +249,24 @@ Now that our `simulate` function has been defined, we can now generate some data
 
 # ╔═╡ 8c33c5c6-aef6-4c3b-be7f-1f858683d4f3
 begin
-	function populate_memory(act=0.0)
-	    chunks = [Chunk(;num1=num1,num2=num2,
-	        sum=num1 + num2,act=act) for num1 in 0:5
-	        for num2 in 0:5]
-	    pop!(chunks)
-	    return chunks
-	end
-	
-	function set_baselevels!(chunks)
-	    for chunk in chunks
-	        if chunk.slots.sum < 5
-	            chunk.bl = 0.65
-	        end
-	    end
-	    return nothing
-	end
+    function populate_memory(act = 0.0)
+        chunks = [
+            Chunk(; num1 = num1, num2 = num2,
+                sum = num1 + num2, act = act) for num1 = 0:5
+            for num2 = 0:5
+        ]
+        pop!(chunks)
+        return chunks
+    end
+
+    function set_baselevels!(chunks)
+        for chunk in chunks
+            if chunk.slots.sum < 5
+                chunk.bl = 0.65
+            end
+        end
+        return nothing
+    end
 end
 
 # ╔═╡ aadf438b-c6f6-48b4-8487-fdebc21723de
@@ -261,24 +276,24 @@ function simulate(stimuli, parms; args...)
     # set the base level constant based on sum slot
     set_baselevels!(chunks)
     # create a declarative memory object
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     # create an ACTR model object
-    actr = ACTR(;declarative=memory, parms..., args...)
+    actr = ACTR(; declarative = memory, parms..., args...)
     shuffle!(stimuli)
     N = length(stimuli)
-    data = Array{NamedTuple,1}(undef, N)
+    data = Array{NamedTuple, 1}(undef, N)
     # loop through trials
-    for (i,s) in enumerate(stimuli)
+    for (i, s) in enumerate(stimuli)
         # retrieve a chunk based on retrieval request s
         chunk = retrieve(actr; s...)
         # compute reaction time 
         rt = compute_RT(actr, chunk) + parms.ter
         if isempty(chunk)
             # retrieval failure
-            data[i] = (s...,resp = -100,rt = rt)
+            data[i] = (s..., resp = -100, rt = rt)
         else
             # chunk retrieved. 
-            data[i] = (s...,resp = chunk[1].slots.sum,rt = rt)
+            data[i] = (s..., resp = chunk[1].slots.sum, rt = rt)
         end
     end
     return data
@@ -286,62 +301,75 @@ end
 
 # ╔═╡ 60ef5ae1-0ccd-4fc2-9725-50d4375ba39f
 begin
-	# mismatch penalty parameter
-	δ = 16.0
-	# retrieval threshold parameter
-	τ = -0.45
-	# logistic scalar for activation noise
-	s = 0.5
-	# fixed parameters 
-	parms = (mmp = true, noise = true, dissim_func = penalize, ter = 2.05)
-	# number of blocks
-	n_blocks = 5
-	# stimuli for simulation
-	stimuli = [(num1 = 1,num2 = 1), (num1 = 1,num2 = 2), (num1 = 1,num2 = 3), (num1 = 2,num2 = 2),
-	    (num1 = 2,num2 = 3), (num1 = 3,num2 = 3)]
-	# generate data for each block 
-	temp = map(x -> simulate(stimuli, parms; δ, τ, s), 1:n_blocks)
-	# flatten data
-	data = vcat(vcat(temp...)...)
-	data[1]
+    # mismatch penalty parameter
+    δ = 16.0
+    # retrieval threshold parameter
+    τ = -0.45
+    # logistic scalar for activation noise
+    s = 0.5
+    # fixed parameters 
+    parms = (mmp = true, noise = true, dissim_func = penalize, ter = 2.05)
+    # number of blocks
+    n_blocks = 5
+    # stimuli for simulation
+    stimuli = [(num1 = 1, num2 = 1), (num1 = 1, num2 = 2), (num1 = 1, num2 = 3),
+        (num1 = 2, num2 = 2),
+        (num1 = 2, num2 = 3), (num1 = 3, num2 = 3)]
+    # generate data for each block 
+    temp = map(x -> simulate(stimuli, parms; δ, τ, s), 1:n_blocks)
+    # flatten data
+    data = vcat(vcat(temp...)...)
+    data[1]
 end
 
 # ╔═╡ 1978fb7c-0b0d-4699-87c6-7dbf477f30b4
 let
-	chunks = populate_memory(0.0)
-	σ = s * pi / sqrt(3)
-	# # set base level constant based on sum slot
-	set_baselevels!(chunks)
-	# create declarative memory object
-	memory = Declarative(;memory=chunks)
-	# create ACTR model object
-	actr = ACTR(;declarative=memory, parms..., δ=δ₁, τ, s)
-	compute_activation!(actr; num1=1, num2=2)
-	sort!(chunks, by = c -> c.act_mean, rev=true)
-	candidate_chunks = get_chunks(actr; sum=3)
-	most_active_chunks = chunks[1:4]
-	times = .0:.05:3.5
-	main_plot = plot(layout = (4,4))
-	z = 1
-	plot_index = reshape(1:16, 4, 4)'
-	for (i,candidate) in enumerate(candidate_chunks)
-		chunk_set = union([candidate], most_active_chunks)[1:4]
-		for (j,chunk) in enumerate(chunk_set)
-			slots = chunk.slots
-			y = pdf.(LogNormal(-chunk.act_mean, σ), times)
-			title = string(slots.num1, " + ", slots.num2, " = ", slots.sum)
-			plot!(main_plot, times, y, subplot=plot_index[z], leg=false, grid=false,
-			title=title, ylims = (0,1.4), yticks= [0.0,.4,.8,1.2], color=:darkorange, titlefontsize=9)
-			if j == 1
-				vline!([win_time], color=:black, linestyle=:dash, subplot=plot_index[z])
-			else
-			ix = times .> win_time
-			plot!(times[ix], y[ix], fillrange = zero(times[ix]), fc=:blues, subplot=plot_index[z])
-			end
-			z += 1
-		end
-	end
-	main_plot
+    chunks = populate_memory(0.0)
+    σ = s * pi / sqrt(3)
+    # # set base level constant based on sum slot
+    set_baselevels!(chunks)
+    # create declarative memory object
+    memory = Declarative(; memory = chunks)
+    # create ACTR model object
+    actr = ACTR(; declarative = memory, parms..., δ = δ₁, τ, s)
+    compute_activation!(actr; num1 = 1, num2 = 2)
+    sort!(chunks, by = c -> c.act_mean, rev = true)
+    candidate_chunks = get_chunks(actr; sum = 3)
+    most_active_chunks = chunks[1:4]
+    times = 0.0:0.05:3.5
+    main_plot = plot(layout = (4, 4))
+    z = 1
+    plot_index = reshape(1:16, 4, 4)'
+    for (i, candidate) in enumerate(candidate_chunks)
+        chunk_set = union([candidate], most_active_chunks)[1:4]
+        for (j, chunk) in enumerate(chunk_set)
+            slots = chunk.slots
+            y = pdf.(LogNormal(-chunk.act_mean, σ), times)
+            title = string(slots.num1, " + ", slots.num2, " = ", slots.sum)
+            plot!(main_plot, times, y, subplot = plot_index[z], leg = false, grid = false,
+                title = title, ylims = (0, 1.4), yticks = [0.0, 0.4, 0.8, 1.2],
+                color = :darkorange, titlefontsize = 9)
+            if j == 1
+                vline!(
+                    [win_time],
+                    color = :black,
+                    linestyle = :dash,
+                    subplot = plot_index[z]
+                )
+            else
+                ix = times .> win_time
+                plot!(
+                    times[ix],
+                    y[ix],
+                    fillrange = zero(times[ix]),
+                    fc = :blues,
+                    subplot = plot_index[z]
+                )
+            end
+            z += 1
+        end
+    end
+    main_plot
 end
 
 # ╔═╡ 5b52a89f-fc8e-4eb7-b907-5f278347fedb
@@ -361,83 +389,85 @@ The function `computeLL` operates in a similar manner to the function `simulate`
 
 # ╔═╡ a19ec626-9c9f-4874-aca4-0443b002faa7
 begin
-	import Distributions: loglikelihood, logpdf
-	
-	struct Siegler{T1,T2,T3,T4} <: ContinuousUnivariateDistribution
-	    δ::T1
-	    τ::T2
-	    s::T3
-	    parms::T4
-	end
-	
-	Siegler(;δ, τ, s, parms) = Siegler(δ, τ, s, parms)
-	
-	loglikelihood(d::Siegler, data::Array{<:NamedTuple,1}) = logpdf(d, data)
-	
-	function logpdf(d::Siegler, data::Array{<:NamedTuple,1})
-	    LL = computeLL(d.parms, data; δ=d.δ, τ=d.τ, s=d.s)
-	    return LL
-	end
-	
-	function computeLL(parms, data; δ, τ, s)
-	    type = typeof(δ)
-	    # populate chunks
-	    chunks = populate_memory(zero(δ))
-	    # set base level constant based on sum slot
-	    set_baselevels!(chunks)
-	    # create declarative memory object
-	    memory = Declarative(;memory=chunks)
-	    # create ACTR model object
-	    actr = ACTR(;declarative=memory, parms..., δ, τ, s)
-	    # remove random values from activation
-	    actr.parms.noise = false
-	    N = length(chunks) + 1
-	    (;s,ter,τ) = actr.parms
-	    LL = 0.0; idx = 0; μ = Array{type,1}(undef, N)
-	    σ = fill(s * pi / sqrt(3), N)
-	    ϕ = ter
-	    for (num1,num2,resp,rt) in data
-	        # compute activation
-	        compute_activation!(actr; num1, num2)
-	        # extract mean activation values
-	        map!(x -> x.act, μ, chunks)
-	        # last mean activation is for retrieval failure
-	        μ[end] = τ
-	        # log normal race distribution 
-	        dist = LNR(;ν=-μ, σ, τ = ter)
-	        # no retrieval error
-	        if resp != -100 
-	            # get all chunk indices such that sum = response
-	            indices = find_indices(actr; sum=resp)
-	            log_probs = zeros(type, length(indices))
-	            # loop over each component of mixture and compute log likelihood
-	            for (c,idx) in enumerate(indices)
-	                log_probs[c] = logpdf(dist, idx, rt)
-	            end
-	            # compute marginal likelihood
-	            LL += logsumexp(log_probs)
-	        else
-	            # retrieval failure 
-	            LL += logpdf(dist, N, rt)
-	        end
-	    end
-	    return LL
-	end
+    import Distributions: loglikelihood, logpdf
+
+    struct Siegler{T1, T2, T3, T4} <: ContinuousUnivariateDistribution
+        δ::T1
+        τ::T2
+        s::T3
+        parms::T4
+    end
+
+    Siegler(; δ, τ, s, parms) = Siegler(δ, τ, s, parms)
+
+    loglikelihood(d::Siegler, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
+
+    function logpdf(d::Siegler, data::Array{<:NamedTuple, 1})
+        LL = computeLL(d.parms, data; δ = d.δ, τ = d.τ, s = d.s)
+        return LL
+    end
+
+    function computeLL(parms, data; δ, τ, s)
+        type = typeof(δ)
+        # populate chunks
+        chunks = populate_memory(zero(δ))
+        # set base level constant based on sum slot
+        set_baselevels!(chunks)
+        # create declarative memory object
+        memory = Declarative(; memory = chunks)
+        # create ACTR model object
+        actr = ACTR(; declarative = memory, parms..., δ, τ, s)
+        # remove random values from activation
+        actr.parms.noise = false
+        N = length(chunks) + 1
+        (; s, ter, τ) = actr.parms
+        LL = 0.0
+        idx = 0
+        μ = Array{type, 1}(undef, N)
+        σ = fill(s * pi / sqrt(3), N)
+        ϕ = ter
+        for (num1, num2, resp, rt) in data
+            # compute activation
+            compute_activation!(actr; num1, num2)
+            # extract mean activation values
+            map!(x -> x.act, μ, chunks)
+            # last mean activation is for retrieval failure
+            μ[end] = τ
+            # log normal race distribution 
+            dist = LNR(; ν = -μ, σ, τ = ter)
+            # no retrieval error
+            if resp != -100
+                # get all chunk indices such that sum = response
+                indices = find_indices(actr; sum = resp)
+                log_probs = zeros(type, length(indices))
+                # loop over each component of mixture and compute log likelihood
+                for (c, idx) in enumerate(indices)
+                    log_probs[c] = logpdf(dist, idx, rt)
+                end
+                # compute marginal likelihood
+                LL += logsumexp(log_probs)
+            else
+                # retrieval failure 
+                LL += logpdf(dist, N, rt)
+            end
+        end
+        return LL
+    end
 end
 
 # ╔═╡ 9510fba9-7b46-41b7-8027-ad58c06cc70f
 let
-	data = [(num1=1, num2=2, resp=3, rt=win_time+parms.ter)]
-	LL = computeLL(parms, data; δ=δ₁, τ, s) |> exp
-cm"""
+    data = [(num1 = 1, num2 = 2, resp = 3, rt = win_time + parms.ter)]
+    LL = computeLL(parms, data; δ = δ₁, τ, s) |> exp
+    cm"""
 
-<div align="center">
-	
-``f_{\textrm{LNR}}(\Theta; \mathbf{Y},t=`` $(win_time)``) = ``$(string(round.(LL, digits=3)))
+    <div align="center">
+    	
+    ``f_{\textrm{LNR}}(\Theta; \mathbf{Y},t=`` $(win_time)``) = ``$(string(round.(LL, digits=3)))
 
-</div>
+    </div>
 
-"""
+    """
 end
 
 # ╔═╡ fb25b64a-615a-42df-b0a8-84d5b4912d9f
@@ -475,22 +505,22 @@ end
 
 # ╔═╡ d47d3419-61f2-4fca-9535-b12198e0e733
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(
-		model(data, parms), 
-		specs, 
-		MCMCThreads(), 
-		n_samples, 
-		n_chains, 
-		progress=true
-	)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(data, parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 956d094f-d77c-4c09-aa1c-b76ea9717ceb
@@ -502,41 +532,50 @@ Overall, the quality of the MCMC chains is good. In the summary printout above, 
 
 # ╔═╡ d7a18054-98f5-4d7c-85cf-7569ac76cace
 begin
-	font_size = 12
-	let
-		ch = group(chain, :δ)
-		p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		pcδ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
-	end
+    font_size = 12
+    let
+        ch = group(chain, :δ)
+        p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:traceplot),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:autocorplot),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:mixeddensity),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        pcδ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
+    end
 end
 
 # ╔═╡ 44658390-5839-48ed-a26b-1af39b500ff6
 let
-	ch = group(chain, :τ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+    ch = group(chain, :τ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ 8dc98772-963f-459b-923f-2787dfa02b0d
 let
-	ch = group(chain, :s)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcs = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+    ch = group(chain, :s)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcs = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ 83ef9196-2442-43e9-82a5-2434079dfa8a
@@ -550,53 +589,61 @@ The code block below generates the posterior distribution of  mean reaction time
 
 # ╔═╡ 6d7007f3-b0b3-4eb6-8d9f-66d8b78e5995
 begin
-	function rt_histogram(df, stimuli; kwargs...)
-	    vals = NamedTuple[]
-	    for (num1,num2) in stimuli
-	        idx = @. ((df[:,:num1] == num1 ) & (df[:,:num2] == num2)) | ((df[:,:num1] == num2) & (df[:,:num2] == num1))
-	        subdf = df[idx,:]
-	        str = string(num1, "+", num2)
-	        temp = filter(x -> x[:resp] != -100, subdf)
-	        g = groupby(temp, :resp)
-	        rt_resp = combine(g, :rt => mean)
-	        push!(vals, (title = str, data = rt_resp))
-	    end
-	    p = bar(layout=(2,3), leg=false, xlims=(0,10), xlabel="Response", ylabel="Mean RT",
-	        size=(600,600), xaxis=font(6), yaxis=font(6), titlefont=font(7), grid=false; kwargs...)
-	    for (i,v) in enumerate(vals)
-	        @df v.data bar!(p, :resp, :rt_mean, subplot=i, title=v.title, bar_width=1, color=:grey,
-	            grid=false, ylims=(0,4.5), xlims=(-.5,9))
-	    end
-	    return p
-	end
-	
-	function response_histogram(df, stimuli; kwargs...)
-	    vals = NamedTuple[]
-	    for (num1,num2) in stimuli
-	        idx = @. ((df[:,:num1] == num1 ) & (df[:,:num2] == num2)) | ((df[:,:num1] == num2) & (df[:,:num2] == num1))
-	        subdf = df[idx,:]
-	        str = string(num1, "+", num2)
-	        v = filter(x -> x != -100, subdf[:,:resp])
-	        push!(vals, (title = str, data = v))
-	    end
-	    p = histogram(layout=(2,3), leg=false, xlims=(0,10), xlabel="Response",ylabel="Proportion",
-	        size=(600,600), xaxis=font(6), yaxis=font(6), titlefont=font(7), grid=false; kwargs...)
-	    for (i,v) in enumerate(vals)
-	        histogram!(p, v.data, subplot=i, title=v.title, bar_width=1, color=:grey, grid=false,
-	        normalize=:probability, ylims=(0,1))
-	    end
-	    return p
-	end
-	nothing
+    function rt_histogram(df, stimuli; kwargs...)
+        vals = NamedTuple[]
+        for (num1, num2) in stimuli
+            idx = @. ((df[:, :num1] == num1) & (df[:, :num2] == num2)) |
+               ((df[:, :num1] == num2) & (df[:, :num2] == num1))
+            subdf = df[idx, :]
+            str = string(num1, "+", num2)
+            temp = filter(x -> x[:resp] != -100, subdf)
+            g = groupby(temp, :resp)
+            rt_resp = combine(g, :rt => mean)
+            push!(vals, (title = str, data = rt_resp))
+        end
+        p = bar(layout = (2, 3), leg = false, xlims = (0, 10), xlabel = "Response",
+            ylabel = "Mean RT",
+            size = (600, 600), xaxis = font(6), yaxis = font(6), titlefont = font(7),
+            grid = false; kwargs...)
+        for (i, v) in enumerate(vals)
+            @df v.data bar!(p, :resp, :rt_mean, subplot = i, title = v.title, bar_width = 1,
+                color = :grey,
+                grid = false, ylims = (0, 4.5), xlims = (-0.5, 9))
+        end
+        return p
+    end
+
+    function response_histogram(df, stimuli; kwargs...)
+        vals = NamedTuple[]
+        for (num1, num2) in stimuli
+            idx = @. ((df[:, :num1] == num1) & (df[:, :num2] == num2)) |
+               ((df[:, :num1] == num2) & (df[:, :num2] == num1))
+            subdf = df[idx, :]
+            str = string(num1, "+", num2)
+            v = filter(x -> x != -100, subdf[:, :resp])
+            push!(vals, (title = str, data = v))
+        end
+        p = histogram(layout = (2, 3), leg = false, xlims = (0, 10), xlabel = "Response",
+            ylabel = "Proportion",
+            size = (600, 600), xaxis = font(6), yaxis = font(6), titlefont = font(7),
+            grid = false; kwargs...)
+        for (i, v) in enumerate(vals)
+            histogram!(p, v.data, subplot = i, title = v.title, bar_width = 1,
+                color = :grey, grid = false,
+                normalize = :probability, ylims = (0, 1))
+        end
+        return p
+    end
+    nothing
 end
 
 # ╔═╡ 4e028eb3-cf7c-4a10-ac85-0c2fac25acb4
 begin
-	preds = posterior_predictive(x -> simulate(stimuli, parms; x...), chain, 1000)
-	preds = vcat(vcat(preds...)...)
-	df = DataFrame(preds)
-	sort!(stimuli)
-	p4 = rt_histogram(df, stimuli)
+    preds = posterior_predictive(x -> simulate(stimuli, parms; x...), chain, 1000)
+    preds = vcat(vcat(preds...)...)
+    df = DataFrame(preds)
+    sort!(stimuli)
+    p4 = rt_histogram(df, stimuli)
 end
 
 # ╔═╡ e242c6bd-38e4-476b-9bd7-e3fd0e769aa9
@@ -607,7 +654,6 @@ The plot below shows the response probabilities for each of the six addition pro
 
 # ╔═╡ e6968ca2-0328-46f9-874e-59f95be243b9
 p5 = response_histogram(df, stimuli)
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

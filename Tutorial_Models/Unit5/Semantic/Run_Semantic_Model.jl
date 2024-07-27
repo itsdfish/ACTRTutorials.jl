@@ -30,19 +30,24 @@ n_samples = 1500
 n_adapt = 1500
 specs = NUTS(n_adapt, 0.65)
 n_chains = 4
-chain = sample(model(data, parms), specs, MCMCThreads(), n_samples, n_chains, progress=true)
+chain =
+    sample(model(data, parms), specs, MCMCThreads(), n_samples, n_chains, progress = true)
 #######################################################################################
 #                                         Plot
 #######################################################################################
 pyplot()
-posteriors = plot(chain, seriestype=:density, grid=false, titlefont=font(10),
-    size=(300,175), xaxis=font(8), yaxis=font(8))
+posteriors = plot(chain, seriestype = :density, grid = false, titlefont = font(10),
+    size = (300, 175), xaxis = font(8), yaxis = font(8))
 #######################################################################################
 #                                  Posterior Predictive
 #######################################################################################
 font_size = 12
 hit_rates(s) = posterior_predictive(x -> hit_rate(parms, s, n_reps; x...), chain, 1000)
 preds = map(s -> hit_rates(s), stimuli)
-predictive_plot = histogram(preds, xlabel="% Correct" ,ylabel="Probability", xaxis=font(font_size), yaxis=font(font_size),
-    grid=false, color=:grey, leg=false, titlefont=font(font_size), xlims=(0,1.1),
-    layout=(2,1), ylims=(0,0.4), normalize=:probability, size=(600,600), title=["Is a canary a bird?" "Is a canary an animal?"])
+predictive_plot =
+    histogram(preds, xlabel = "% Correct", ylabel = "Probability", xaxis = font(font_size),
+        yaxis = font(font_size),
+        grid = false, color = :grey, leg = false, titlefont = font(font_size),
+        xlims = (0, 1.1),
+        layout = (2, 1), ylims = (0, 0.4), normalize = :probability, size = (600, 600),
+        title = ["Is a canary a bird?" "Is a canary an animal?"])

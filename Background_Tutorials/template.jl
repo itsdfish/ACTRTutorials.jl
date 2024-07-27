@@ -6,8 +6,8 @@ using InteractiveUtils
 
 # ╔═╡ 075380cc-6f0a-11ec-1349-835bd76094fb
 begin
-	using PlutoUI
-	TableOfContents()
+    using PlutoUI
+    TableOfContents()
 end
 
 # ╔═╡ bc2509d9-307a-4b22-9879-60dab2cb879e

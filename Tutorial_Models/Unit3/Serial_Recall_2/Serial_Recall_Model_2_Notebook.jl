@@ -6,23 +6,23 @@ using InteractiveUtils
 
 # ╔═╡ 45ab4552-e6ac-11ec-36ed-5f38b60183c8
 begin
-	# load the required packages
-	using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
-	using StatsBase
-	# seed random number generator
-	Random.seed!(62102);
-	TableOfContents()
+    # load the required packages
+    using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
+    using StatsBase
+    # seed random number generator
+    Random.seed!(62102)
+    TableOfContents()
 end
 
 # ╔═╡ 24ac1270-c6d8-420e-9248-2e078f7ae99a
 begin
-path_u3_4 = joinpath(pwd(), "../Serial_Recall_1/Serial_Recall_Model_1_Notebook.jl")
+    path_u3_4 = joinpath(pwd(), "../Serial_Recall_1/Serial_Recall_Model_1_Notebook.jl")
 
-nothing
+    nothing
 end
 
 # ╔═╡ f1b4139b-a25d-40cc-8db2-f1f877e10c4b
- Markdown.parse("
+Markdown.parse("
 
 # Introduction
 
@@ -254,9 +254,9 @@ The fuction `penalize` computes the absolute difference between the slot value o
 """
 
 # ╔═╡ e6367e9b-382c-43dc-932d-91007a86cb23
-begin	
-	penalize(s, v1::Array{Bool,1}, v2::Array{Bool,1}) = sum(@. abs(v1 - v2) * 1.0)
-	penalize(s, v1, v2) = abs(v1 .- v2)
+begin
+    penalize(s, v1::Array{Bool, 1}, v2::Array{Bool, 1}) = sum(@. abs(v1 - v2) * 1.0)
+    penalize(s, v1, v2) = abs(v1 .- v2)
 end
 
 # ╔═╡ 6ee1e8e6-af15-4f05-904f-4d20e68904ef
@@ -266,170 +266,175 @@ Now that our `simulate` and `penalize` function have been defined, we can now ge
 
 # ╔═╡ fbabeb36-5565-4039-9d28-144f1649ed99
 begin
-	function initialize_memory(act=0.0)
-	    chunks = [Chunk(;act=act, position=1, retrieved=[false])]
-	    return typeof(chunks)()
-	end
-	
-	function populate_memory(n_items, act=0.0)
-	    chunks = [Chunk(;act=act, position=i, retrieved=[false]) for i in 1:n_items]
-	    return chunks
-	end
+    function initialize_memory(act = 0.0)
+        chunks = [Chunk(; act = act, position = 1, retrieved = [false])]
+        return typeof(chunks)()
+    end
 
-	function set_state!(actr, data_chunks)
-	    chunks = actr.declarative.memory
-	    for (c,v) in zip(chunks,data_chunks)
-	        modify!(c; N=v.N, lags=v.lags, recent=v.recent)
-	        modify!(c.slots, retrieved=v.slots.retrieved[1])
-	    end
-	    return nothing
-	end
+    function populate_memory(n_items, act = 0.0)
+        chunks = [Chunk(; act = act, position = i, retrieved = [false]) for i = 1:n_items]
+        return chunks
+    end
+
+    function set_state!(actr, data_chunks)
+        chunks = actr.declarative.memory
+        for (c, v) in zip(chunks, data_chunks)
+            modify!(c; N = v.N, lags = v.lags, recent = v.recent)
+            modify!(c.slots, retrieved = v.slots.retrieved[1])
+        end
+        return nothing
+    end
 end
 
 # ╔═╡ bcba93bd-9278-498b-bed7-bdcde445126f
 begin
-	using Distributions
-	import Distributions: logpdf, rand, loglikelihood
-	
-	struct SerialRecall{T1,T2,T3,T4} <: ContinuousUnivariateDistribution
-	    δ::T1
-	    τ::T2
-	    d::T3
-	    parms::T4
-	    n_trials::Int
-	end
-	
-	Broadcast.broadcastable(x::SerialRecall) = Ref(x)
-	
-	SerialRecall(;δ, τ, d, parms, n_trials) = SerialRecall(δ, τ, d, parms)
-	
-	loglikelihood(d::SerialRecall, data::Array{<:Array{<:NamedTuple,1},1}) = logpdf(d, data)
-	
-	function logpdf(d::SerialRecall ,data::Array{<:Array{<:NamedTuple,1},1})
-	    return computeLL(d.parms, data, d.n_trials; δ=d.δ, τ=d.τ, d=d.d)
-	end
+    using Distributions
+    import Distributions: logpdf, rand, loglikelihood
 
-	function computeLL(parms, all_data, n_items; δ, τ, d)
-	    act = zero(typeof(δ))
-	    chunks = populate_memory(n_items, act)
-	    # populate declarative memory with chunks
-	    memory = Declarative(;memory=chunks)
-	    # initialize the ACTR object
-	    actr = ACTR(;declarative=memory, parms..., δ, τ, d)
-	    # initialize time
-	    cur_time = 0.0
-	    # initialize log likelihood
-	    LL = 0.0
-	    # loop over each block of data
-	    for data in all_data
-	        # compute log likelhood of block data
-	        LL += block_LL(actr, data)
-	    end
-	    return LL
-	end
-	
-	function block_LL(actr, data)
-	    # initialize block log likelihood for block
-	    LL = 0.0
-	    # iterate over each block trial
-	    for k in data 
-	        set_state!(actr, k.state)
-	        request = retrieval_request(actr; position=k.position, retrieved=[false])
-	        # get the retrieved trucked
-	        chunk = get_chunks(actr; position=k.resp, retrieved=[false])
-	        # compute the probability of the retrieved chunk and retrieval failure
-	        θᵣ,rf = retrieval_prob(actr, chunk, k.cur_time; position=k.position, retrieved=[false])
-	        θ = θᵣ + rf * (1 / length(request))
-	        # increment the log likelihood LL
-	        LL += log(θ)
-	    end
-	    return LL
-	end
+    struct SerialRecall{T1, T2, T3, T4} <: ContinuousUnivariateDistribution
+        δ::T1
+        τ::T2
+        d::T3
+        parms::T4
+        n_trials::Int
+    end
 
+    Broadcast.broadcastable(x::SerialRecall) = Ref(x)
+
+    SerialRecall(; δ, τ, d, parms, n_trials) = SerialRecall(δ, τ, d, parms)
+
+    loglikelihood(d::SerialRecall, data::Array{<:Array{<:NamedTuple, 1}, 1}) =
+        logpdf(d, data)
+
+    function logpdf(d::SerialRecall, data::Array{<:Array{<:NamedTuple, 1}, 1})
+        return computeLL(d.parms, data, d.n_trials; δ = d.δ, τ = d.τ, d = d.d)
+    end
+
+    function computeLL(parms, all_data, n_items; δ, τ, d)
+        act = zero(typeof(δ))
+        chunks = populate_memory(n_items, act)
+        # populate declarative memory with chunks
+        memory = Declarative(; memory = chunks)
+        # initialize the ACTR object
+        actr = ACTR(; declarative = memory, parms..., δ, τ, d)
+        # initialize time
+        cur_time = 0.0
+        # initialize log likelihood
+        LL = 0.0
+        # loop over each block of data
+        for data in all_data
+            # compute log likelhood of block data
+            LL += block_LL(actr, data)
+        end
+        return LL
+    end
+
+    function block_LL(actr, data)
+        # initialize block log likelihood for block
+        LL = 0.0
+        # iterate over each block trial
+        for k in data
+            set_state!(actr, k.state)
+            request = retrieval_request(actr; position = k.position, retrieved = [false])
+            # get the retrieved trucked
+            chunk = get_chunks(actr; position = k.resp, retrieved = [false])
+            # compute the probability of the retrieved chunk and retrieval failure
+            θᵣ, rf = retrieval_prob(
+                actr,
+                chunk,
+                k.cur_time;
+                position = k.position,
+                retrieved = [false]
+            )
+            θ = θᵣ + rf * (1 / length(request))
+            # increment the log likelihood LL
+            LL += log(θ)
+        end
+        return LL
+    end
 end
 
 # ╔═╡ b90540cf-9d4d-4e5b-b604-e2999a7449f1
 begin
-	
-	function simulate(parms, n_study, n_items; δ, τ, d)
-	    chunks = initialize_memory()
-	    # populate declarative memory with chunks
-	    memory = Declarative(;memory=chunks)
-	    # initialize the ACTR object
-	    actr = ACTR(;declarative=memory, parms..., δ, τ, d)
-	    # initialize time
-	    cur_time = 0.0
-	    # study list items
-	    cur_time = simulate_study!(actr, n_study, n_items, cur_time)
-	    # add 3 second delay between study and test phases
-	    cur_time += 1.0
-	    return simulate_test!(actr, n_items, cur_time)
-	end
-	
-	function simulate_study!(actr, n_study, n_items, cur_time)
-	    # stimulus presentation rate
-	    p_rate = 2.0
-	    encoding_time = 0.5
-	    rehersal_time = 0.5
-	    chunks = actr.declarative.memory
-	    # repeat study list
-	    for rep ∈ 1:n_study
-	        # loop through each chunk
-	        for m ∈ 1:n_items
-	            # increment time
-	            cur_time += encoding_time
-	            add_chunk!(actr, cur_time; position=m, retrieved=[false])
-	            # rehersal index
-	            r = 1
-	            # reherse from r ∈ 1:m while time remaining
-	            while mod(cur_time, p_rate) != 0 
-	                # increment time
-	                cur_time += rehersal_time
-	                # println(cur_time, " m ", m, " r ", r)
-	                # update chunk
-	                update_chunk!(chunks[r], cur_time)
-	                #reset reloop through if necessary
-	                r  = r == m ? 1 : r += 1
-	            end
-	        end
-	    end
-	    return cur_time
-	end
-	
-	function simulate_test!(actr, n_items, cur_time)
-	    parms = actr.parms
-	    data = Array{NamedTuple,1}(undef,n_items)
-	    chunks = actr.declarative.memory
-	    chunk = deepcopy(chunks[1])
-	    rt = 0.0
-	    for i ∈ 1:n_items
-	        cur_time += 0.05
-	        # compute retrieval probabilities θ for retrieval request current position i and non-retrieved chunks
-	        θ,request = retrieval_probs(actr, cur_time; position=i, retrieved=[false])
-	        n_choices = length(θ)
-	        # select a random chunk index weighted by retrieval probabilities
-	        chunk_id = sample(1:n_choices, Weights(θ))
-	        compute_activation!(actr, cur_time; position=i, retrieved=[false])
-	        if chunk_id == n_choices
-	            # guessing process
-	            chunk = rand(request)
-	            rt = compute_RT(actr, Chunk[])
-	        else
-	            # retrieval process
-	            chunk = request[chunk_id] 
-	            rt = compute_RT(actr, chunk)
-	        end
-	        # add state, position, respose and current time to data
-	        data[i] = (state = deepcopy(chunks), position=i, resp=chunk.slots.position,
-	             cur_time=cur_time)
-	        cur_time += rt
-	        # set retrieved chunk to retrieved = true
-	        modify!(chunk.slots, retrieved=true)
-	        # time to respond
-	        cur_time += (0.05 + 0.5)
-	    end
-	    return data
-	end
+    function simulate(parms, n_study, n_items; δ, τ, d)
+        chunks = initialize_memory()
+        # populate declarative memory with chunks
+        memory = Declarative(; memory = chunks)
+        # initialize the ACTR object
+        actr = ACTR(; declarative = memory, parms..., δ, τ, d)
+        # initialize time
+        cur_time = 0.0
+        # study list items
+        cur_time = simulate_study!(actr, n_study, n_items, cur_time)
+        # add 3 second delay between study and test phases
+        cur_time += 1.0
+        return simulate_test!(actr, n_items, cur_time)
+    end
+
+    function simulate_study!(actr, n_study, n_items, cur_time)
+        # stimulus presentation rate
+        p_rate = 2.0
+        encoding_time = 0.5
+        rehersal_time = 0.5
+        chunks = actr.declarative.memory
+        # repeat study list
+        for rep ∈ 1:n_study
+            # loop through each chunk
+            for m ∈ 1:n_items
+                # increment time
+                cur_time += encoding_time
+                add_chunk!(actr, cur_time; position = m, retrieved = [false])
+                # rehersal index
+                r = 1
+                # reherse from r ∈ 1:m while time remaining
+                while mod(cur_time, p_rate) != 0
+                    # increment time
+                    cur_time += rehersal_time
+                    # println(cur_time, " m ", m, " r ", r)
+                    # update chunk
+                    update_chunk!(chunks[r], cur_time)
+                    #reset reloop through if necessary
+                    r = r == m ? 1 : r += 1
+                end
+            end
+        end
+        return cur_time
+    end
+
+    function simulate_test!(actr, n_items, cur_time)
+        parms = actr.parms
+        data = Array{NamedTuple, 1}(undef, n_items)
+        chunks = actr.declarative.memory
+        chunk = deepcopy(chunks[1])
+        rt = 0.0
+        for i ∈ 1:n_items
+            cur_time += 0.05
+            # compute retrieval probabilities θ for retrieval request current position i and non-retrieved chunks
+            θ, request = retrieval_probs(actr, cur_time; position = i, retrieved = [false])
+            n_choices = length(θ)
+            # select a random chunk index weighted by retrieval probabilities
+            chunk_id = sample(1:n_choices, Weights(θ))
+            compute_activation!(actr, cur_time; position = i, retrieved = [false])
+            if chunk_id == n_choices
+                # guessing process
+                chunk = rand(request)
+                rt = compute_RT(actr, Chunk[])
+            else
+                # retrieval process
+                chunk = request[chunk_id]
+                rt = compute_RT(actr, chunk)
+            end
+            # add state, position, respose and current time to data
+            data[i] = (state = deepcopy(chunks), position = i, resp = chunk.slots.position,
+                cur_time = cur_time)
+            cur_time += rt
+            # set retrieved chunk to retrieved = true
+            modify!(chunk.slots, retrieved = true)
+            # time to respond
+            cur_time += (0.05 + 0.5)
+        end
+        return data
+    end
 end
 
 # ╔═╡ 55c67be6-e69c-4d73-9006-4d16ce0d981e
@@ -439,21 +444,21 @@ Now that our `simulate` function has been defined, we can now generate some data
 
 # ╔═╡ 6f1cd9de-9d6c-494a-b3b9-212f99111df9
 begin
-	# mismatch penalty parameter
-	δ = 1.0
-	# retrieval threshold parameter
-	τ = -1.0
-	# activation decay parameter
-	d = 0.5
-	# number of blocks
-	n_blocks = 10
-	# number of items per block
-	n_items = 10
-	# number of times each list is studied
-	n_study = 1
-	# fixed parameters
-	parms = (s = 0.3, mmp = true, noise = true, dissim_func = penalize, bll = true)
-	data = map(x -> simulate(parms, n_study, n_items; δ, τ, d), 1:n_blocks);
+    # mismatch penalty parameter
+    δ = 1.0
+    # retrieval threshold parameter
+    τ = -1.0
+    # activation decay parameter
+    d = 0.5
+    # number of blocks
+    n_blocks = 10
+    # number of items per block
+    n_items = 10
+    # number of times each list is studied
+    n_study = 1
+    # fixed parameters
+    parms = (s = 0.3, mmp = true, noise = true, dissim_func = penalize, bll = true)
+    data = map(x -> simulate(parms, n_study, n_items; δ, τ, d), 1:n_blocks)
 end
 
 # ╔═╡ fc3ec29a-4ae3-402b-8d68-908c7560e9ae
@@ -463,18 +468,19 @@ Let's determine whether `simulate_study!` produces the desired rehersal distribu
 
 # ╔═╡ a797727c-a797-48f6-a313-5381940bc80e
 begin
-	chunks = initialize_memory()
-	# populate declarative memory with chunks
-	memory = Declarative(;memory=chunks)
-	# initialize the ACTR object
-	actr = ACTR(;declarative=memory, parms..., δ, τ, d)
-	# initialize time
-	cur_time = 0.0
-	# study list items
-	simulate_study!(actr, n_study, n_items, cur_time)
-	ns = map(x ->x.N, chunks)
-	plot(ns, grid=false, leg=false, xaxis=font(11), yaxis=font(11), xlabel="Position", ylabel="Reherals", 
-	    ylims=(0,14), size=(600,400))
+    chunks = initialize_memory()
+    # populate declarative memory with chunks
+    memory = Declarative(; memory = chunks)
+    # initialize the ACTR object
+    actr = ACTR(; declarative = memory, parms..., δ, τ, d)
+    # initialize time
+    cur_time = 0.0
+    # study list items
+    simulate_study!(actr, n_study, n_items, cur_time)
+    ns = map(x -> x.N, chunks)
+    plot(ns, grid = false, leg = false, xaxis = font(11), yaxis = font(11),
+        xlabel = "Position", ylabel = "Reherals",
+        ylims = (0, 14), size = (600, 400))
 end
 
 # ╔═╡ 93a91615-83be-4382-9369-526173eaf3e0
@@ -529,13 +535,20 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ ce61291f-e099-40b5-9599-8e86578a11fc
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, 0.8)
-	# Start sampling.
-	chain = sample(model(data, parms, n_items), specs, MCMCThreads(), n_samples, n_chains, progress=true)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, 0.8)
+    # Start sampling.
+    chain = sample(
+        model(data, parms, n_items),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
 end
 
 # ╔═╡ 7f2537cb-cefc-48ec-81d5-8a1ba888de44
@@ -553,33 +566,33 @@ The density plots located in the third panel of each plot below show that the po
 """
 
 # ╔═╡ 1530dc8e-99ab-4daf-8950-e7e794309c75
-let  
-	ch = group(chain, :δ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot),
-	  grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+let
+    ch = group(chain, :δ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot),
+        grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ 653a831e-e918-4933-bf08-9b925c822a32
-let  
-	ch = group(chain, :d)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot),
-	  grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+let
+    ch = group(chain, :d)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot),
+        grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ c0c28fe8-661a-4391-bce2-5bbe37dbfe2c
-let  
-	ch = group(chain, :τ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot),
-	  grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+let
+    ch = group(chain, :τ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot),
+        grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ dfe35cd9-5e3f-4625-9cf7-cbfb94fa7be8
@@ -594,24 +607,34 @@ The code block below generates the posterior distribution of transposition displ
 
 # ╔═╡ d242208c-d5d7-4abc-9266-cb4d13843d2c
 begin
-	function transpostions(parms, n_study, n_items; δ, τ, d)
-	    data = simulate(parms, n_study, n_items; δ, τ, d)
-	    positions = map(x->x.resp, data)
-	    return @. abs([1:n_items;] - positions)
-	end
-	
-	function serial_position(parms, n_study, n_items; δ, τ, d)
-	    data = simulate(parms, n_study, n_items; δ, τ, d)
-	    positions = map(x->x.resp, data)
-	    return @. 1:n_items .== positions
-	end
+    function transpostions(parms, n_study, n_items; δ, τ, d)
+        data = simulate(parms, n_study, n_items; δ, τ, d)
+        positions = map(x -> x.resp, data)
+        return @. abs([1:n_items;] - positions)
+    end
+
+    function serial_position(parms, n_study, n_items; δ, τ, d)
+        data = simulate(parms, n_study, n_items; δ, τ, d)
+        positions = map(x -> x.resp, data)
+        return @. 1:n_items .== positions
+    end
 end
 
 # ╔═╡ 8d06714c-b24d-4728-b389-c87b7cfcc867
 begin
-preds = posterior_predictive(x -> transpostions(parms, n_study, n_items; x...), chain, 1000)
-preds = vcat(preds...)
-p4 = histogram(preds, xlabel="Position Displacement", ylabel="Probability", grid=false, normalize = :probability, color=:grey, leg=false, linewidth=0.3)
+    preds =
+        posterior_predictive(x -> transpostions(parms, n_study, n_items; x...), chain, 1000)
+    preds = vcat(preds...)
+    p4 = histogram(
+        preds,
+        xlabel = "Position Displacement",
+        ylabel = "Probability",
+        grid = false,
+        normalize = :probability,
+        color = :grey,
+        leg = false,
+        linewidth = 0.3
+    )
 end
 
 # ╔═╡ 9746e63b-d0cb-4899-8de6-8d423ae7164a
@@ -623,10 +646,24 @@ The posterior predictive distribution for the primacy effect is plotted below. A
 
 # ╔═╡ 74eb41c8-2973-448c-a101-e46c8f95815b
 let
-preds = posterior_predictive(x -> serial_position(parms, n_study, n_items; x...), chain, 1000)
-preds = hcat(preds...)
-sp_effect = mean(preds, dims=2)
-p5 = plot(1:n_items, sp_effect, xlabel="Position", ylims = (0,1), ylabel="Accuracy", grid=false, color=:grey, leg=false, linewidth=1.5)
+    preds = posterior_predictive(
+        x -> serial_position(parms, n_study, n_items; x...),
+        chain,
+        1000
+    )
+    preds = hcat(preds...)
+    sp_effect = mean(preds, dims = 2)
+    p5 = plot(
+        1:n_items,
+        sp_effect,
+        xlabel = "Position",
+        ylims = (0, 1),
+        ylabel = "Accuracy",
+        grid = false,
+        color = :grey,
+        leg = false,
+        linewidth = 1.5
+    )
 end
 
 # ╔═╡ 13f7a2ae-3ec0-4e70-bdc7-86ee57e3c44d

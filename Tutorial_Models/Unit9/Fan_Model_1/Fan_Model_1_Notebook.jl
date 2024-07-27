@@ -6,136 +6,136 @@ using InteractiveUtils
 
 # ╔═╡ a27d67f0-840b-11ec-1ca7-a3b556928b86
 begin
-	using Turing, StatsPlots, ACTRModels, DataFrames
-	using Random, PlutoUI, SequentialSamplingModels, StatsFuns
-	TableOfContents()
+    using Turing, StatsPlots, ACTRModels, DataFrames
+    using Random, PlutoUI, SequentialSamplingModels, StatsFuns
+    TableOfContents()
 end
 
 # ╔═╡ 15a84aa7-b587-4171-a33e-d17197449ec2
 begin
-	using Parameters, StatsBase
-	import Distributions: logpdf, rand, loglikelihood
-	
-	"""
-	Distribution constructor for the baseline fan model.
-	
-	* γ: maximum association parameter
-	* parms: contains all fixed parameters
-	* slots: slot-value pairs used to populate ACT-R's declarative memory
-	"""
-	struct Fan{T1,T2,T3} <: ContinuousUnivariateDistribution
-	  γ::T1
-	  parms::T2
-	  slots::T3
-	end
-	
-	#Keyword constructor
-	Fan(;γ,ter,parms,slots) = Fan(γ,ter,parms,slots)
-	
-	"""
-	Computes the log likelihood for the baseline fan model.
-	"""
-	function logpdf(d::Fan, data::Array{<:NamedTuple,1})
-		LL = computeLL(d.parms, d.slots, data; γ=d.γ)
-		return LL
-	end
-	
-	loglikelihood(d::Fan, data::Array{<:NamedTuple,1}) = logpdf(d, data)
-	
-	function computeLL(parms ,slots, data; γ)
-		act = zero(γ)
-		# creates an array of chunks for declarative memory
-		chunks = [Chunk(;person=pe, place=pl, act) for (pe,pl) in zip(slots...)]
-		# creates a declarative memory object that holds an array of chunks
-		memory = Declarative(;memory=chunks)
-		imaginal = Imaginal(buffer=chunks[1])
-		# creates an ACTR object that holds declarative memory and other modules as needed
-		actr = ACTR(;declarative=memory, imaginal, γ, parms...)
-		# don't add noise to activation values
-		actr.parms.noise = false
-		# initializes the log likelihood
-		LL = 0.0
-		LLs = Array{typeof(γ), 1}(undef,2)
-		# iterate over each trial in data and compute the Loglikelihood based on the response yes, no and
-		# rf (retrieval failure)
-		# each response is a mixture of person vs. place retrieval request
-		for v in data
-			#Add stimulus to imaginal buffer
-			imaginal.buffer[1] = Chunk(;act, person=v.person, place=v.place)
-			if v.resp == :yes
-				# log likelihood of retrieval using person slot
-				LLs[1] = loglike_yes(actr, v.person, v.place,v.rt; person=v.person)
-				# log likelihood of retrieval using place slot
-				LLs[2] = loglike_yes(actr, v.person, v.place, v.rt; place=v.place)
-				# log likelihood of retrieving with person vs. place slot
-				LLs .+= log(.5)
-				# compute log likelihood of mixture
-				LL += logsumexp(LLs)
-			else
-				# log likelihood of retrieval using person slot
-				LLs[1] = loglike_no(actr, v.person, v.place, v.rt; person=v.person)
-				# log likelihood of retrieval using place slot
-				LLs[2] = loglike_no(actr, v.person, v.place, v.rt; place=v.place)
-				# log likelihood of retrieving with person vs. place slot
-				LLs .+= log(.5)
-				# compute log likelihood of mixture
-				LL += logsumexp(LLs)
-			end
-		end
-		return LL
-	end
+    using Parameters, StatsBase
+    import Distributions: logpdf, rand, loglikelihood
 
-	function loglike_yes(actr, person, place, rt; request...)
-	    # extract required parameters
-	    (; s,τ,ter) = actr.parms
-	    # subset of chunks that match retrieval request
-	    chunks = get_chunks(actr; request...)
-	    # find index corresponding to "yes" response, which is the stimulus
-	    choice = find_index(chunks; person, place)
-	    # compute the activation for each of the matching chunks
-	    compute_activation!(actr, chunks; request...)
-	    # collect activation values into a vector
-	    μ = map(x->x.act, chunks)
-	    # add threshold as the last response
-	    push!(μ, τ)
-	    # map the s parameter to the standard deviation for
-	    # comparability to Lisp ACTR models.
-	    σ = fill(s*pi/sqrt(3), length(μ))
-	    # create a distribution object for the LogNormal Race model
-	    dist = LNR(; ν = -μ, σ, τ = ter)
-	    # compute likelihood of choice and rt given the parameters.
-	    return logpdf(dist, choice, rt)
-	end
+    """
+    Distribution constructor for the baseline fan model.
 
-	function loglike_no(actr, person, place, rt; request...)
-	    # extract required parameters
-	    (; s,τ,ter,γ) = actr.parms
-	    # subset of chunks that match retrieval request
-	    chunks = get_chunks(actr; request...)
-	    # compute the activation for each of the matching chunks
-	    compute_activation!(actr, chunks; request...)
-	    # collect activation values into a vector
-	    μ = map(x->x.act, chunks)
-	    # add threshold as the last response
-	    push!(μ, τ)
-	    # map the s parameter to the standard deviation for
-	    # comparability to Lisp ACTR models.
-	    σ = fill(s*pi/sqrt(3), length(μ))
-	    dist = LNR(; ν = -μ, σ, τ = ter)
-	    # index of the chunk that represents the stimulus
-	    idx = find_index(chunks; person=person, place=place)
-	    # marginalize over all of the possible chunks that could have lead to the
-	    # observed response
-	    N = length(chunks) + 1
-	    LLs = Array{typeof(γ), 1}()
-	    for i in 1:N
-	        # exclude the chunk representing the stimulus because the response was "no"
-	        if i != idx
-	            push!(LLs, logpdf(dist, i, rt))
-	        end
-	    end
-	    return logsumexp(LLs)
-	end
+    * γ: maximum association parameter
+    * parms: contains all fixed parameters
+    * slots: slot-value pairs used to populate ACT-R's declarative memory
+    """
+    struct Fan{T1, T2, T3} <: ContinuousUnivariateDistribution
+        γ::T1
+        parms::T2
+        slots::T3
+    end
+
+    #Keyword constructor
+    Fan(; γ, ter, parms, slots) = Fan(γ, ter, parms, slots)
+
+    """
+    Computes the log likelihood for the baseline fan model.
+    """
+    function logpdf(d::Fan, data::Array{<:NamedTuple, 1})
+        LL = computeLL(d.parms, d.slots, data; γ = d.γ)
+        return LL
+    end
+
+    loglikelihood(d::Fan, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
+
+    function computeLL(parms, slots, data; γ)
+        act = zero(γ)
+        # creates an array of chunks for declarative memory
+        chunks = [Chunk(; person = pe, place = pl, act) for (pe, pl) in zip(slots...)]
+        # creates a declarative memory object that holds an array of chunks
+        memory = Declarative(; memory = chunks)
+        imaginal = Imaginal(buffer = chunks[1])
+        # creates an ACTR object that holds declarative memory and other modules as needed
+        actr = ACTR(; declarative = memory, imaginal, γ, parms...)
+        # don't add noise to activation values
+        actr.parms.noise = false
+        # initializes the log likelihood
+        LL = 0.0
+        LLs = Array{typeof(γ), 1}(undef, 2)
+        # iterate over each trial in data and compute the Loglikelihood based on the response yes, no and
+        # rf (retrieval failure)
+        # each response is a mixture of person vs. place retrieval request
+        for v in data
+            #Add stimulus to imaginal buffer
+            imaginal.buffer[1] = Chunk(; act, person = v.person, place = v.place)
+            if v.resp == :yes
+                # log likelihood of retrieval using person slot
+                LLs[1] = loglike_yes(actr, v.person, v.place, v.rt; person = v.person)
+                # log likelihood of retrieval using place slot
+                LLs[2] = loglike_yes(actr, v.person, v.place, v.rt; place = v.place)
+                # log likelihood of retrieving with person vs. place slot
+                LLs .+= log(0.5)
+                # compute log likelihood of mixture
+                LL += logsumexp(LLs)
+            else
+                # log likelihood of retrieval using person slot
+                LLs[1] = loglike_no(actr, v.person, v.place, v.rt; person = v.person)
+                # log likelihood of retrieval using place slot
+                LLs[2] = loglike_no(actr, v.person, v.place, v.rt; place = v.place)
+                # log likelihood of retrieving with person vs. place slot
+                LLs .+= log(0.5)
+                # compute log likelihood of mixture
+                LL += logsumexp(LLs)
+            end
+        end
+        return LL
+    end
+
+    function loglike_yes(actr, person, place, rt; request...)
+        # extract required parameters
+        (; s, τ, ter) = actr.parms
+        # subset of chunks that match retrieval request
+        chunks = get_chunks(actr; request...)
+        # find index corresponding to "yes" response, which is the stimulus
+        choice = find_index(chunks; person, place)
+        # compute the activation for each of the matching chunks
+        compute_activation!(actr, chunks; request...)
+        # collect activation values into a vector
+        μ = map(x -> x.act, chunks)
+        # add threshold as the last response
+        push!(μ, τ)
+        # map the s parameter to the standard deviation for
+        # comparability to Lisp ACTR models.
+        σ = fill(s * pi / sqrt(3), length(μ))
+        # create a distribution object for the LogNormal Race model
+        dist = LNR(; ν = -μ, σ, τ = ter)
+        # compute likelihood of choice and rt given the parameters.
+        return logpdf(dist, choice, rt)
+    end
+
+    function loglike_no(actr, person, place, rt; request...)
+        # extract required parameters
+        (; s, τ, ter, γ) = actr.parms
+        # subset of chunks that match retrieval request
+        chunks = get_chunks(actr; request...)
+        # compute the activation for each of the matching chunks
+        compute_activation!(actr, chunks; request...)
+        # collect activation values into a vector
+        μ = map(x -> x.act, chunks)
+        # add threshold as the last response
+        push!(μ, τ)
+        # map the s parameter to the standard deviation for
+        # comparability to Lisp ACTR models.
+        σ = fill(s * pi / sqrt(3), length(μ))
+        dist = LNR(; ν = -μ, σ, τ = ter)
+        # index of the chunk that represents the stimulus
+        idx = find_index(chunks; person = person, place = place)
+        # marginalize over all of the possible chunks that could have lead to the
+        # observed response
+        N = length(chunks) + 1
+        LLs = Array{typeof(γ), 1}()
+        for i = 1:N
+            # exclude the chunk representing the stimulus because the response was "no"
+            if i != idx
+                push!(LLs, logpdf(dist, i, rt))
+            end
+        end
+        return logsumexp(LLs)
+    end
 end
 
 # ╔═╡ 2308b774-b414-4ac5-9d58-ba360117fceb
@@ -175,9 +175,9 @@ On each trial, the model proceeds through a series of production cycles in which
 
 # ╔═╡ c7bb1d00-0cb3-4894-b68d-50945141780e
 let
-	url = "https://i.imgur.com/QZcS8lQ.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/png"(), data)
+    url = "https://i.imgur.com/QZcS8lQ.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/png"(), data)
 end
 
 # ╔═╡ c9c830fe-c091-4ec1-9a6b-46c7be772304
@@ -231,97 +231,102 @@ Reveal the three cells below to see code for generating stimuli, generating chun
 
 # ╔═╡ 9c0c8566-d906-425e-8b74-9b6254099b55
 begin
-	people = [:hippie,:hippie,:hippie,:captain,:captain,:debutante,:fireman,:giant,
-	          :giant,:giant,:earl,:earl,:lawyer]
-	
-	places = [:park,:church,:bank,:park,:cave,:bank,:park,:beach,:castle,:dungeon,
-	  :castle,:forest,:store]
-	
-	slots = (people=people,places=places)
-		
-	trial = [:target,:target,:target,:target,:target,
-	         :target,:target,:target,:target,:foil,:foil,:foil,:foil,
-	         :foil,:foil,:foil,:foil,:foil]
-	pep = [:lawyer,:captain,:hippie,:debutante,:earl,:hippie,
-	          :fireman,:captain,:hippie,:fireman,:captain,:giant,
-	          :fireman,:captain,:giant,:lawyer,:earl,:giant]
-	pla = [:store,:cave,:church,:bank,:castle,:bank,:park,
-	          :park,:park,:store,:store,:store,
-	          :bank,:bank,:bank,:park,:park,:park]
-	
-	stimuli = [(trial=t,person=p,place=pl) for (t,p,pl) in zip(trial,pep,pla)]
+    people = [:hippie, :hippie, :hippie, :captain, :captain, :debutante, :fireman, :giant,
+        :giant, :giant, :earl, :earl, :lawyer]
 
-	"""
-	Computes the fan values for the stimulus set. Returns a NamedTuple
-	    for each trial.
-	"""
-	function count_fan(vals)
-	    un = (unique(vals)...,)
-	    uc = map(y->count(x->x==y, vals), un)
-	    return NamedTuple{un}(uc)
-	end
-	
-	"""
-	Returns fan values for a given person-place pair
-	"""
-	function get_fan(vals, person, place)
-	    return (fanPerson=vals[:people][person],fanPlace=vals[:places][place])
-	end
-	
-	"""
-	Computes mean RT for each fan condition. Used in posterior predictive
-	"""
-	summarize(vals) = summarize(DataFrame(vcat(vals...)))
-	
-	function summarize(df::DataFrame)
-	    g = groupby(df, [:trial,:resp,:fanPerson,:fanPlace])
-	    return combine(g, :rt=>mean=>:MeanRT)
-	end
-	
-	"""
-	Computes accuracy for each fan condition. Used in posterior predictive
-	"""
-	accuracy(vals) = accuracy(DataFrame(vcat(vals...)))
-	accuracy(df::DataFrame) = accuracy(df, [:trial,:fanPerson,:fanPlace])
-	
-	function accuracy(df::DataFrame, factors)
-	    g = groupby(df, factors)
-	    compute_correct!(df)
-	    pred_correct = combine(g, accuracy=:correct=>mean)
-	    return pred_correct
-	end
-	
-	function compute_correct!(df)
-	  df[:,:correct] = (df[:,:resp] .== :yes) .& (df[:,:trial] .== :target) .| (df[:,:resp] .== :no) .& (df[:,:trial] .== :foil)
-	end
+    places = [:park, :church, :bank, :park, :cave, :bank, :park, :beach, :castle, :dungeon,
+        :castle, :forest, :store]
 
-	  nothing
-	nothing
+    slots = (people = people, places = places)
+
+    trial = [:target, :target, :target, :target, :target,
+        :target, :target, :target, :target, :foil, :foil, :foil, :foil,
+        :foil, :foil, :foil, :foil, :foil]
+    pep = [:lawyer, :captain, :hippie, :debutante, :earl, :hippie,
+        :fireman, :captain, :hippie, :fireman, :captain, :giant,
+        :fireman, :captain, :giant, :lawyer, :earl, :giant]
+    pla = [:store, :cave, :church, :bank, :castle, :bank, :park,
+        :park, :park, :store, :store, :store,
+        :bank, :bank, :bank, :park, :park, :park]
+
+    stimuli = [(trial = t, person = p, place = pl) for (t, p, pl) in zip(trial, pep, pla)]
+
+    """
+    Computes the fan values for the stimulus set. Returns a NamedTuple
+        for each trial.
+    """
+    function count_fan(vals)
+        un = (unique(vals)...,)
+        uc = map(y -> count(x -> x == y, vals), un)
+        return NamedTuple{un}(uc)
+    end
+
+    """
+    Returns fan values for a given person-place pair
+    """
+    function get_fan(vals, person, place)
+        return (fanPerson = vals[:people][person], fanPlace = vals[:places][place])
+    end
+
+    """
+    Computes mean RT for each fan condition. Used in posterior predictive
+    """
+    summarize(vals) = summarize(DataFrame(vcat(vals...)))
+
+    function summarize(df::DataFrame)
+        g = groupby(df, [:trial, :resp, :fanPerson, :fanPlace])
+        return combine(g, :rt => mean => :MeanRT)
+    end
+
+    """
+    Computes accuracy for each fan condition. Used in posterior predictive
+    """
+    accuracy(vals) = accuracy(DataFrame(vcat(vals...)))
+    accuracy(df::DataFrame) = accuracy(df, [:trial, :fanPerson, :fanPlace])
+
+    function accuracy(df::DataFrame, factors)
+        g = groupby(df, factors)
+        compute_correct!(df)
+        pred_correct = combine(g, accuracy = :correct => mean)
+        return pred_correct
+    end
+
+    function compute_correct!(df)
+        df[:, :correct] =
+            (df[:, :resp] .== :yes) .& (df[:, :trial] .== :target) .|
+            (df[:, :resp] .== :no) .& (df[:, :trial] .== :foil)
+    end
+
+    nothing
+    nothing
 end
 
 # ╔═╡ 8ef83797-63a7-4b45-8a5d-14030f2b88d8
 let
-	function compute_fan_activation(fan_size, slots, parms; γ)
-    #Creates an array of chunks for declarative memory
-    chunks = [Chunk(;place=:home) for _ in 1:fan_size]
-    #Creates a declarative memory object that holds an array of chunks and model parameters
-    memory = Declarative(;memory=chunks)
-    #Initialize imaginal module
-    imaginal = Imaginal(buffer=chunks[1])
-    #Creates an ACTR object that holds declarative memory and other modules as needed
-    actr = ACTR(;declarative=memory, imaginal, parms..., γ)
-    imaginal.buffer[1] = Chunk(;place=:home)
-    compute_activation!(actr, place=:home)
-    return chunks[1].act
-end
+    function compute_fan_activation(fan_size, slots, parms; γ)
+        #Creates an array of chunks for declarative memory
+        chunks = [Chunk(; place = :home) for _ = 1:fan_size]
+        #Creates a declarative memory object that holds an array of chunks and model parameters
+        memory = Declarative(; memory = chunks)
+        #Initialize imaginal module
+        imaginal = Imaginal(buffer = chunks[1])
+        #Creates an ACTR object that holds declarative memory and other modules as needed
+        actr = ACTR(; declarative = memory, imaginal, parms..., γ)
+        imaginal.buffer[1] = Chunk(; place = :home)
+        compute_activation!(actr, place = :home)
+        return chunks[1].act
+    end
 
-ex_parms = (sa=true, )
-γs = .5:0.5:3.0
-fans = 1:10
-compute_fan_activations(fans, γ) = map(x->compute_fan_activation(x, slots, ex_parms; γ=γ), fans)
-activations = map(x->compute_fan_activations(fans, x), γs)
-plot(fans, activations, labels=γs', grid=false, xlabel="Fan Size", ylabel = "Spreading Activation",
-    xaxis=font(12), yaxis=font(12), color=cgrad(:rust), linewidth=1.5, line_z=(fans)', colorbar=false)
+    ex_parms = (sa = true,)
+    γs = 0.5:0.5:3.0
+    fans = 1:10
+    compute_fan_activations(fans, γ) =
+        map(x -> compute_fan_activation(x, slots, ex_parms; γ = γ), fans)
+    activations = map(x -> compute_fan_activations(fans, x), γs)
+    plot(fans, activations, labels = γs', grid = false, xlabel = "Fan Size",
+        ylabel = "Spreading Activation",
+        xaxis = font(12), yaxis = font(12), color = cgrad(:rust), linewidth = 1.5,
+        line_z = (fans)', colorbar = false)
 end
 
 # ╔═╡ 529daefc-a9c6-47db-bd87-661b220cb71d
@@ -452,19 +457,19 @@ For each stimulus, the function `simulate_block` performs the following operatio
 
 # ╔═╡ 848dbfb7-7a15-4c09-bbd1-c740bd53bf1e
 function simulate_block(actr, stimuli, slots)
-    (; declarative,imaginal) = actr
+    (; declarative, imaginal) = actr
     #Extract ter parameter for encoding and motor response
     ter = get_parm(actr, :ter)
     resp = :_
-    data = Array{NamedTuple,1}(undef,length(stimuli))
+    data = Array{NamedTuple, 1}(undef, length(stimuli))
     i = 0
     chunk = Chunk()
     #Counts the fan for each person-place pair
-    fanCount = map(x->count_fan(x), slots)
-    for (trial,person,place) in stimuli
-        i+=1
+    fanCount = map(x -> count_fan(x), slots)
+    for (trial, person, place) in stimuli
+        i += 1
         #Encode stimulus into imaginal buffer
-        imaginal.buffer[1] = Chunk(;person, place)
+        imaginal.buffer[1] = Chunk(; person, place)
         #Randomly select a production rule for person or place retrieval request.
         if rand(Bool)
             chunk = retrieve(actr; person)
@@ -481,7 +486,8 @@ function simulate_block(actr, stimuli, slots)
         #Get the fan for the person and place
         fan = get_fan(fanCount, person, place)
         #Record all of the simulation output for the ith trial
-        data[i] = (trial=trial, person=person, place=place, fan...,rt=rt, resp=resp)
+        data[i] =
+            (trial = trial, person = person, place = place, fan..., rt = rt, resp = resp)
     end
     return data
 end
@@ -489,15 +495,15 @@ end
 # ╔═╡ 5f526018-869d-4af3-9c0e-908b5897c9e4
 function simulate(stimuli, slots, parms, n_blocks; γ)
     #Creates an array of chunks for declarative memory
-    chunks = [Chunk(;person=pe, place=pl) for (pe,pl) in zip(slots...)]
+    chunks = [Chunk(; person = pe, place = pl) for (pe, pl) in zip(slots...)]
     #Creates a declarative memory object that holds an array of chunks and model parameters
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     #Initialize imaginal module
-    imaginal = Imaginal(buffer=chunks[1])
+    imaginal = Imaginal(buffer = chunks[1])
     #Creates an ACTR object that holds declarative memory and other modules as needed
-    actr = ACTR(;declarative=memory, imaginal=imaginal, parms..., γ)
-    data = Array{Array{>:NamedTuple,1},1}(undef,n_blocks)
-    for b in 1:n_blocks
+    actr = ACTR(; declarative = memory, imaginal = imaginal, parms..., γ)
+    data = Array{Array{>:NamedTuple, 1}, 1}(undef, n_blocks)
+    for b = 1:n_blocks
         data[b] = simulate_block(actr, stimuli, slots)
     end
     return vcat(data...)
@@ -511,17 +517,17 @@ In the code block below, we will generate 5 blocks of simulated data, producing 
 
 # ╔═╡ a8410050-f7c0-4e94-800b-25c4ab1f116c
 begin
-	# True value for the maximum association parameter
-	γ = 1.6
-	# Number of repeated blocks
-	n_reps = 5
-	# Fixed parameters used in the model
-	parms = (blc=0.3, τ=-0.5, sa=true, noise=true, s=0.2, ter=0.845)
-	# Generates data for n_reps. Slots contains the slot-value pairs to populate memory
-	temp = simulate(stimuli, slots, parms, n_reps; γ)
-	# Forces the data into a concrete type for improved performance
-	data = vcat(temp...)
-	data[1]
+    # True value for the maximum association parameter
+    γ = 1.6
+    # Number of repeated blocks
+    n_reps = 5
+    # Fixed parameters used in the model
+    parms = (blc = 0.3, τ = -0.5, sa = true, noise = true, s = 0.2, ter = 0.845)
+    # Generates data for n_reps. Slots contains the slot-value pairs to populate memory
+    temp = simulate(stimuli, slots, parms, n_reps; γ)
+    # Forces the data into a concrete type for improved performance
+    data = vcat(temp...)
+    data[1]
 end
 
 # ╔═╡ 247d7269-6bcd-47fe-8f05-8653e84c7f44
@@ -565,40 +571,59 @@ The code in the block below superimoses the likelihood against a histogram of si
 
 # ╔═╡ a0d03c4b-f3d6-4c12-ab62-df47f7ec3e2b
 let
-	# True value for the maximum association parameter
-	γ = 1.6
-	# Number of repeated blocks
-	n_reps = 5
-	# Fixed parameters used in the model
-	# Generates data for n_reps. Slots contains the slot-value pairs to populate memory
-	temp = simulate(stimuli, slots, parms, 10^4; γ=γ)
-	# Forces the data into a concrete type for improved performance
-	sim_data = vcat(temp...)
-	plots = Plots.Plot[]
-	idx = 0
-	title = [string("place: ",i," ","person: ",j) for i in 1:3 for j in 1:3]
-	title = reshape(title, 1, 9)
-	idx = 0
-	for f1 in 1:3
-	    for f2 in 1:3
-	        idx += 1
-	        temp = filter(x->x.fanPerson == f1 && x.fanPlace == f2 && x.trial == :target, sim_data)
-	        n_total = length(temp)
-	        temp_yes = filter(x->x.resp == :yes, temp)
-	        n_yes = length(temp_yes)
-	        rts = map(x->x.rt, temp_yes)
-	        p = histogram(rts, norm=true, grid=false, leg=false, xlabel="RT (seconds)", ylabel="Density", size=(600,600),
-	            color=:grey, bins=40, title=title[idx], xlims=(.5,2), ylims=(0,4),
-			titlefontsize = 11, xaxis=font(10), yaxis=font(10))
-	        p.series_list[1][:y] *= n_yes/n_total
-	        x = .85:0.01:2
-	        t_data = temp_yes[1]
-	        density = map(x->computeLL(parms ,slots, [(person=t_data.person, place=t_data.place, resp=:yes, rt=x)]; γ) |> exp, x)
-	        plot!(p, x, density, color=:darkorange, linewidth=1.5)
-	        push!(plots, p)
-	    end
-	end
-	plot(plots..., layout=(3,3), size=(600,600))
+    # True value for the maximum association parameter
+    γ = 1.6
+    # Number of repeated blocks
+    n_reps = 5
+    # Fixed parameters used in the model
+    # Generates data for n_reps. Slots contains the slot-value pairs to populate memory
+    temp = simulate(stimuli, slots, parms, 10^4; γ = γ)
+    # Forces the data into a concrete type for improved performance
+    sim_data = vcat(temp...)
+    plots = Plots.Plot[]
+    idx = 0
+    title = [string("place: ", i, " ", "person: ", j) for i = 1:3 for j = 1:3]
+    title = reshape(title, 1, 9)
+    idx = 0
+    for f1 = 1:3
+        for f2 = 1:3
+            idx += 1
+            temp = filter(
+                x -> x.fanPerson == f1 && x.fanPlace == f2 && x.trial == :target,
+                sim_data
+            )
+            n_total = length(temp)
+            temp_yes = filter(x -> x.resp == :yes, temp)
+            n_yes = length(temp_yes)
+            rts = map(x -> x.rt, temp_yes)
+            p = histogram(rts, norm = true, grid = false, leg = false,
+                xlabel = "RT (seconds)", ylabel = "Density", size = (600, 600),
+                color = :grey, bins = 40, title = title[idx], xlims = (0.5, 2),
+                ylims = (0, 4),
+                titlefontsize = 11, xaxis = font(10), yaxis = font(10))
+            p.series_list[1][:y] *= n_yes / n_total
+            x = 0.85:0.01:2
+            t_data = temp_yes[1]
+            density = map(
+                x ->
+                    computeLL(
+                        parms,
+                        slots,
+                        [(
+                            person = t_data.person,
+                            place = t_data.place,
+                            resp = :yes,
+                            rt = x
+                        )];
+                        γ
+                    ) |> exp,
+                x
+            )
+            plot!(p, x, density, color = :darkorange, linewidth = 1.5)
+            push!(plots, p)
+        end
+    end
+    plot(plots..., layout = (3, 3), size = (600, 600))
 end
 
 # ╔═╡ 3329c307-ccf0-442f-a3e1-4dbaaa5dd4b3
@@ -621,20 +646,27 @@ In computer code, the model is specified as follows:
 @model model(data, slots, parms) = begin
     #Prior distribution for the maximum association parameter
     γ ~ truncated(Normal(1.6, 0.8), 0, 4)
-    data ~ Fan(γ, parms ,slots)
+    data ~ Fan(γ, parms, slots)
 end
 
 # ╔═╡ 0b5c1bdd-c000-4362-a71b-0375adb734d7
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	n_adapt = 1000
-	n_chains = 4
-	# #Collects sampler configuration options
-	specs = NUTS(n_adapt, 0.8)
-	#Start sampling.
-	chain = sample(model(data, slots, parms), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    n_adapt = 1000
+    n_chains = 4
+    # #Collects sampler configuration options
+    specs = NUTS(n_adapt, 0.8)
+    #Start sampling.
+    chain = sample(
+        model(data, slots, parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ bd24fd0c-2847-4574-908d-29fe799bed1d
@@ -646,15 +678,18 @@ A summary of the parameter estimates can be found in the output above. The diagn
 
 # ╔═╡ 9eb98f2f-7e83-4bad-b174-42b07f47e621
 let
-	font_size = 12
-	ch = group(chain, :γ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    font_size = 12
+    ch = group(chain, :γ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ db4e0c1c-56db-4fe3-9a47-f77d0d6e0d09
@@ -665,21 +700,24 @@ The grid plot below shows the mean posterior predictive reaction time for "yes" 
 """
 
 # ╔═╡ a77c3845-d45d-466b-bbb1-7a1c7a3c3f16
-let 
-	sim(p) = simulate(stimuli, slots, parms, n_reps; p...)
-	preds = posterior_predictive(x->sim(x), chain, 1000, summarize)
-	df = vcat(preds...)
-	fan_effect = filter(x->x.resp == :yes && x.trial == :target, df)
-	df_data = DataFrame(data)
-	filter!(x->x.resp == :yes && x.trial == :target, df_data)
-	groups = groupby(df_data, [:fanPlace,:fanPerson])
-	data_means = combine(groups, :rt=>mean).rt_mean
-	title = [string("place: ",i," ","person: ",j) for i in 1:3 for j in 1:3]
-	title = reshape(title, 1, 9)
-	p4 = @df fan_effect histogram(:MeanRT,group=(:fanPlace,:fanPerson), 		ylabel="Density",
-	    xaxis=font(9), yaxis=font(9), grid=false, norm=true, color=:grey, leg=false, xticks=[1.0,1.3,1.6,1.9],
-	    titlefont=font(11), title=title, layout=9, xlims=(1.0,2.0), ylims=(0,8), bins=15)
-	vline!(p4, data_means', color=:darkred, size=(700,500))
+let
+    sim(p) = simulate(stimuli, slots, parms, n_reps; p...)
+    preds = posterior_predictive(x -> sim(x), chain, 1000, summarize)
+    df = vcat(preds...)
+    fan_effect = filter(x -> x.resp == :yes && x.trial == :target, df)
+    df_data = DataFrame(data)
+    filter!(x -> x.resp == :yes && x.trial == :target, df_data)
+    groups = groupby(df_data, [:fanPlace, :fanPerson])
+    data_means = combine(groups, :rt => mean).rt_mean
+    title = [string("place: ", i, " ", "person: ", j) for i = 1:3 for j = 1:3]
+    title = reshape(title, 1, 9)
+    p4 = @df fan_effect histogram(:MeanRT, group = (:fanPlace, :fanPerson),
+        ylabel = "Density",
+        xaxis = font(9), yaxis = font(9), grid = false, norm = true, color = :grey,
+        leg = false, xticks = [1.0, 1.3, 1.6, 1.9],
+        titlefont = font(11), title = title, layout = 9, xlims = (1.0, 2.0),
+        ylims = (0, 8), bins = 15)
+    vline!(p4, data_means', color = :darkred, size = (700, 500))
 end
 
 # ╔═╡ c3999673-aba4-4f32-a018-a43e1253c9ab

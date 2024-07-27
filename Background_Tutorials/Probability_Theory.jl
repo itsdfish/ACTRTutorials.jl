@@ -6,10 +6,10 @@ using InteractiveUtils
 
 # ╔═╡ 14666c46-31be-470a-b989-361e828260b4
 begin
-	using PlutoUI, Distributions, Plots, Random
-	using QuadGK
-	Random.seed!(454)
-	TableOfContents()
+    using PlutoUI, Distributions, Plots, Random
+    using QuadGK
+    Random.seed!(454)
+    TableOfContents()
 end
 
 # ╔═╡ 815269f0-6ecf-11ec-3c92-07db775981f9
@@ -92,9 +92,9 @@ Before presenting the law of total probability, it will be helpful to provide an
 
 # ╔═╡ 9837348a-842c-421f-9ec2-664c766bc572
 let
-	url = "https://i.imgur.com/kPuyjPw.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/jpg"(), data)
+    url = "https://i.imgur.com/kPuyjPw.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/jpg"(), data)
 end
 
 # ╔═╡ 422eda59-3883-4e04-ad79-e991ef1bb4a8
@@ -143,9 +143,9 @@ where $\sim$ means distributed as, $n$ is the number of trials, and $\theta$ is 
 
 # ╔═╡ 314c3674-89fa-4816-997f-916114237f06
 begin
-	n = 10
-	θ = .3
-	k = rand(Binomial(n, θ))
+    n = 10
+    θ = 0.3
+    k = rand(Binomial(n, θ))
 end
 
 # ╔═╡ b66ef8ac-bf16-46aa-b14c-7c830fccae62
@@ -173,10 +173,11 @@ The following code plots the Binomial probability mass distribution as a functio
 
 # ╔═╡ 0aa7d553-15c8-44f6-a79b-b29173724125
 begin
-	x = 0:n
-	p = pdf.(Binomial(n, θ), x)
-	bar(x, p, leg=false, grid=false, xlabel="k", ylabel="Probability", xaxis=font(12), yaxis=font(12), size=(600,400),
-	    color=:grey)
+    x = 0:n
+    p = pdf.(Binomial(n, θ), x)
+    bar(x, p, leg = false, grid = false, xlabel = "k", ylabel = "Probability",
+        xaxis = font(12), yaxis = font(12), size = (600, 400),
+        color = :grey)
 end
 
 # ╔═╡ 69eb4e92-3145-444d-bc91-628820b5d010
@@ -204,10 +205,11 @@ In the plot below, the likelihood of the data $k=3$ is plotted as a function of 
 
 # ╔═╡ d6ae1f70-5f2e-4691-911c-c030e61b62f3
 begin
-	θs = .0:.01:1
-	dens = @. pdf(Binomial(n, θs), k)
-	plot(θs, dens, leg=false, grid=false, xlabel="θ", ylabel="Likelihood", xaxis=font(14), yaxis=font(14), size=(600,400),
-	    color=:darkblue, linewidth=2)
+    θs = 0.0:0.01:1
+    dens = @. pdf(Binomial(n, θs), k)
+    plot(θs, dens, leg = false, grid = false, xlabel = "θ", ylabel = "Likelihood",
+        xaxis = font(14), yaxis = font(14), size = (600, 400),
+        color = :darkblue, linewidth = 2)
 end
 
 # ╔═╡ ea79096d-bbac-4abd-8488-50bf7aaade40
@@ -218,8 +220,8 @@ We can confirm that the binomial likelihood function is not a probability functi
 
 # ╔═╡ 2d1e6d92-1636-47c3-a746-5aac30145196
 let
-	integral,_ = quadgk(x->pdf(Binomial(n, x), k), 0, 1)
-	integral
+    integral, _ = quadgk(x -> pdf(Binomial(n, x), k), 0, 1)
+    integral
 end
 
 # ╔═╡ 1af5aabd-6b0f-4a47-847a-294c102a5986
@@ -245,10 +247,10 @@ Suppose, for example, $y=.5$. In this case, the PDF of this value can be calcula
 
 # ╔═╡ dc44c97d-4825-48cd-a4df-ce550c6e6581
 let
-	μ = 0.0
-	σ = 1.0
-	y = .5
-	dens_y = pdf(Normal(μ, σ), y)
+    μ = 0.0
+    σ = 1.0
+    y = 0.5
+    dens_y = pdf(Normal(μ, σ), y)
 end
 
 # ╔═╡ ee94d261-dd31-49ec-8bdf-6616bae4af01
@@ -258,15 +260,16 @@ The figure below plots the density of the standard normal distribution as a func
 
 # ╔═╡ db92f860-d815-43bc-9625-2f41b62d4af1
 let
-	x = -3.5:.01:3.5
-	μ = 0.0
-	σ = 1.0
-	y = .5
-	dens_y = pdf(Normal(μ, σ), y)
-	dens = pdf.(Normal(μ, σ), x)
-	plot(x, dens, leg=false, grid=false, xlabel="y", ylabel="Density", xaxis=font(14), yaxis=font(14), size=(600,400),
-	    color=:grey, linewidth=2)
-	plot!([y;y], [0;dens_y], color=:black, linestyle=:dash)
+    x = -3.5:0.01:3.5
+    μ = 0.0
+    σ = 1.0
+    y = 0.5
+    dens_y = pdf(Normal(μ, σ), y)
+    dens = pdf.(Normal(μ, σ), x)
+    plot(x, dens, leg = false, grid = false, xlabel = "y", ylabel = "Density",
+        xaxis = font(14), yaxis = font(14), size = (600, 400),
+        color = :grey, linewidth = 2)
+    plot!([y; y], [0; dens_y], color = :black, linestyle = :dash)
 end
 
 # ╔═╡ ade5f6a3-e5e7-46a3-9ae7-7a20b15100a3
@@ -276,16 +279,17 @@ As with the Binimial distribution, it is possible to plot the likelihood of para
 "
 
 # ╔═╡ 29df83ab-cf6e-43df-98de-e19114514e8d
-let 
-	σ = 1.0
-	y = .5
-	μs = -3.5:.01:3.5
-	x = μs
-dens_μ = @. pdf(Normal(μs, σ), y)
-plot(x, dens_μ, leg=false, grid=false, xlabel="μ", ylabel="Likelihood", xaxis=font(14), yaxis=font(14), size=(600,400),
-    color=:darkblue, linewidth=2)
-dens_y = pdf(Normal(y, σ), y)
-plot!([y;y], [0;dens_y], color=:black, linestyle=:dash)
+let
+    σ = 1.0
+    y = 0.5
+    μs = -3.5:0.01:3.5
+    x = μs
+    dens_μ = @. pdf(Normal(μs, σ), y)
+    plot(x, dens_μ, leg = false, grid = false, xlabel = "μ", ylabel = "Likelihood",
+        xaxis = font(14), yaxis = font(14), size = (600, 400),
+        color = :darkblue, linewidth = 2)
+    dens_y = pdf(Normal(y, σ), y)
+    plot!([y; y], [0; dens_y], color = :black, linestyle = :dash)
 end
 
 # ╔═╡ afa66a1c-5bb0-4332-a0b0-74a920a0cc9d
@@ -295,14 +299,15 @@ A similar plot can be generated for the likelihood of $y=.5$ as a function of pa
 
 # ╔═╡ 93d32bac-b7a1-40c5-88ee-6f8882ac90b1
 let
-	σs = 0:.01:20
-	μ = 0.0
-	y = .5
-	dens_σ = @. pdf(Normal(μ, σs), y)
-	plot(σs, dens_σ, leg=false, grid=false, xlabel="σ", ylabel="Likelihood", xaxis=font(14), yaxis=font(14), size=(600,400),
-	    color=:darkblue, linewidth=2)
-dens_y = pdf(Normal(μ, y), y)
-plot!([y;y], [0;dens_y], color=:black, linestyle=:dash)
+    σs = 0:0.01:20
+    μ = 0.0
+    y = 0.5
+    dens_σ = @. pdf(Normal(μ, σs), y)
+    plot(σs, dens_σ, leg = false, grid = false, xlabel = "σ", ylabel = "Likelihood",
+        xaxis = font(14), yaxis = font(14), size = (600, 400),
+        color = :darkblue, linewidth = 2)
+    dens_y = pdf(Normal(μ, y), y)
+    plot!([y; y], [0; dens_y], color = :black, linestyle = :dash)
 end
 
 # ╔═╡ cf8e2ce4-c2f8-4c09-8a05-38d5d3b92779
@@ -321,25 +326,26 @@ An example of a CDF can be found in the code block below:
 "
 
 # ╔═╡ a32b99c5-8076-4d1e-b0c8-736715e92b47
-let 
-	μ = 0.0
-	σ = 1.0
-	y = .5
-	cdf_y = cdf(Normal(μ, σ), y)
+let
+    μ = 0.0
+    σ = 1.0
+    y = 0.5
+    cdf_y = cdf(Normal(μ, σ), y)
 end
 
 # ╔═╡ 0e1609a9-08de-49fc-88e3-32f7e8a7ad2c
 let
-	x = -3.5:.01:3.5
-	μ = 0.0
-	σ = 1.0
-	y = .5
-	cdfs = cdf.(Normal(μ, σ), x)
-	plot(x, cdfs, leg=false, grid=false, xlabel="y", ylabel="Pr(Y ≤ y)", xaxis=font(14), yaxis=font(14), size=(600,400),
-	    color=:grey, linewidth=2)
-	cdf_y = cdf(Normal(μ, σ), y)
-	plot!([y;y], [0;cdf_y], color=:black, linestyle=:dash)
-	plot!([-3.5;y], [cdf_y;cdf_y], color=:black, linestyle=:dash)
+    x = -3.5:0.01:3.5
+    μ = 0.0
+    σ = 1.0
+    y = 0.5
+    cdfs = cdf.(Normal(μ, σ), x)
+    plot(x, cdfs, leg = false, grid = false, xlabel = "y", ylabel = "Pr(Y ≤ y)",
+        xaxis = font(14), yaxis = font(14), size = (600, 400),
+        color = :grey, linewidth = 2)
+    cdf_y = cdf(Normal(μ, σ), y)
+    plot!([y; y], [0; cdf_y], color = :black, linestyle = :dash)
+    plot!([-3.5; y], [cdf_y; cdf_y], color = :black, linestyle = :dash)
 end
 
 # ╔═╡ e95730eb-c132-431f-b3ae-5c0895df51ce
@@ -365,9 +371,9 @@ The code block below shows how to compute the log likelihood of data that are as
 
 # ╔═╡ 20dede48-c2f3-4a73-989d-f7a51202a724
 let
-	n = 100
-	y = rand(Normal(0, 1), n)
-	LL = logpdf(Normal(0, 1), n)
+    n = 100
+    y = rand(Normal(0, 1), n)
+    LL = logpdf(Normal(0, 1), n)
 end
 
 # ╔═╡ 710c595d-5398-47ce-bef6-6e0ff80b99a8
@@ -376,7 +382,6 @@ md"
 
 [https://betanalpha.github.io/assets/case_studies/probability_theory.html](https://betanalpha.github.io/assets/case_studies/probability_theory.html)
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,8 +23,8 @@ end
 
 # ╔═╡ 43366b1a-541e-11ec-0545-15db49af78b7
 begin
-	using LinearAlgebra,PlutoUI
-	TableOfContents()
+    using LinearAlgebra, PlutoUI
+    TableOfContents()
 end
 
 # ╔═╡ 513f6e52-b64f-4d55-97b1-3dfcafe31d73
@@ -43,7 +50,7 @@ The environment you are currently using is called Pluto. Pluto is an interactive
 "
 
 # ╔═╡ 352f3570-5344-4629-8ed1-bed5c36c25a7
-x1 = @bind x1 Slider(-100:100, default=0)
+x1 = @bind x1 Slider(-100:100, default = 0)
 
 # ╔═╡ cda2f5d7-1e04-46c2-830b-60e55841bfb3
 "x1 = $x1"
@@ -56,7 +63,6 @@ There are two methods for accessing documentation in a Pluto notebook. One metho
 "
 
 # ╔═╡ d1e1ad29-088a-4315-9f65-4c32417ec868
-
 
 # ╔═╡ 775f90c2-222c-43b2-a62c-e3485ba0c628
 md"
@@ -134,8 +140,8 @@ The function `typeof` returns the type of a variable. For instance:
 
 # ╔═╡ a3736648-5890-4a2b-9211-bb11ca462e6c
 begin
-	x = 0.3
-	string("x is a ", typeof(x))
+    x = 0.3
+    string("x is a ", typeof(x))
 end
 
 # ╔═╡ c22c2af3-9abe-4266-b103-105650223045
@@ -146,7 +152,7 @@ It is possible to use unicode as variable names in Julia with `\unicode + tab` w
 "
 
 # ╔═╡ d6fa8f6c-9b79-464f-88c5-29c13a43c09f
-θ = .3
+θ = 0.3
 
 # ╔═╡ 5d6f1cb7-21f9-4886-b666-3900e84c2845
 md" Unicode characters can be helpful because they make code look more similar to mathematical formulas."
@@ -165,7 +171,7 @@ Custom types in Julia are composites of primative types and other custom types. 
 
 # ╔═╡ 14b6c9a0-ac08-4abf-a477-219632348310
 struct MyImmutable
-	x::Int
+    x::Int
 end
 
 # ╔═╡ 406dfacf-f33d-4e91-a6a7-e60df4839def
@@ -258,7 +264,7 @@ A parametric type (sometimes called a generic type) allows object fields to assu
 "
 
 # ╔═╡ d04b2bd8-2c56-453b-82d7-066219d2156e
-mutable struct MyParametric{T <:Number}
+mutable struct MyParametric{T <: Number}
     x::T
 end
 
@@ -269,7 +275,7 @@ In the following cells, we have an example of types in which `x` is a `Float64` 
 "
 
 # ╔═╡ 340fb788-3502-474e-a2ef-f2cbd19d8fa4
-my_parametric_float = MyParametric(.3)
+my_parametric_float = MyParametric(0.3)
 
 # ╔═╡ c7b17819-b35c-4a9e-861e-6e16b853ad53
 my_parametric_int = MyParametric(100)
@@ -288,9 +294,9 @@ In practice, you may define many fields with different type restrictions. In the
 "
 
 # ╔═╡ 364a303c-7491-4e75-a8cc-7a736b6a8265
-mutable struct MyType{T1<:Number,T2}
+mutable struct MyType{T1 <: Number, T2}
     name::String
-    x::Array{T1,1}
+    x::Array{T1, 1}
     m::T2
     z::T2
 end
@@ -299,7 +305,7 @@ end
 md" An instance can be created as follows:"
 
 # ╔═╡ 9e909bbf-6c2e-416f-b499-dbc39d2a45b7
-MyType("hello", [1,2,3], .4, .5)
+MyType("hello", [1, 2, 3], 0.4, 0.5)
 
 # ╔═╡ 7c3108ab-9778-40e7-ae21-3a02e58cdf3f
 md"
@@ -337,31 +343,31 @@ my_array[end]
 md" An array of indices can be used to return more than 1 element of an array:"
 
 # ╔═╡ 0cc514c1-9bf1-473d-bb92-1369a4863675
-sub_array = my_array[[1,2]]
+sub_array = my_array[[1, 2]]
 
 # ╔═╡ 59c4f8eb-9b37-4461-9324-cd83c8b50ce4
 md" By default, Julia creates a copy when multiple values are indexed as illustrated here:"
 
 # ╔═╡ 9794d991-fc63-49df-bafd-fa3812795c7d
 begin
-	# change the first element
-	sub_array[1] = 0.0
-	# my_array does not change because sub_array is a copy
-	my_array
+    # change the first element
+    sub_array[1] = 0.0
+    # my_array does not change because sub_array is a copy
+    my_array
 end
 
 # ╔═╡ 2f5be4df-24e0-414d-9264-f658beb0c90e
-my_view = @view my_array[[1,2]]
+my_view = @view my_array[[1, 2]]
 
 # ╔═╡ 00393d8b-0b3e-453d-b4d6-d9a26e5ace41
 md" It is possible to return a view or reference of a sub_array with the `@view` macro:"
 
 # ╔═╡ ff7fd34f-3107-448c-b450-5c6e9c71b22e
 begin
-	# change the first element
-	my_view[1] = 0.0
-	# my_array now has 0.0 as the first element
-	my_array
+    # change the first element
+    my_view[1] = 0.0
+    # my_array now has 0.0 as the first element
+    my_array
 end
 
 # ╔═╡ 7d031965-6a4a-4d8a-826f-bc92ce4734bd
@@ -374,7 +380,7 @@ three_d_array = rand(5, 2, 3)
 md" In addition, you can create an array of arrays in which each array has different dimensions  The following code generates an array containing a 1X1 array, a 2X2 array and a 3X3 array with a list comprehension:"
 
 # ╔═╡ b075d869-0850-472a-8f6f-29e0907cb082
-weird_array = [rand(i,i) for i in 1:3]
+weird_array = [rand(i, i) for i = 1:3]
 
 # ╔═╡ 29667264-6aea-4694-a336-3214c28520f2
 md" The second array can be accessed as follows:"
@@ -386,10 +392,10 @@ weird_array[2]
 md" Use push! to add elements to an array without creating a copy:"
 
 # ╔═╡ bff2e4bd-8a55-4745-a9ae-c89bcbdfdae9
-push!(my_array, .99)
+push!(my_array, 0.99)
 
 # ╔═╡ 5e4450cc-e657-4609-8417-049e973ae4ef
-md" Note that in Julia appending `!` to a function name does not change the way it works, but serves as a convention to express that the function modifies the input." 
+md" Note that in Julia appending `!` to a function name does not change the way it works, but serves as a convention to express that the function modifies the input."
 
 # ╔═╡ b5f634e3-194a-4de1-8c93-5f8c8c2e4e59
 md"Use the elipse `...` to push multiple elements into a list:"
@@ -402,11 +408,11 @@ md"
 
 ### Dictionaries
 
-Dictionaries are unordered and mutable key-value pairs. Dictionaries allow you to associate a unique quantity called a key with a quantity called a value using the arrow operator "=>". Here is an example of a dictionary:
-"
+Dictionaries are unordered and mutable key-value pairs. Dictionaries allow you to associate a unique quantity called a key with a quantity called a value using the arrow operator " => ". Here is an example of a dictionary:
+  "
 
 # ╔═╡ c4023896-a26b-4809-97f7-d085af96df5a
-my_dictionary = Dict(:a=>1 ,:b=>2)
+my_dictionary = Dict(:a => 1, :b => 2)
 
 # ╔═╡ 2b6584b6-a432-40eb-8186-8c9f33b25cef
 md" Values are accessed with the key as follows:"
@@ -427,7 +433,7 @@ md"
 "
 
 # ╔═╡ e0327e7a-25b0-456f-b8b6-0d8c472b9ede
-named_tuple = (x =1,y=3,z=4)
+named_tuple = (x = 1, y = 3, z = 4)
 
 # ╔═╡ 7502dcba-45ae-4526-8276-041992599145
 md"Unlike dictionaries, named tuples are ordered. As a result, elements can be accessed by numeric index:"
@@ -478,7 +484,7 @@ The following blocks of code demonstrate how to compare values of quantities
 1 ≠ 2 # alernatively, 1 != 2
 
 # ╔═╡ 03d262ad-7e3f-4d28-b12b-893b13a1cd3d
-isapprox(0.0, 0.0000000001, atol=1e-8)
+isapprox(0.0, 0.0000000001, atol = 1e-8)
 
 # ╔═╡ 4981e112-bc2e-45aa-9bb4-cf13806a3fb9
 md"
@@ -490,10 +496,10 @@ md"
 
 # ╔═╡ 6f68fc3d-f3ee-4c29-a960-3b3393aa65e1
 begin
-	num = 3
-	if num < 3
-	    string("$num is < 3")
-	end
+    num = 3
+    if num < 3
+        string("$num is < 3")
+    end
 end
 
 # ╔═╡ 18a8be44-503d-4a47-9f71-18e993e9c5c6
@@ -508,12 +514,12 @@ An `if-else` evaluates one of two sets of code, depending on whether the specifi
 
 # ╔═╡ 40a19dc4-4deb-4411-8fa0-5d2aec531f57
 begin
-	num1 = 3
-	if num1 < 3
-	    string("$num1 is < 3")
-	else
-	    string("$num1 is not < 3")
-	end
+    num1 = 3
+    if num1 < 3
+        string("$num1 is < 3")
+    else
+        string("$num1 is not < 3")
+    end
 end
 
 # ╔═╡ d4a69932-bc26-4018-aa7c-7d118732cf4c
@@ -524,14 +530,14 @@ The keyword `elseif` is used to specify multiple conditions. Consider the follow
 
 # ╔═╡ c87e14e6-8ebf-4abd-b4f0-4377be224b74
 begin
-	num3 = 3
-	if num3 == 1
-	    string("$num equals 1")
-	elseif num3 == 2
-	    string("$num equals 2")
-	elseif num3 == 3
-	    string("$num is too large")
-	end
+    num3 = 3
+    if num3 == 1
+        string("$num equals 1")
+    elseif num3 == 2
+        string("$num equals 2")
+    elseif num3 == 3
+        string("$num is too large")
+    end
 end
 
 # ╔═╡ cd7b0046-e9dd-4e31-80b2-1c225376b89b
@@ -539,8 +545,8 @@ md" Julia provides special syntax for short if-else statements. For example:"
 
 # ╔═╡ 15dd4226-0227-4e19-9cd8-d8800a8ddeea
 begin
-	num4 = 3
-	num3 > 2 ? 1 : 2
+    num4 = 3
+    num3 > 2 ? 1 : 2
 end
 
 # ╔═╡ 9b73ae11-b4f3-4a02-8b8c-721a4f0c4a56
@@ -578,11 +584,11 @@ vals = []
 
 # ╔═╡ 343fa00c-56a2-4f7a-b6c0-a36100bfe574
 begin
-	iter1 = 4:8
-	for i in 1:length(iter1)
-	    push!(vals, iter1[i])
-	end
-	vals
+    iter1 = 4:8
+    for i = 1:length(iter1)
+        push!(vals, iter1[i])
+    end
+    vals
 end
 
 # ╔═╡ 36be7744-ccc4-4d2d-88ff-f2fb371f9e14
@@ -592,12 +598,12 @@ Alternatively, it is possible to loop directly over the values of `iter1`.
 
 # ╔═╡ 1e8958fb-a781-494d-9ffe-bcb1e31111b8
 begin
-	# empty vals
-	empty!(vals)
-	for v in iter1
-	    push!(vals, v)
-	end
-	vals
+    # empty vals
+    empty!(vals)
+    for v in iter1
+        push!(vals, v)
+    end
+    vals
 end
 
 # ╔═╡ ce782e13-78b8-4721-a1fc-fd5b366811b0
@@ -609,11 +615,11 @@ The iterator `enumerate` is used to ierate over index and value simultaneously. 
 
 # ╔═╡ 3ef703a1-c27e-4fd9-bff5-640dda63f928
 begin
-	empty!(vals)
-	for (i,v) in enumerate(iter1)
-	    push!(vals, string("i: $i v: $v"))
-	end
-	vals
+    empty!(vals)
+    for (i, v) in enumerate(iter1)
+        push!(vals, string("i: $i v: $v"))
+    end
+    vals
 end
 
 # ╔═╡ ff2e0e47-15f2-4fc3-bdfd-432f9298f1ec
@@ -627,13 +633,13 @@ You can iterate over multiple containers of the same length with the iterator `z
 
 # ╔═╡ 7629d3a5-18b7-495e-beea-72548a84d0c4
 begin
-	iter2 = 14:20
-	zipped = zip(iter1, iter2)
-	empty!(vals)
-	for (i,j) in zipped
-	    push!(vals, string("i: ",i, " j: ",j))
-	end
-	vals
+    iter2 = 14:20
+    zipped = zip(iter1, iter2)
+    empty!(vals)
+    for (i, j) in zipped
+        push!(vals, string("i: ", i, " j: ", j))
+    end
+    vals
 end
 
 # ╔═╡ 5a98a896-2818-44bb-a7a5-2d749551a5a3
@@ -645,22 +651,22 @@ The following code block illustrates how to write nested loops. The first value 
 
 # ╔═╡ a6b386c8-1575-458b-a2f7-c8f9ce11811c
 begin
-	empty!(vals)
-	for i in iter1
-	    for j in iter2
-	        push!(vals, (i,j))
-	    end
-	end
-	vals
+    empty!(vals)
+    for i in iter1
+        for j in iter2
+            push!(vals, (i, j))
+        end
+    end
+    vals
 end
 
 # ╔═╡ ccaa90e0-45f7-490b-b7f6-6a60f216a8b3
 begin
-	empty!(vals)
-	for i in iter1, j in iter2
-	        push!(vals, (i,j))
-	end
-	vals
+    empty!(vals)
+    for i in iter1, j in iter2
+        push!(vals, (i, j))
+    end
+    vals
 end
 
 # ╔═╡ d830a9b5-4379-4b7c-80ff-3a2681e092cf
@@ -671,16 +677,16 @@ List comprehensions provide a streamlined syntax for loop operations and automat
 "
 
 # ╔═╡ 8dc3c788-0ddc-45d1-be50-9e11bb2ce4ff
-[(i,j) for (i,j) in zipped]
+[(i, j) for (i, j) in zipped]
 
 # ╔═╡ bc6c8c37-f0d1-4fe2-a450-1c8e111935a8
 begin
-	dict1 = Dict(:x=>1,:y=>3)
-	empty!(vals)
-	for (k,v) in dict1
-	    push!(vals, string("key: ",k," value: ",v))
-	end
-	vals
+    dict1 = Dict(:x => 1, :y => 3)
+    empty!(vals)
+    for (k, v) in dict1
+        push!(vals, string("key: ", k, " value: ", v))
+    end
+    vals
 end
 
 # ╔═╡ e751fecb-5565-4358-9ab0-3c984f90f04e
@@ -692,12 +698,12 @@ A while loop is a block that begins with the keyword `while` and terminates with
 
 # ╔═╡ b1cd0299-0e09-4bb8-a236-0f9a1eb49949
 begin
-	v1 = 0
-	while v1 < 10
-	    v1 += 1
-	    println("v: $v1")
-	end
-	v1
+    v1 = 0
+    while v1 < 10
+        v1 += 1
+        println("v: $v1")
+    end
+    v1
 end
 
 # ╔═╡ 6ad73cea-11a2-4d5b-bcd9-4f28284c1747
@@ -749,13 +755,13 @@ Keyword arguments allow arguments to be specified by keyword with no order restr
 "
 
 # ╔═╡ 7efb5994-e99c-46bd-8f7f-262aec7b41e5
-keyword_function(;a, b) =  string("You entered: a = $a, b = $b")
+keyword_function(; a, b) = string("You entered: a = $a, b = $b")
 
 # ╔═╡ a550a09e-330f-438d-9f80-673a8f010eac
 md"A function with keywords is called as follows:"
 
 # ╔═╡ 9f75af0e-4372-484d-9a76-a63541259325
-keyword_function(b=1, a=40)
+keyword_function(b = 1, a = 40)
 
 # ╔═╡ ace5dd6e-e1f4-474d-86ab-0bd5cb02df55
 md"Notice that the arguments were not entered in order specified in the function definition"
@@ -769,13 +775,13 @@ When passing a variable as a keyword argument, this can be done explictly or imp
 
 # ╔═╡ d83e79ae-3b6e-4408-90e8-159e99e225a3
 begin
-	a = 1
-	b = 2
-	keyword_function(a=a, b=b)
+    a = 1
+    b = 2
+    keyword_function(a = a, b = b)
 end
 
 # ╔═╡ 4b268e73-434d-4766-b01f-18eef22a0330
-keyword_function(;b, a)
+keyword_function(; b, a)
 
 # ╔═╡ 1e1fff30-5721-46a6-a28a-bcc180e6f44a
 md"
@@ -802,7 +808,7 @@ Just as it is possible to have a variable length positional argument, it is poss
 "
 
 # ╔═╡ 9470bc90-ef5b-474c-a855-dbe4dd20468d
-function kwvarg_function(;a, kwargs...)
+function kwvarg_function(; a, kwargs...)
     string("You entered: a = $a, kwargs = $kwargs")
 end
 
@@ -810,7 +816,7 @@ end
 md" In the example below, keywords `c` and `b` are collected as pairs because they were not declared in the function `kwvarg_function."
 
 # ╔═╡ 034dfb39-a8a4-410b-8677-9f2c8ae92f0e
-kwvarg_function(b=2 ,c="dog", a= 1)
+kwvarg_function(b = 2, c = "dog", a = 1)
 
 # ╔═╡ 85fb7761-4afa-46fc-9dcc-cd47c3bfe89f
 md"
@@ -821,8 +827,8 @@ When multiple operations need to be performed, it is possible to use compound fu
 
 # ╔═╡ 1b5db27a-15d8-49ce-b292-48fc5a1c86f4
 begin
-	x2 = 3
-	mod(10, x2 + 1) |> sqrt |> exp
+    x2 = 3
+    mod(10, x2 + 1) |> sqrt |> exp
 end
 
 # ╔═╡ eae8315b-c40e-4ee4-8858-762a9bbbef3f
@@ -836,8 +842,8 @@ In Julia, an array can be broadcast (or applied) across any function with the `.
 # ╔═╡ 1169509b-d1ed-4fc7-b344-37f211605b1f
 function some_function(x)
     if x > 1
-     x += 100.0
-    elseif x < 0 
+        x += 100.0
+    elseif x < 0
         x = sqrt(abs(x))
     end
     return x
@@ -850,8 +856,8 @@ In order to apply `some_function` to every element in the vector x, simply add `
 
 # ╔═╡ bb183b21-3536-4ec9-8608-827f5a5b1313
 begin
-	x3 = [-1,0.0,2]
-	some_function.(x3)
+    x3 = [-1, 0.0, 2]
+    some_function.(x3)
 end
 
 # ╔═╡ f98cfd18-32ff-4ee2-b39d-aa4c9a2e07a7
@@ -864,9 +870,9 @@ x3 .> 0
 
 # ╔═╡ cbc4c535-9cf8-4637-b694-d92f021a6fee
 begin
-	y = [1,2,3] 
-	z = [1 3]
-	y .+ z
+    y = [1, 2, 3]
+    z = [1 3]
+    y .+ z
 end
 
 # ╔═╡ aecfb3da-0ad8-4008-b447-0a844bce0a6c
@@ -895,34 +901,34 @@ Multiple dispatch allows different versions of a function evoked at runtime depe
 
 # ╔═╡ 0c1d02bd-3906-48f3-93b4-dffbd494ca0c
 begin
-	abstract type Animal end
-	
-	struct Chinchilla <: Animal
-	    name::String
-	end
-	
-	struct Human <: Animal
-	    name::String
-	end
-	
-	struct SomeAnimal <: Animal
-	  name::String  
-	end
+    abstract type Animal end
+
+    struct Chinchilla <: Animal
+        name::String
+    end
+
+    struct Human <: Animal
+        name::String
+    end
+
+    struct SomeAnimal <: Animal
+        name::String
+    end
 end
 
 # ╔═╡ 299c52c7-66cb-4786-85d4-89e3e2d617cb
 begin
-	dog = Chinchilla("Chinchi")
-	human = Human("Sam")
-	some_animal = SomeAnimal("Bonkers")
+    dog = Chinchilla("Chinchi")
+    human = Human("Sam")
+    some_animal = SomeAnimal("Bonkers")
 end
 
 # ╔═╡ a34e683c-b26f-4a83-90b3-3ff04cfdf179
 begin
-		move(dog::Chinchilla) = string(dog.name, " runs on four legs")
-		move(human::Human) = string(human.name, " runs on two legs")
-		move(animal::Animal) = string(animal.name, " has default movement")
-		move(dog)
+    move(dog::Chinchilla) = string(dog.name, " runs on four legs")
+    move(human::Human) = string(human.name, " runs on two legs")
+    move(animal::Animal) = string(animal.name, " has default movement")
+    move(dog)
 end
 
 # ╔═╡ 2892fd8a-6bec-47f6-85cd-9a5918375484
@@ -947,14 +953,11 @@ In the cell below, we will declare two sub-types of `Animal`: a `Dog` type and a
 
 # ╔═╡ 16650eb1-e624-4aa3-9da5-661a7cb13bc7
 begin
-	
-	struct Dog <: Animal
-	
-	end
-	
-	struct Cat <: Animal
-	
-	end
+    struct Dog <: Animal
+    end
+
+    struct Cat <: Animal
+    end
 end
 
 # ╔═╡ d3c22202-3731-4bef-aeef-e63a09453b76
@@ -967,15 +970,13 @@ Now we will define an abstract type called `Trainer` and define sub-types `GoodT
 
 # ╔═╡ b1512c6b-195d-4fcf-bc26-2daf8bbff92a
 begin
-	abstract type Trainer end
-	
-	struct GoodTrainer <: Trainer
-	
-	end
-	
-	struct BadTrainer <: Trainer 
-	
-	end
+    abstract type Trainer end
+
+    struct GoodTrainer <: Trainer
+    end
+
+    struct BadTrainer <: Trainer
+    end
 end
 
 # ╔═╡ 241aeae2-8a4f-442d-83a0-6d7085e40c39
@@ -986,37 +987,37 @@ Here we define various interaction methods. The first method defined default beh
 
 # ╔═╡ 16227ac9-c5ce-4c01-8979-b33f37c43450
 begin
-	function interact(animal::Animal, trainer::Trainer) 
-		return string(
-			typeof(animal),
-			" interacts with ", typeof(trainer), 
-			". Dispatch: generic default"
-		)
-	end
-	
-	function interact(animal::Animal, trainer::GoodTrainer)
-		return string(
-			typeof(animal), " interacts with ", 
-			typeof(trainer), 
-			". Dispatch: Good trainer, generic animal"
-		)
-	end
-		
-	function interact(animal::Dog, trainer::BadTrainer) 
-		return string(
-			typeof(animal), " interacts with ", 
-			typeof(trainer), 
-			". Dispatch: bad trainer and dog"
-		)
-	end
-		
-	function interact(animal::Cat, trainer::BadTrainer)
-		return string(
-			typeof(animal), " interacts with ", 
-			typeof(trainer), 
-			". Dispatch: bad trainer and cat"
-		)
-	end
+    function interact(animal::Animal, trainer::Trainer)
+        return string(
+            typeof(animal),
+            " interacts with ", typeof(trainer),
+            ". Dispatch: generic default"
+        )
+    end
+
+    function interact(animal::Animal, trainer::GoodTrainer)
+        return string(
+            typeof(animal), " interacts with ",
+            typeof(trainer),
+            ". Dispatch: Good trainer, generic animal"
+        )
+    end
+
+    function interact(animal::Dog, trainer::BadTrainer)
+        return string(
+            typeof(animal), " interacts with ",
+            typeof(trainer),
+            ". Dispatch: bad trainer and dog"
+        )
+    end
+
+    function interact(animal::Cat, trainer::BadTrainer)
+        return string(
+            typeof(animal), " interacts with ",
+            typeof(trainer),
+            ". Dispatch: bad trainer and cat"
+        )
+    end
 end
 
 # ╔═╡ 969fc1cd-c022-4689-83f3-f7fc2525e466
@@ -1028,7 +1029,6 @@ Adding a new type is simple. Let's add a type for a rat.
 
 # ╔═╡ a58d0b14-130f-4f76-9aeb-a8a1b3b6db7f
 struct Rat <: Animal
-
 end
 
 # ╔═╡ 56c8fb8d-4289-4dc0-b1ac-24be7e8098e1
@@ -1043,20 +1043,25 @@ If the generic method does not impliment the appropriate behavior,  a specific m
 "
 
 # ╔═╡ 9814617c-91b0-429b-8f7a-b51cd0535590
-interact(animal::Rat, trainer::Trainer) = string(typeof(animal), " interacts with ", typeof(trainer), ". Dispatch: rat and any trainer")
+interact(animal::Rat, trainer::Trainer) = string(
+    typeof(animal),
+    " interacts with ",
+    typeof(trainer),
+    ". Dispatch: rat and any trainer"
+)
 
 # ╔═╡ 8532da17-e951-43a2-9daf-6746875cbe6f
 begin
-	animals = [Cat(), Dog()]
-	trainers = [GoodTrainer(), BadTrainer()]
-	empty!(vals)
-	for trainer in trainers
-	    for animal in animals 
-	        result = interact(animal, trainer)
-			push!(vals, result)
-	    end 
-	end
-	vals
+    animals = [Cat(), Dog()]
+    trainers = [GoodTrainer(), BadTrainer()]
+    empty!(vals)
+    for trainer in trainers
+        for animal in animals
+            result = interact(animal, trainer)
+            push!(vals, result)
+        end
+    end
+    vals
 end
 
 # ╔═╡ 648f8b22-335f-4141-9e23-3963b1d6847d

@@ -21,7 +21,7 @@ n_trials = 50
 # True value of retrieval threshold
 τ = 0.5
 # Fixed parameters
-parms = (blc = 1.5,s = 0.4)
+parms = (blc = 1.5, s = 0.4)
 # Simulate the number of correct retrievals
 k = simulate(parms, n_trials; τ)
 #######################################################################################
@@ -41,7 +41,14 @@ n_adapt = 1000
 n_chains = 4
 specs = NUTS(n_adapt, delta)
 # Start sampling.
-chain = sample(model(k, n_trials, parms), specs, MCMCThreads(), n_samples, n_chains, progress=true)
+chain = sample(
+    model(k, n_trials, parms),
+    specs,
+    MCMCThreads(),
+    n_samples,
+    n_chains,
+    progress = true
+)
 #######################################################################################
 #                                      Summarize
 #######################################################################################
@@ -51,17 +58,19 @@ println(chain)
 #######################################################################################
 pyplot()
 ch = group(chain, :τ)
-p1 = plot(ch, xaxis=font(10), yaxis=font(10), seriestype=(:traceplot),
-  grid=false, size=(250,100), titlefont=font(10))
-p2 = plot(ch, xaxis=font(10), yaxis=font(10), seriestype=(:autocorplot),
-  grid=false, size=(250,100), titlefont=font(10))
-p3 = plot(ch, xaxis=font(10), yaxis=font(10), seriestype=(:mixeddensity),
-  grid=false, size=(250,100), titlefont=font(10))
-pc = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+p1 = plot(ch, xaxis = font(10), yaxis = font(10), seriestype = (:traceplot),
+    grid = false, size = (250, 100), titlefont = font(10))
+p2 = plot(ch, xaxis = font(10), yaxis = font(10), seriestype = (:autocorplot),
+    grid = false, size = (250, 100), titlefont = font(10))
+p3 = plot(ch, xaxis = font(10), yaxis = font(10), seriestype = (:mixeddensity),
+    grid = false, size = (250, 100), titlefont = font(10))
+pc = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 #######################################################################################
 #                                  Posterior Predictive
 #######################################################################################
 preds = posterior_predictive(x -> simulate(parms, n_trials; x...), chain, 1000)
-p4 = histogram(preds, xlabel="Number Retrieved", ylabel="Density", xaxis=font(12), yaxis=font(12),
-    grid=false, norm=true, color=:grey, leg=false, size=(800,400), titlefont=font(12),
-    bar_width=1)
+p4 = histogram(preds, xlabel = "Number Retrieved", ylabel = "Density", xaxis = font(12),
+    yaxis = font(12),
+    grid = false, norm = true, color = :grey, leg = false, size = (800, 400),
+    titlefont = font(12),
+    bar_width = 1)

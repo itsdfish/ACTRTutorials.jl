@@ -1,5 +1,5 @@
 cd(@__DIR__)
-using Pkg 
+using Pkg
 Pkg.activate("../")
 using SafeTestsets
 
@@ -13,12 +13,12 @@ using SafeTestsets
     Random.seed!(5057)
     γ = 1.6
     Nblocks = 10^3
-    parms = (blc=.3,τ=-.5,sa=true,noise=true,s=.3,ter=.845)
-    temp = simulate(stimuli, slots, parms, Nblocks; γ=γ)
+    parms = (blc = 0.3, τ = -0.5, sa = true, noise = true, s = 0.3, ter = 0.845)
+    temp = simulate(stimuli, slots, parms, Nblocks; γ = γ)
     data = vcat(temp...)
-    x = range(γ*.5, γ*1.5, length=50)
-    y = map(x -> computeLL(parms, slots, data; γ=x), x)
-    mxv,mxi = findmax(y)
+    x = range(γ * 0.5, γ * 1.5, length = 50)
+    y = map(x -> computeLL(parms, slots, data; γ = x), x)
+    mxv, mxi = findmax(y)
     γ′ = x[mxi]
-    @test γ′≈ γ atol=1e-1
+    @test γ′ ≈ γ atol = 1e-1
 end

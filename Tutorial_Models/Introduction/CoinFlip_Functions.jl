@@ -13,7 +13,7 @@ end
 
 function computational(data, θ, n, n_sim)
     sim_data = fill(0, n + 1)
-    map(x -> simulate!(.5, n, sim_data), 1:n_sim)
+    map(x -> simulate!(0.5, n, sim_data), 1:n_sim)
     sim_data /= n_sim
     LL = 0.0
     for d in data

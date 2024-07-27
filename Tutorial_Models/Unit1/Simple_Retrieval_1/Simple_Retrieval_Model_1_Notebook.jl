@@ -6,71 +6,75 @@ using InteractiveUtils
 
 # ╔═╡ c40c7ada-454a-4fa3-a71a-4d85e92fec03
 begin
-	# load the required packages
-	using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
-	# seed random number generator
-	Random.seed!(2050);
-	TableOfContents()
+    # load the required packages
+    using Turing, StatsPlots, Revise, ACTRModels, PlutoUI, Random
+    # seed random number generator
+    Random.seed!(2050)
+    TableOfContents()
 end
 
 # ╔═╡ 4c88a16a-49fc-447f-b1e7-e43e1a3a8b95
 begin
-	using Distributions
-	import Distributions: logpdf
-	
-	struct Retrieval{T1,T2,T3} <: ContinuousUnivariateDistribution
-	    τ::T1
-	    n_trials::T2
-	    parms::T3
-	end
-	
-	Retrieval(;τ, n, parms) = Retrieval(τ, n, parms)
-	
-	function logpdf(d::Retrieval, k::Int64)
-	    return computeLL(d.parms, d.n_trials, k; τ=d.τ)
-	end
+    using Distributions
+    import Distributions: logpdf
 
-	# primary function for computing log likelihood
-	function computeLL(parms, n_trials, k; τ)
-		# initialize activation for auto-differentiation
-		act = zero(typeof(τ))
-		# create a chunk
-		chunk = Chunk(;act=act)
-		# add chunk and parameters to declarative memory
-		memory = Declarative(;memory=[chunk])
-		# add declarative memory to ACT-R object
-		actr = ACTR(;declarative=memory, parms..., τ)
-		# compute the probability of retrieving the chunk
-		θᵣ,_ = retrieval_prob(actr, chunk)
-		# compute the log likelihood of data given n_trials and θᵣ
-		LL = logpdf(Binomial(n_trials, θᵣ), k)
-		return LL
-	end
+    struct Retrieval{T1, T2, T3} <: ContinuousUnivariateDistribution
+        τ::T1
+        n_trials::T2
+        parms::T3
+    end
+
+    Retrieval(; τ, n, parms) = Retrieval(τ, n, parms)
+
+    function logpdf(d::Retrieval, k::Int64)
+        return computeLL(d.parms, d.n_trials, k; τ = d.τ)
+    end
+
+    # primary function for computing log likelihood
+    function computeLL(parms, n_trials, k; τ)
+        # initialize activation for auto-differentiation
+        act = zero(typeof(τ))
+        # create a chunk
+        chunk = Chunk(; act = act)
+        # add chunk and parameters to declarative memory
+        memory = Declarative(; memory = [chunk])
+        # add declarative memory to ACT-R object
+        actr = ACTR(; declarative = memory, parms..., τ)
+        # compute the probability of retrieving the chunk
+        θᵣ, _ = retrieval_prob(actr, chunk)
+        # compute the log likelihood of data given n_trials and θᵣ
+        LL = logpdf(Binomial(n_trials, θᵣ), k)
+        return LL
+    end
 end
 
 # ╔═╡ cdf15da2-a00a-4b63-8a66-40df1577c179
 begin
+    path_introduction = joinpath(pwd(), "../../Introduction/Introduction.jl")
 
-path_introduction = joinpath(pwd(), "../../Introduction/Introduction.jl")
+    path_u1_2 =
+        joinpath(pwd(), "../Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
 
-path_u1_2 = joinpath(pwd(), "../Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
+    path_u1_3 = joinpath(
+        pwd(),
+        "../Tutorial_Models/Unit1/Simple_Retrieval_3/Simple_Retrieval_Model_3_Notebook.jl"
+    )
 
-path_u1_3 = joinpath(pwd(), "../Tutorial_Models/Unit1/Simple_Retrieval_3/Simple_Retrieval_Model_3_Notebook.jl")
+    path_u2_1 = joinpath(pwd(), "../../Unit2/Simple_RT_1/Simple_RT_Model_1_Notebook.jl")
 
-path_u2_1 = joinpath(pwd(), "../../Unit2/Simple_RT_1/Simple_RT_Model_1_Notebook.jl")
+    path_lognormal =
+        joinpath(pwd(), "../../../Background_Tutorials/Lognormal_Race_Process.jl")
 
-path_lognormal = joinpath(pwd(), "../../../Background_Tutorials/Lognormal_Race_Process.jl")
+    path_julia = joinpath(pwd(), "../../../Background_Tutorials/julia_tutorial.jl")
 
-path_julia = joinpath(pwd(), "../../../Background_Tutorials/julia_tutorial.jl")
+    path_notation = joinpath(pwd(), "../../../Background_Tutorials/Notation.jl")
 
-path_notation = joinpath(pwd(), "../../../Background_Tutorials/Notation.jl")
-
-path_mcmc = joinpath(pwd(), "../../../Background_Tutorials/mcmc_sampling.jl")
-nothing
+    path_mcmc = joinpath(pwd(), "../../../Background_Tutorials/mcmc_sampling.jl")
+    nothing
 end
 
 # ╔═╡ 1055d000-35bf-11ec-2497-55c5e64198c4
- Markdown.parse("
+Markdown.parse("
 # Introduction 
 
 Unit 1 introduces a series of increasingly complex memory retrieval models for a simple paired associates task. Each model predicts response probabilities based on different assumptions about errors and guessing processes. The following provides a brief overview of the models covered in Unit 1:
@@ -83,7 +87,7 @@ Mirroring Unit 1, [Unit 2](./open?path=$path_u2_1) will demonstrate how to creat
 
 The goal of this tutorial is to develop a simple model of memory retrievel using the binomial likelihood function described in the [introduction](./open?path=$path_introduction). On each trial of a paired associates task, the model attempts to retrieve the correct answering using the cue as a retrieval request. The result of the retrieval request is either a chunk containing the correct answer, or failure to retrieve a chunk. This binary outcome is naturally modeled with a binomial likelihood function.
 
-Although the Simple Retrieval Model 1 is rather simple, it forms the foundation for developing more interesting models throughout the tutorial. The simple model of retrieval will augment the binomial coin flip model we used in the introduction. Rather than estimating the probability of a coin landing on heads, we will incorporate ACT-R's retrieval mechanism to estimate a retrieval threshold parameter that modulates retrieval success." 
+Although the Simple Retrieval Model 1 is rather simple, it forms the foundation for developing more interesting models throughout the tutorial. The simple model of retrieval will augment the binomial coin flip model we used in the introduction. Rather than estimating the probability of a coin landing on heads, we will incorporate ACT-R's retrieval mechanism to estimate a retrieval threshold parameter that modulates retrieval success."
 )
 
 # ╔═╡ 0e7dd998-de4d-45de-990f-f155f8fc43ca
@@ -194,10 +198,22 @@ It is often informative to reason about the effect different values of a paramet
 
 # ╔═╡ 0d8477dd-a533-4926-b012-d21b68b3a1fa
 begin
-	prob(a, τ, σ) = exp(a/σ)/(exp(a/σ) + exp(τ/σ))
-	τs = -1.0:0.01:1.0
-	retrieval_probs = prob.(1, τs, 0.5)
-	plot(τs, retrieval_probs, grid=false, size=(600,400), leg=false, xlabel="τ", 			ylabel="Retrieval Probability", xaxis=font(12), yaxis=font(12), 		    		color=:darkred, linewidth=2)
+    prob(a, τ, σ) = exp(a / σ) / (exp(a / σ) + exp(τ / σ))
+    τs = -1.0:0.01:1.0
+    retrieval_probs = prob.(1, τs, 0.5)
+    plot(
+        τs,
+        retrieval_probs,
+        grid = false,
+        size = (600, 400),
+        leg = false,
+        xlabel = "τ",
+        ylabel = "Retrieval Probability",
+        xaxis = font(12),
+        yaxis = font(12),
+        color = :darkred,
+        linewidth = 2
+    )
 end
 
 # ╔═╡ 95e358cf-83ac-476a-9f18-30bc4698952a
@@ -236,43 +252,43 @@ function compute_prob(parms, n_trials; τ)
     # Create a chunk object
     chunk = Chunk()
     # Create a declarative memory object
-    memory = Declarative(;memory=[chunk])
+    memory = Declarative(; memory = [chunk])
     # Create an ACTR object
-    actr = ACTR(;declarative=memory, parms..., τ)
+    actr = ACTR(; declarative = memory, parms..., τ)
     # Compute the retrieval probability of the chunk
-    θ,_ = retrieval_prob(actr, chunk)
+    θ, _ = retrieval_prob(actr, chunk)
     return θ
 end
 
 # ╔═╡ c97e28fa-0b1e-4fe8-9679-ec5f3b4b0db6
 let
-	function _compute_prob(blc, τ, n_trials)
-		parms = (blc,s = 0.4)
-		return compute_prob(parms, n_trials; τ)
-	end
-	
-	n = 100
-	n_trials = 30
-	vals = range(-.3, .3, length=n)
-	blcs = repeat(reshape(vals, 1, :), length(vals), 1)
-	τs = repeat(vals, 1, length(vals))
-	
-	Z1 = map((blc,τ) -> _compute_prob(blc, τ, n_trials), blcs, τs)
-	c1 = contour(
-		vals, 
-		vals, 
-		Z1, 
-		fill = true,
-		xlabel = "blc",
-		ylabel = "τ",
-		levels = 50, 
-		#clims = (0,1)
-	)
+    function _compute_prob(blc, τ, n_trials)
+        parms = (blc, s = 0.4)
+        return compute_prob(parms, n_trials; τ)
+    end
+
+    n = 100
+    n_trials = 30
+    vals = range(-0.3, 0.3, length = n)
+    blcs = repeat(reshape(vals, 1, :), length(vals), 1)
+    τs = repeat(vals, 1, length(vals))
+
+    Z1 = map((blc, τ) -> _compute_prob(blc, τ, n_trials), blcs, τs)
+    c1 = contour(
+        vals,
+        vals,
+        Z1,
+        fill = true,
+        xlabel = "blc",
+        ylabel = "τ",
+        levels = 50
+        #clims = (0,1)
+    )
 end
 
 # ╔═╡ a3f2b34e-681e-4942-87e4-ba9f5cc66dc9
 function simulate(parms, n_trials; τ)
-	θ = compute_prob(parms, n_trials; τ)
+    θ = compute_prob(parms, n_trials; τ)
     # Simulate n_trials
     data = rand(Binomial(n_trials, θ))
     return data
@@ -285,14 +301,14 @@ In the following code, we will generate 50 simulated trials. The `NamedTuple` pa
 
 # ╔═╡ d589f754-9731-40a4-a9ee-2af24f9b7af4
 begin
-	# The number of trials
-	n_trials = 50
-	# True value of retrieval threshold
-	τ = 0.5
-	# Fixed parameters
-	parms = (blc = 1.5,s = 0.4)
-	# Simulate the number of correct retrievals
-	k = simulate(parms, n_trials; τ)
+    # The number of trials
+    n_trials = 50
+    # True value of retrieval threshold
+    τ = 0.5
+    # Fixed parameters
+    parms = (blc = 1.5, s = 0.4)
+    # Simulate the number of correct retrievals
+    k = simulate(parms, n_trials; τ)
 end
 
 # ╔═╡ d464b3a6-147f-41d1-8eee-e7bdb45ef81a
@@ -349,18 +365,25 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ 2fa1c5aa-e79c-4893-8da2-d3e1c57c1604
 begin
-	# number of MCMC samples
-	n_samples = 1000
-	# NUTS delta parameter
-	delta = 0.85
-	# number of adaption samples to exclude from each chain
-	n_adapt = 1000
-	# the number of chains
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# run the MCMC sampler
-	chain = sample(model(k, n_trials, parms), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # number of MCMC samples
+    n_samples = 1000
+    # NUTS delta parameter
+    delta = 0.85
+    # number of adaption samples to exclude from each chain
+    n_adapt = 1000
+    # the number of chains
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # run the MCMC sampler
+    chain = sample(
+        model(k, n_trials, parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 9c46ff96-34ae-4d58-974d-0435c4c535ea
@@ -375,15 +398,18 @@ The code below plots the diagnostics for the model. The first panel shows good m
 
 # ╔═╡ 3bd9ffc8-722b-4087-af2f-b65a4d5aeb2a
 begin
-	font_size = 12
-	ch = group(chain, :τ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    font_size = 12
+    ch = group(chain, :τ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ b93904b4-47b9-4e8f-87ec-510baba40971
@@ -403,10 +429,12 @@ In the code block below, function `posterior_predictive` accepts the data simula
 
 # ╔═╡ ba0fe4d1-9d97-4e40-b9ad-9b72b57d9114
 begin
-	preds = posterior_predictive(x -> simulate(parms, n_trials; x...), chain, 1000)
-	p4 = histogram(preds, xlabel="Number Retrieved", ylabel="Density", xaxis=font(12), yaxis=font(12),
-	    xlims=(0,50), grid=false, norm=true, color=:grey, leg=false, titlefont=font(12),
-	    bar_width=1)
+    preds = posterior_predictive(x -> simulate(parms, n_trials; x...), chain, 1000)
+    p4 = histogram(preds, xlabel = "Number Retrieved", ylabel = "Density", xaxis = font(12),
+        yaxis = font(12),
+        xlims = (0, 50), grid = false, norm = true, color = :grey, leg = false,
+        titlefont = font(12),
+        bar_width = 1)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

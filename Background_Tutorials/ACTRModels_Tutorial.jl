@@ -6,9 +6,9 @@ using InteractiveUtils
 
 # ╔═╡ 2bf04f4e-67df-45bc-a183-6b7b8c12cfe0
 begin
-	using ACTRModels, Random, PlutoUI, DataFrames
-	Random.seed!(2125)
-	TableOfContents()
+    using ACTRModels, Random, PlutoUI, DataFrames
+    Random.seed!(2125)
+    TableOfContents()
 end
 
 # ╔═╡ 6c65c466-ffa6-4559-9668-85324ce39a2c
@@ -82,8 +82,8 @@ Now we can add and modify the slot-value pairs:
 
 # ╔═╡ 8eea30b2-2eec-402a-ba39-7be7a5614900
 begin
-	chunk1.slots[:slot] = :value
-	chunk1
+    chunk1.slots[:slot] = :value
+    chunk1
 end
 
 # ╔═╡ 996d5d53-8061-4b78-8be3-0847290d53fe
@@ -100,7 +100,7 @@ In cases where only the slot-values change, rather than the number of slot-value
 "
 
 # ╔═╡ 3ef16fd3-5e12-4c5c-8f78-780f829b9f04
-chunk2 = Chunk(state=[:sad])
+chunk2 = Chunk(state = [:sad])
 
 # ╔═╡ 64899ca5-892e-4e8c-a058-c888d105e001
 md"
@@ -124,7 +124,7 @@ In the following examples, we will create chunks with specific slot-value pairs 
 "
 
 # ╔═╡ 625a7c23-98ae-48d5-bb3e-1cd668d9dfad
-chunk3 = Chunk(;animal=:dog, name=:Sigma)
+chunk3 = Chunk(; animal = :dog, name = :Sigma)
 
 # ╔═╡ 605cb2cf-2c47-417d-a4e2-5b2e959485be
 md"
@@ -132,7 +132,7 @@ If you are using baselevel learning, you may want to pass a value for the time a
 "
 
 # ╔═╡ 80c5fdde-5baf-4373-afed-099ee2db33cf
-chunk4 = Chunk(;animal=:dog, name=:Sigma, time_created=2.0)
+chunk4 = Chunk(; animal = :dog, name = :Sigma, time_created = 2.0)
 
 # ╔═╡ 92451e4a-e8a6-4fc2-b4a3-a541beefc0a6
 md"
@@ -140,7 +140,7 @@ You also may specify an chunk specific baselevel with the keyword `bl`:
 "
 
 # ╔═╡ 794ed9b2-7bb7-47fe-b4f5-a6a8ffc5a655
-chunk5 = Chunk(;name=:Bob, department=:Accounting, bl=1.5)
+chunk5 = Chunk(; name = :Bob, department = :Accounting, bl = 1.5)
 
 # ╔═╡ 4143a295-92b2-4420-8477-6422f2c06186
 md"
@@ -151,8 +151,11 @@ The declarative memory module stores a vector of chunks. In the following exampl
 
 # ╔═╡ eda7f651-7dec-4d96-ad58-57e4c4173abb
 begin
-	chunks = [Chunk(;animal=:dog, name=:Sigma, bl=2.0), Chunk(;animal=:rat, name=:LordXenu, bl=1.5)]
-	memory = Declarative(;memory = chunks)
+    chunks = [
+        Chunk(; animal = :dog, name = :Sigma, bl = 2.0),
+        Chunk(; animal = :rat, name = :LordXenu, bl = 1.5)
+    ]
+    memory = Declarative(; memory = chunks)
 end
 
 # ╔═╡ 97cdd5b4-c104-4805-937b-9e21ca3e4de6
@@ -174,7 +177,7 @@ We will begin with a simple model by passing declarative memory object and param
 "
 
 # ╔═╡ df1fbc69-24bd-4ded-b0db-be04d60f38a7
-actr = ACTR(;declarative=memory, noise=true, s=0.5);
+actr = ACTR(; declarative = memory, noise = true, s = 0.5);
 
 # ╔═╡ 1cd35ea6-13f7-494c-8cc8-4281a1b9ba40
 md"
@@ -188,8 +191,8 @@ Random.seed!(5452)
 
 # ╔═╡ c49ac25d-1c00-4313-87c7-e31f8da37dc7
 begin
-	retrieval_result = retrieve(actr; animal=:rat)
-	retrieved_chunk = retrieval_result[1]
+    retrieval_result = retrieve(actr; animal = :rat)
+    retrieved_chunk = retrieval_result[1]
 end
 
 # ╔═╡ 67e89289-98c5-4f67-8c9f-8d4ce43cb5bc
@@ -204,7 +207,7 @@ Next, we can compute the approximate retrieval probability of the retrieved chun
 "
 
 # ╔═╡ 79e668dd-640f-45c8-bf15-c3878d7d3c1f
-p1,_ = retrieval_prob(actr, retrieved_chunk; animal=:rat)
+p1, _ = retrieval_prob(actr, retrieved_chunk; animal = :rat)
 
 # ╔═╡ 04a457ad-418d-46ad-92ab-552c0e6208c0
 md"
@@ -214,25 +217,28 @@ md"
 We will build upon the previous example by including spreading activation from the imaginal buffer. Spreading activation is set to true in the `ACTR` object and the maximum association parameter is set to $\gamma = 1.6$. So that activation can spread to declarative memory, we will add a chunk to the imaginal buffer containing the slot-value pair (animal, rat).
 "
 
-
 # ╔═╡ 66578bdf-cb6d-4d95-b2fb-5ad7fc217af6
 begin
-	# create the chunks for Sigma and Lord Xenu
-	chunks1 = [Chunk(;animal=:dog, name=:Sigma, bl=2.0), Chunk(;animal=:rat, name=:LordXenu, bl=1.5)]
-	# create declarative memory object
-	memory1 = Declarative(;memory = chunks1)
-	# create a rat chunk
-	rat_chunk = Chunk(;animal=:rat)
-	# add rat chunk to imaginal buffer
-	imaginal = Imaginal(;buffer=rat_chunk)
-	# add all the components to the ACTR object
-	actr1 = ACTR(;declarative=memory1, imaginal, noise=true, s=0.5, sa=true, γ=1.6);
+    # create the chunks for Sigma and Lord Xenu
+    chunks1 = [
+        Chunk(; animal = :dog, name = :Sigma, bl = 2.0),
+        Chunk(; animal = :rat, name = :LordXenu, bl = 1.5)
+    ]
+    # create declarative memory object
+    memory1 = Declarative(; memory = chunks1)
+    # create a rat chunk
+    rat_chunk = Chunk(; animal = :rat)
+    # add rat chunk to imaginal buffer
+    imaginal = Imaginal(; buffer = rat_chunk)
+    # add all the components to the ACTR object
+    actr1 =
+        ACTR(; declarative = memory1, imaginal, noise = true, s = 0.5, sa = true, γ = 1.6)
 end
 
 # ╔═╡ 916bf149-fb82-43f3-a6f1-520e7c21f515
 begin
-	retrieval_result1 = retrieve(actr1; animal=:rat)
-	retrieved_chunk1 = retrieval_result1[1]
+    retrieval_result1 = retrieve(actr1; animal = :rat)
+    retrieved_chunk1 = retrieval_result1[1]
 end
 
 # ╔═╡ 94b7c676-7fc7-4ffb-8aa1-558af8cb6e33
@@ -241,7 +247,7 @@ The retrieved chunk is an $(retrieved_chunk1.slots.animal) named $(retrieved_chu
 "
 
 # ╔═╡ 62c1e6ed-01c8-4ca7-983d-fbc571d3f3ae
-p2,_ = retrieval_prob(actr1, retrieved_chunk1; animal=:rat)
+p2, _ = retrieval_prob(actr1, retrieved_chunk1; animal = :rat)
 
 # ╔═╡ 18c5ace3-1aab-4aa7-9064-70ff2ae6cc4f
 md"
@@ -261,7 +267,6 @@ t2 = compute_RT(actr1, retrieved_chunk1)
 md"
 As you might exect, the retrieval time was faster with spreading activation enabled than when it was disabled:  $(round(t2, digits=3)) seconds vs. $(round(t1, digits=3)) seconds.
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

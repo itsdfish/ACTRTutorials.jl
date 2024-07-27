@@ -6,19 +6,18 @@ using InteractiveUtils
 
 # ╔═╡ a10e7108-08fd-11ed-3325-99f69255421b
 begin
-	using Turing, StatsPlots, Revise, ACTRModels, KernelDensity
-	using Distributions, StatsFuns, StatsBase, DataFrames, Random
-	using PlutoUI
-	Random.seed!(8545)
+    using Turing, StatsPlots, Revise, ACTRModels, KernelDensity
+    using Distributions, StatsFuns, StatsBase, DataFrames, Random
+    using PlutoUI
+    Random.seed!(8545)
 
-	TableOfContents()
+    TableOfContents()
 end
 
 # ╔═╡ 444f7bb3-9f15-4cac-a4b5-6271ad2b6bf3
 begin
-
-path1 = joinpath(pwd(), "../IBL/IBL_Model_Notebook.jl")
-nothing
+    path1 = joinpath(pwd(), "../IBL/IBL_Model_Notebook.jl")
+    nothing
 end
 
 # ╔═╡ 741a2155-5f51-460b-bd9d-3ace4fc38bb5
@@ -205,140 +204,138 @@ Reveal the cell below to see the gamble functions
 
 # ╔═╡ bcb9e25f-0f61-446a-9461-17782a8d3044
 begin
-	import StatsBase: sample
-	
-	mutable struct Gamble{T1,T2}
-	    v::T1
-	    p::T2
-	end
-	
-	Gamble(v::T) where {T<:Real} = Gamble([v],[1.0])
-	
-	function Gamble(;v, p)
-	    return Gamble(v, p)
-	end
-	
-	function Gambles()
-	    temp = (a=Gamble([2.,-1.],[.5,.5]),b=Gamble(0.0))
-	    gambles = Array{typeof(temp),1}()
-	    push!(gambles,temp)
-	    temp = (a=Gamble([3.,1.],[.8,.2]),b=Gamble([4.,2.],[.5,.5]))
-	    push!(gambles,temp)
-	    temp = (a=Gamble([-10.,-0.],[.5,.5]),b=Gamble(-4.0))
-	    push!(gambles,temp)
-	    return gambles
-	end
-	
-	sample(G::NamedTuple, option::Symbol) = sample(getfield(G, option))
-	
-	function sample(g::Gamble)
-	    w = Weights(g.p)
-	    return sample(g.v, w)
-	end
-	
-	EV(g) = g.v' * g.p
-	
+    import StatsBase: sample
+
+    mutable struct Gamble{T1, T2}
+        v::T1
+        p::T2
+    end
+
+    Gamble(v::T) where {T <: Real} = Gamble([v], [1.0])
+
+    function Gamble(; v, p)
+        return Gamble(v, p)
+    end
+
+    function Gambles()
+        temp = (a = Gamble([2.0, -1.0], [0.5, 0.5]), b = Gamble(0.0))
+        gambles = Array{typeof(temp), 1}()
+        push!(gambles, temp)
+        temp = (a = Gamble([3.0, 1.0], [0.8, 0.2]), b = Gamble([4.0, 2.0], [0.5, 0.5]))
+        push!(gambles, temp)
+        temp = (a = Gamble([-10.0, -0.0], [0.5, 0.5]), b = Gamble(-4.0))
+        push!(gambles, temp)
+        return gambles
+    end
+
+    sample(G::NamedTuple, option::Symbol) = sample(getfield(G, option))
+
+    function sample(g::Gamble)
+        w = Weights(g.p)
+        return sample(g.v, w)
+    end
+
+    EV(g) = g.v' * g.p
 end
 
 # ╔═╡ ece63d7b-01c5-4fdf-aafa-cc5870f2bcd9
 begin
-	function simulate(parms, gambles, n_trials; d, ϕ, ρ)
-	    # initialize a chunk for each gamble
-	    chunks = populate_memory(gambles)
-	    # populate declarative memory
-	    memory = Declarative(;memory=chunks)
-	    # create ACT-R object and pass parameters
-	    actr = ACTR(;declarative=memory, parms..., d, ϕ, ρ)
-	    choices = [keys(gambles)...]
-	    data = Array{NamedTuple,1}(undef,n_trials)
-	    # initialize blank variable for previous option
-	    prev = :_
-	    for (i,trial) in enumerate(1.0:n_trials)
-	        # select a response
-	        choice = decide(actr, choices, gambles, trial, prev)
-	        # sample an outcome from the choosen option
-	        outcome = sample(gambles, choice)
-	        # add trial, choice, and outcome information to data array
-	        data[i] = (trial=trial,choice=choice, outcome=outcome, prev=prev)
-	        # adds new chunk or updates N for existing chunk
-	        add_chunk!(actr, trial; choice, outcome)
-	        # update previous choice
-	        prev=choice
-	    end
-	    return [data...]
-	end
-	
-	function decide(actr, choices, gamble, trial, prev)
-	    ρ = get_parm(actr, :ρ)
-	    choice = :_
-	    if prev != :_ && rand() <= ρ
-	        choice = prev
-	    else
-	        θ = decision_probs(actr, gamble, trial)
-	        choice = sample(choices, Weights(θ))
-	    end
-	    return choice
-	end
-	
-	function compute_utility(actr, trial, choice)
-	    # return retrieval probability p and chunks given request choice = choice
-	    p,chunks = retrieval_probs(actr, trial; choice)
-	    # remove the last value, which represents a negligible probability of a retrieval failure
-	    pop!(p)
-	    # extract the utilities from the chunks
-	    u = map(x->x.slots.outcome, chunks)
-	    # compute the expected utility
-	    return p' * u
-	end
-	
+    function simulate(parms, gambles, n_trials; d, ϕ, ρ)
+        # initialize a chunk for each gamble
+        chunks = populate_memory(gambles)
+        # populate declarative memory
+        memory = Declarative(; memory = chunks)
+        # create ACT-R object and pass parameters
+        actr = ACTR(; declarative = memory, parms..., d, ϕ, ρ)
+        choices = [keys(gambles)...]
+        data = Array{NamedTuple, 1}(undef, n_trials)
+        # initialize blank variable for previous option
+        prev = :_
+        for (i, trial) in enumerate(1.0:n_trials)
+            # select a response
+            choice = decide(actr, choices, gambles, trial, prev)
+            # sample an outcome from the choosen option
+            outcome = sample(gambles, choice)
+            # add trial, choice, and outcome information to data array
+            data[i] = (trial = trial, choice = choice, outcome = outcome, prev = prev)
+            # adds new chunk or updates N for existing chunk
+            add_chunk!(actr, trial; choice, outcome)
+            # update previous choice
+            prev = choice
+        end
+        return [data...]
+    end
+
+    function decide(actr, choices, gamble, trial, prev)
+        ρ = get_parm(actr, :ρ)
+        choice = :_
+        if prev != :_ && rand() <= ρ
+            choice = prev
+        else
+            θ = decision_probs(actr, gamble, trial)
+            choice = sample(choices, Weights(θ))
+        end
+        return choice
+    end
+
+    function compute_utility(actr, trial, choice)
+        # return retrieval probability p and chunks given request choice = choice
+        p, chunks = retrieval_probs(actr, trial; choice)
+        # remove the last value, which represents a negligible probability of a retrieval failure
+        pop!(p)
+        # extract the utilities from the chunks
+        u = map(x -> x.slots.outcome, chunks)
+        # compute the expected utility
+        return p' * u
+    end
 end
 
 # ╔═╡ 008909b9-ff35-4a60-89f2-81e5a987ece1
 begin
-	function populate_memory(gamble, act=0.0)
-	    chunks = [Chunk(;act=act, choice=k, outcome=30.0) for k in keys(gamble)]
-	    return chunks
-	end
-	
-	function get_index(choices, choice)
-	    for (i,v) in enumerate(choices)
-	        v == choice ? (return i) : nothing
-	    end
-	    return 0
-	end
-	
-	function decision_prob(actr, gambles, choice, trial)
-	    p = decision_probs(actr, gambles, trial)
-	    choices = [keys(gambles)...]
-	    idx = get_index(choices, choice)
-	    return p[idx]
-	end
-	
-	function decision_probs(actr, gambles, trial)
-	    ϕ = actr.parms.misc.ϕ
-	    choices = [keys(gambles)...]
-	    f(c) = compute_utility(actr, trial, c)
-	    u = map(f, choices)
-	    p = exp.(u / ϕ) ./ sum(exp.(u / ϕ))
-	    return p
-	end
+    function populate_memory(gamble, act = 0.0)
+        chunks = [Chunk(; act = act, choice = k, outcome = 30.0) for k in keys(gamble)]
+        return chunks
+    end
+
+    function get_index(choices, choice)
+        for (i, v) in enumerate(choices)
+            v == choice ? (return i) : nothing
+        end
+        return 0
+    end
+
+    function decision_prob(actr, gambles, choice, trial)
+        p = decision_probs(actr, gambles, trial)
+        choices = [keys(gambles)...]
+        idx = get_index(choices, choice)
+        return p[idx]
+    end
+
+    function decision_probs(actr, gambles, trial)
+        ϕ = actr.parms.misc.ϕ
+        choices = [keys(gambles)...]
+        f(c) = compute_utility(actr, trial, c)
+        u = map(f, choices)
+        p = exp.(u / ϕ) ./ sum(exp.(u / ϕ))
+        return p
+    end
 end
 
 # ╔═╡ 4ed0dc78-5402-4294-a48d-c522778c8d9d
 begin
-	# set of gambles
-	gamble_set = Gambles()
-	# number of trials per gamble block
-	n_trials = 50
-	# decay parameter
-	d = 0.5
-	# decision noise
-	ϕ = 0.2
-	# inertia parameter 
-	ρ = 0.25
-	parms = (τ=-10,s=0.2,bll=true)
-	data = map(x->simulate(parms, x, n_trials; d, ϕ, ρ), gamble_set);
-	data[1]
+    # set of gambles
+    gamble_set = Gambles()
+    # number of trials per gamble block
+    n_trials = 50
+    # decay parameter
+    d = 0.5
+    # decision noise
+    ϕ = 0.2
+    # inertia parameter 
+    ρ = 0.25
+    parms = (τ = -10, s = 0.2, bll = true)
+    data = map(x -> simulate(parms, x, n_trials; d, ϕ, ρ), gamble_set)
+    data[1]
 end
 
 # ╔═╡ b095a857-bf4f-4a94-bdb4-a3f75d54b3c0
@@ -377,69 +374,70 @@ The details of each function are annotated in the code block below.
 
 # ╔═╡ 41e4adbe-a089-45c8-8847-56c51c150838
 begin
-	import Distributions: logpdf, loglikelihood
-	
-	struct IBL{T1,T2,T3,T4,T5} <: ContinuousUnivariateDistribution
-	    d::T1
-	    ϕ::T2
-	    ρ::T3
-	    parms::T4
-	    gambles::T5
-	end
-	
-	Broadcast.broadcastable(x::IBL) = Ref(x)
-	
-	IBL(;d, ϕ, ρ, parms, gambles) = IBL(d, ϕ, ρ, parms, gambles)
-	
-	loglikelihood(d::IBL, data::Array{<:T,1})  where {T<:Array{<:NamedTuple,1}} = logpdf(d, data)
-	
-	function logpdf(dist::IBL, data::Array{T,1}) where {T<:Array{<:NamedTuple,1}}
-	    return computeLL(dist.parms, dist.gambles, data; d=dist.d, ϕ=dist.ϕ, ρ=dist.ρ)
-	end
-	
-	function computeLL(parms, gambles, Data; d, ϕ, ρ)
-	    # initialize the log likelihood
-	    LL = 0.0
-	    # compute log likelihood for all trials in a given block. Each block corresponds to a gamble
-	    for (data,gamble) in zip(Data,gambles)
-	        LL += computeLLBlock(parms, gamble, data; d, ϕ, ρ)
-	    end
-	    return LL
-	end
-	
-	function computeLLBlock(parms, gambles, data; d, ϕ, ρ)
-	    T = typeof(d)
-	    act = zero(T)
-	    # initialize a chunk for each option in gambles
-	    chunks = populate_memory(gambles, act)
-	    # populate declarative memory
-	    memory = Declarative(;memory=chunks)
-	    # create an ACT-R object and pass parameters 
-	    actr = ACTR(;declarative=memory, parms..., d, ϕ, ρ)
-	    LL::T = 0.0
-	    for v in data
-	        # compute the decision probability
-	        LL += decisionLL(actr, v, gambles; d, ϕ, ρ)
-	        # update declarative memory based on choice and outcome
-	        add_chunk!(actr, v.trial; bl=act, choice=v.choice, outcome=v.outcome)
-	    end
-	    return LL
-	end
-	
-	function decisionLL(actr, data, gambles; d, ϕ, ρ)
-	    (;prev,choice,trial) = data
-	    # compute the decision probability
-	    pr = decision_prob(actr, gambles, choice, trial)
-	    if trial == 1
-	    # mixture when previous and current choices are equal
-	    elseif prev == choice
-	        pr = (1 - ρ) * pr + ρ
-	    # mixture when previous and current choices are different    
-	    else
-	        pr = (1 - ρ) * pr
-	    end
-	    return log(pr)
-	end
+    import Distributions: logpdf, loglikelihood
+
+    struct IBL{T1, T2, T3, T4, T5} <: ContinuousUnivariateDistribution
+        d::T1
+        ϕ::T2
+        ρ::T3
+        parms::T4
+        gambles::T5
+    end
+
+    Broadcast.broadcastable(x::IBL) = Ref(x)
+
+    IBL(; d, ϕ, ρ, parms, gambles) = IBL(d, ϕ, ρ, parms, gambles)
+
+    loglikelihood(d::IBL, data::Array{<:T, 1}) where {T <: Array{<:NamedTuple, 1}} =
+        logpdf(d, data)
+
+    function logpdf(dist::IBL, data::Array{T, 1}) where {T <: Array{<:NamedTuple, 1}}
+        return computeLL(dist.parms, dist.gambles, data; d = dist.d, ϕ = dist.ϕ, ρ = dist.ρ)
+    end
+
+    function computeLL(parms, gambles, Data; d, ϕ, ρ)
+        # initialize the log likelihood
+        LL = 0.0
+        # compute log likelihood for all trials in a given block. Each block corresponds to a gamble
+        for (data, gamble) in zip(Data, gambles)
+            LL += computeLLBlock(parms, gamble, data; d, ϕ, ρ)
+        end
+        return LL
+    end
+
+    function computeLLBlock(parms, gambles, data; d, ϕ, ρ)
+        T = typeof(d)
+        act = zero(T)
+        # initialize a chunk for each option in gambles
+        chunks = populate_memory(gambles, act)
+        # populate declarative memory
+        memory = Declarative(; memory = chunks)
+        # create an ACT-R object and pass parameters 
+        actr = ACTR(; declarative = memory, parms..., d, ϕ, ρ)
+        LL::T = 0.0
+        for v in data
+            # compute the decision probability
+            LL += decisionLL(actr, v, gambles; d, ϕ, ρ)
+            # update declarative memory based on choice and outcome
+            add_chunk!(actr, v.trial; bl = act, choice = v.choice, outcome = v.outcome)
+        end
+        return LL
+    end
+
+    function decisionLL(actr, data, gambles; d, ϕ, ρ)
+        (; prev, choice, trial) = data
+        # compute the decision probability
+        pr = decision_prob(actr, gambles, choice, trial)
+        if trial == 1
+            # mixture when previous and current choices are equal
+        elseif prev == choice
+            pr = (1 - ρ) * pr + ρ
+            # mixture when previous and current choices are different    
+        else
+            pr = (1 - ρ) * pr
+        end
+        return log(pr)
+    end
 end
 
 # ╔═╡ b2dd5400-d6c8-482a-8fbe-028b9cdddc0c
@@ -488,17 +486,24 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ 3e59400d-05f8-4310-b218-72ce96541404
 begin
-	# total samples
-	n_samples = 2000
-	# adaption samples
-	n_adapt = 1000
-	# number of chains
-	n_chains = 4
-	# sampler object
-	specs = NUTS(n_adapt, 0.65)
-	# start sampling.
-	chain = sample(model(data, parms, gamble_set), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # total samples
+    n_samples = 2000
+    # adaption samples
+    n_adapt = 1000
+    # number of chains
+    n_chains = 4
+    # sampler object
+    specs = NUTS(n_adapt, 0.65)
+    # start sampling.
+    chain = sample(
+        model(data, parms, gamble_set),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ f3dbf36f-8b1d-4a00-917c-a1155c0241bc
@@ -510,29 +515,29 @@ A summary of the MCMC chains and the posterior distribution of $d$ and $\phi$ ar
 
 # ╔═╡ 882e0ef9-77eb-4feb-8207-25be1fabb77b
 let
-	ch = group(chain,:d)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity),grid=false)
-	pcd = plot(p1, p2, p3, layout=(3,1), size = (600,600))
+    ch = group(chain, :d)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcd = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ f45c1a5c-dec1-4874-81f4-14bc71b17a96
 let
-	ch = group(chain,:ϕ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity),grid=false)
-	pcd = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    ch = group(chain, :ϕ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcd = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 5518ba38-4014-41e9-a743-eea8ee2c8a8c
 let
-	ch = group(chain,:ρ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity),grid=false)
-	pcd = plot(p1, p2, p3, layout=(3,1), size = (600,600))
+    ch = group(chain, :ρ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcd = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 7b0c4455-4783-4149-96b7-568dbf7a8421
@@ -590,119 +595,181 @@ Reveal the cell below to see plotting code
 
 # ╔═╡ 909344e2-4b72-4aa4-b3ef-d3130b276406
 begin
-	function posterior_a_rate(parms, gambles, n_samples; d, ϕ, ρ)
-	    data = map(x->simulate(parms, x, n_trials; d, ϕ, ρ), gambles)
-	    return a_rate.(data)
-	end
-	
-	function a_rate(data)
-	    a = 0
-	    N = length(data) - 1
-	    for i in 1:N
-	        if data[i].choice != data[i+1].choice
-	            a += 1
-	        end
-	    end
-	    return a / N
-	end
-	
-	function recurrence_rate(x)
-	    cnt = 0 
-	    n = length(x)
-	    for i in 1:n
-	        for j in 1:n
-	            cnt += i ≠ j ? x[i] == x[j] : 0
-	        end
-	    end
-	    return cnt / (n^2 - n)
-	end
-	
-	recurrence_indices(x::Vector{<:NamedTuple}) = recurrence_indices(map(x->x.choice, x))
-	
-	function recurrence_indices(x)
-	    cnt = 0 
-	    n = length(x)
-	    v1 = Int[]
-	    v2 = Int[]
-	    for i in 1:n
-	        for j in 1:n
-	            if (i ≠ j) && (x[i] == x[j])
-	                push!(v1, i)
-	                push!(v2, j)
-	            end
-	        end
-	    end
-	    return v1,v2
-	end
-	
-	function recurrence_indices(x1::Vector{<:NamedTuple}, x2::Vector{<:NamedTuple}) 
-	     recurrence_indices(map(x->x.choice, x1), map(x->x.choice, x2))
-	end
-	
-	function recurrence_indices(x1, x2)
-	    cnt = 0 
-	    n = length(x)
-	    v1 = Int[]
-	    v2 = Int[]
-	    for i in 1:n
-	        for j in 1:n
-	            if x1[i] == x2[j]
-	                push!(v1, i)
-	                push!(v2, j)
-	            end
-	        end
-	    end
-	    return v1,v2
-	end
+    function posterior_a_rate(parms, gambles, n_samples; d, ϕ, ρ)
+        data = map(x -> simulate(parms, x, n_trials; d, ϕ, ρ), gambles)
+        return a_rate.(data)
+    end
+
+    function a_rate(data)
+        a = 0
+        N = length(data) - 1
+        for i = 1:N
+            if data[i].choice != data[i + 1].choice
+                a += 1
+            end
+        end
+        return a / N
+    end
+
+    function recurrence_rate(x)
+        cnt = 0
+        n = length(x)
+        for i = 1:n
+            for j = 1:n
+                cnt += i ≠ j ? x[i] == x[j] : 0
+            end
+        end
+        return cnt / (n^2 - n)
+    end
+
+    recurrence_indices(x::Vector{<:NamedTuple}) = recurrence_indices(map(x -> x.choice, x))
+
+    function recurrence_indices(x)
+        cnt = 0
+        n = length(x)
+        v1 = Int[]
+        v2 = Int[]
+        for i = 1:n
+            for j = 1:n
+                if (i ≠ j) && (x[i] == x[j])
+                    push!(v1, i)
+                    push!(v2, j)
+                end
+            end
+        end
+        return v1, v2
+    end
+
+    function recurrence_indices(x1::Vector{<:NamedTuple}, x2::Vector{<:NamedTuple})
+        recurrence_indices(map(x -> x.choice, x1), map(x -> x.choice, x2))
+    end
+
+    function recurrence_indices(x1, x2)
+        cnt = 0
+        n = length(x)
+        v1 = Int[]
+        v2 = Int[]
+        for i = 1:n
+            for j = 1:n
+                if x1[i] == x2[j]
+                    push!(v1, i)
+                    push!(v2, j)
+                end
+            end
+        end
+        return v1, v2
+    end
 end
 
 # ╔═╡ 121bf141-3010-4805-81d8-442de9f00c8c
-let 
-	posterior_pred(x) = posterior_a_rate(parms, gamble_set, n_trials; x...)
-	preds = posterior_predictive(x -> posterior_pred(x), chain, 1000)
-	preds = permutedims(hcat(preds...))
-	df = DataFrame(preds, :auto)
-	colnames = Dict(Symbol(string("x", i)) => Symbol(string("Gamble ", i)) for i in 1:length(gamble_set))
-	rename!(df, colnames)
-	df = DataFrames.stack(df)
-	titles = reshape(unique(df.variable), 1, length(gamble_set))
-	p4 = @df df histogram(:value, group=:variable, layout=(3,1), xlims=(0,1), ylims=(0,10), color=:grey, xlabel="A-Rate",
-	  norm=true, leg=false, title=titles, grid=false)
-	obs_a_rates = a_rate.(data)
-	vline!(obs_a_rates', color=:darkred)
+let
+    posterior_pred(x) = posterior_a_rate(parms, gamble_set, n_trials; x...)
+    preds = posterior_predictive(x -> posterior_pred(x), chain, 1000)
+    preds = permutedims(hcat(preds...))
+    df = DataFrame(preds, :auto)
+    colnames = Dict(Symbol(string("x", i)) => Symbol(string("Gamble ", i)) for
+         i = 1:length(gamble_set))
+    rename!(df, colnames)
+    df = DataFrames.stack(df)
+    titles = reshape(unique(df.variable), 1, length(gamble_set))
+    p4 = @df df histogram(:value, group = :variable, layout = (3, 1), xlims = (0, 1),
+        ylims = (0, 10), color = :grey, xlabel = "A-Rate",
+        norm = true, leg = false, title = titles, grid = false)
+    obs_a_rates = a_rate.(data)
+    vline!(obs_a_rates', color = :darkred)
 end
 
 # ╔═╡ 2ad1402d-9522-4657-9239-3b97a26e7cbb
 let
-	v1,v2 = recurrence_indices(data[1])
-	hist1 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 1 Recurrence", leg=false, grid=false, color=:black)
-	
-	v1,v2 = recurrence_indices(data[2])
-	hist2 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 2 Recurrence", leg=false, grid=false, color=:black)
-	
-	v1,v2 = recurrence_indices(data[3])
-	hist3 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 3 Recurrence", leg=false, grid=false, color=:black)
-	plot(hist1, hist2, hist3, layout=(3, 1), size = (600,600))
+    v1, v2 = recurrence_indices(data[1])
+    hist1 = histogram2d(
+        v1,
+        v2,
+        bins = n_trials,
+        xlabel = "Trials",
+        ylabel = "Trials",
+        title = "Gamble 1 Recurrence",
+        leg = false,
+        grid = false,
+        color = :black
+    )
+
+    v1, v2 = recurrence_indices(data[2])
+    hist2 = histogram2d(
+        v1,
+        v2,
+        bins = n_trials,
+        xlabel = "Trials",
+        ylabel = "Trials",
+        title = "Gamble 2 Recurrence",
+        leg = false,
+        grid = false,
+        color = :black
+    )
+
+    v1, v2 = recurrence_indices(data[3])
+    hist3 = histogram2d(
+        v1,
+        v2,
+        bins = n_trials,
+        xlabel = "Trials",
+        ylabel = "Trials",
+        title = "Gamble 3 Recurrence",
+        leg = false,
+        grid = false,
+        color = :black
+    )
+    plot(hist1, hist2, hist3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ d9f249d0-0e8b-4ece-a4b9-1979629c1c75
-let 
-	preds = posterior_predictive(x -> simulate(parms, gamble_set[1], n_trials; x...), chain, 1000, recurrence_indices)
-	v1 = mapreduce(x->x[1], vcat, preds)
-	v2 = mapreduce(x->x[2], vcat, preds)
-	hist1 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 1 Recurrence", 
-	  xaxis=font(12), yaxis=font(12))
-	
-	preds = posterior_predictive(x -> simulate(parms, gamble_set[2], n_trials; x...), chain, 1000, recurrence_indices)
-	v1 = mapreduce(x->x[1], vcat, preds)
-	v2 = mapreduce(x->x[2], vcat, preds)
-	hist2 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 2 Recurrence")
-	
-	preds = posterior_predictive(x -> simulate(parms, gamble_set[3], n_trials; x...), chain, 1000, recurrence_indices)
-	v1 = mapreduce(x->x[1], vcat, preds)
-	v2 = mapreduce(x->x[2], vcat, preds)
-	hist3 = histogram2d(v1, v2, bins=n_trials, xlabel="Trials", ylabel="Trials", title="Gamble 3 Recurrence")
-	plot(hist1, hist2, hist3, layout=(3, 1), size = (600,600))
+let
+    preds = posterior_predictive(
+        x -> simulate(parms, gamble_set[1], n_trials; x...),
+        chain,
+        1000,
+        recurrence_indices
+    )
+    v1 = mapreduce(x -> x[1], vcat, preds)
+    v2 = mapreduce(x -> x[2], vcat, preds)
+    hist1 = histogram2d(v1, v2, bins = n_trials, xlabel = "Trials", ylabel = "Trials",
+        title = "Gamble 1 Recurrence",
+        xaxis = font(12), yaxis = font(12))
+
+    preds = posterior_predictive(
+        x -> simulate(parms, gamble_set[2], n_trials; x...),
+        chain,
+        1000,
+        recurrence_indices
+    )
+    v1 = mapreduce(x -> x[1], vcat, preds)
+    v2 = mapreduce(x -> x[2], vcat, preds)
+    hist2 = histogram2d(
+        v1,
+        v2,
+        bins = n_trials,
+        xlabel = "Trials",
+        ylabel = "Trials",
+        title = "Gamble 2 Recurrence"
+    )
+
+    preds = posterior_predictive(
+        x -> simulate(parms, gamble_set[3], n_trials; x...),
+        chain,
+        1000,
+        recurrence_indices
+    )
+    v1 = mapreduce(x -> x[1], vcat, preds)
+    v2 = mapreduce(x -> x[2], vcat, preds)
+    hist3 = histogram2d(
+        v1,
+        v2,
+        bins = n_trials,
+        xlabel = "Trials",
+        ylabel = "Trials",
+        title = "Gamble 3 Recurrence"
+    )
+    plot(hist1, hist2, hist3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ cd69e5d8-a3e8-4f07-823b-f7b992193a38
@@ -716,7 +783,6 @@ Lejarraga, T., Dutt, V., & Gonzalez, C. (2012). Instance‐based learning: A gen
 
 McCormick, E. N., Blaha, L. M., & Gonzalez, C. (2020). Exploring Dynamic Decision Making Strategies with Recurrence Quantification Analysis. Annual Conference for Cognitive Science.
 """
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

@@ -6,17 +6,20 @@ using InteractiveUtils
 
 # ╔═╡ 180fbfd2-7399-11ec-2f78-d5f7b633eda7
 begin
-	using Turing, StatsPlots, ACTRModels
-	using Random, PlutoUI, Distributions
-	using HypertextLiteral
-	Random.seed!(44301)
-	TableOfContents()
+    using Turing, StatsPlots, ACTRModels
+    using Random, PlutoUI, Distributions
+    using HypertextLiteral
+    Random.seed!(44301)
+    TableOfContents()
 end
 
 # ╔═╡ 733a16eb-fb60-4fd1-b563-727fbcfe4144
 begin
-	path_u1_1 = joinpath(pwd(), "../../Unit1/Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl")
-	nothing
+    path_u1_1 = joinpath(
+        pwd(),
+        "../../Unit1/Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl"
+    )
+    nothing
 end
 
 # ╔═╡ 67dc1f4b-bf9f-4b9d-92af-8823b9be2e24
@@ -33,9 +36,9 @@ The 1 High Threshold Model is applied to classic recognition memory tasks in whi
 
 # ╔═╡ 337cdc86-e244-4244-86b7-56aa7f6b5282
 let
-	url = "https://i.imgur.com/8JZhdPB.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/png"(), data)
+    url = "https://i.imgur.com/8JZhdPB.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/png"(), data)
 end
 
 # ╔═╡ b5f414f2-179e-482a-930c-91622f5dfd26
@@ -172,18 +175,18 @@ function simulate(parms, N; τ, θg)
     # create a chunk
     chunk = Chunk()
     # add the chunk to declarative memory
-    memory = Declarative(;memory=[chunk])
+    memory = Declarative(; memory = [chunk])
     # create the ACTR object
-    actr = ACTR(;declarative=memory, parms..., τ, θg)
+    actr = ACTR(; declarative = memory, parms..., τ, θg)
     # compute the retrieval probability
-    θᵣ,_ = retrieval_prob(actr, chunk)
+    θᵣ, _ = retrieval_prob(actr, chunk)
     # compute the probabililty of a correct answer for target trials
     θ = θᵣ + (1 - θᵣ) * θg
     # generate responses for the target trial
     target = rand(Binomial(N.t, θ))
     # generate responses for foil trials
     foil = rand(Binomial(N.f, θg))
-    return (Nt = N.t,Nf = N.f,target = target,foil = foil)
+    return (Nt = N.t, Nf = N.f, target = target, foil = foil)
 end
 
 # ╔═╡ 7777c307-d1c9-49f8-a5e1-210c6c678c25
@@ -193,16 +196,16 @@ Now that our `simulate` function has been defined, we can now generate some data
 
 # ╔═╡ c71d4b3b-1949-4cc3-bc49-bd3e6ee5364d
 begin
-	# number of trials for targets and foils
-	n_trials = (t = 80,f = 20)
-	# retrieval threshold parameter
-	τ = 0.5
-	# guessing parameter
-	θg = 0.8
-	# fixed parameters for base level constant and logistic scale
-	fixed_parms = (blc = 1.5,s = 0.4)
-	# generate data
-	data = simulate(fixed_parms, n_trials; τ, θg)
+    # number of trials for targets and foils
+    n_trials = (t = 80, f = 20)
+    # retrieval threshold parameter
+    τ = 0.5
+    # guessing parameter
+    θg = 0.8
+    # fixed parameters for base level constant and logistic scale
+    fixed_parms = (blc = 1.5, s = 0.4)
+    # generate data
+    data = simulate(fixed_parms, n_trials; τ, θg)
 end
 
 # ╔═╡ 05b19a83-fb32-4460-b1d0-a0a7d1dde430
@@ -220,44 +223,44 @@ The function `computeLL` performs the heavy lifting and is called via `logpdf` w
 
 # ╔═╡ 8e055366-c693-4ca8-85d0-2308dc56a63f
 begin
-	import Distributions: logpdf, loglikelihood
-	
-	struct Retrieval{T1,T2,T3} <: ContinuousUnivariateDistribution
-	    τ::T1
-	    θg::T2
-	    fixed_parms::T3
-	end
-	
-	Broadcast.broadcastable(x::Retrieval) = Ref(x)
-	
-	loglikelihood(d::Retrieval, data::NamedTuple) = logpdf(d, data)
-	
-	Retrieval(;τ, θg, fixed_parms) = Retrieval(τ, θg, fixed_parms)
-	
-	function logpdf(d::Retrieval, data::NamedTuple)
-	    return computeLL(d.fixed_parms, data;τ=d.τ, θg=d.θg)
-	end
-	
-	function computeLL(fixed_parms, data; τ, θg)
-	    # intitialize activation with the same variable type as τ to work with 
+    import Distributions: logpdf, loglikelihood
+
+    struct Retrieval{T1, T2, T3} <: ContinuousUnivariateDistribution
+        τ::T1
+        θg::T2
+        fixed_parms::T3
+    end
+
+    Broadcast.broadcastable(x::Retrieval) = Ref(x)
+
+    loglikelihood(d::Retrieval, data::NamedTuple) = logpdf(d, data)
+
+    Retrieval(; τ, θg, fixed_parms) = Retrieval(τ, θg, fixed_parms)
+
+    function logpdf(d::Retrieval, data::NamedTuple)
+        return computeLL(d.fixed_parms, data; τ = d.τ, θg = d.θg)
+    end
+
+    function computeLL(fixed_parms, data; τ, θg)
+        # intitialize activation with the same variable type as τ to work with 
         # autodiff
-	    act = zero(typeof(τ))
-	    # initialize the chunk
-	    chunk = Chunk(;act)
-	    # add the chunk to declarative memory
-	    memory = Declarative(;memory=[chunk])
-	    # create the ACTR object
-	    actr = ACTR(;declarative=memory, fixed_parms..., τ, θg)
-	    # compute the retrival probability
-	    θᵣ,_ = retrieval_prob(actr, chunk)
-	    # compute the probability of a correct response
-	    θ = θᵣ + (1 - θᵣ) * θg
-	    # compute the log likelihood for target trials
-	    LL = logpdf(Binomial(data.Nt, θ), data.target)
-	    # compute the log likelihood for foil trials
-	    LL += logpdf(Binomial(data.Nf, θg), data.foil)
-	    return LL
-	end
+        act = zero(typeof(τ))
+        # initialize the chunk
+        chunk = Chunk(; act)
+        # add the chunk to declarative memory
+        memory = Declarative(; memory = [chunk])
+        # create the ACTR object
+        actr = ACTR(; declarative = memory, fixed_parms..., τ, θg)
+        # compute the retrival probability
+        θᵣ, _ = retrieval_prob(actr, chunk)
+        # compute the probability of a correct response
+        θ = θᵣ + (1 - θᵣ) * θg
+        # compute the log likelihood for target trials
+        LL = logpdf(Binomial(data.Nt, θ), data.target)
+        # compute the log likelihood for foil trials
+        LL += logpdf(Binomial(data.Nf, θg), data.foil)
+        return LL
+    end
 end
 
 # ╔═╡ 7e1b499d-8649-4c73-9e78-f9790fe78d1b
@@ -291,23 +294,23 @@ end
 
 # ╔═╡ c9e05603-99f5-4116-b27a-6931916e7aca
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(
-		model(
-			data, 
-			fixed_parms), 
-			specs, 
-			MCMCThreads(), 
-			n_samples, 
-			n_chains
-	)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(
+            data,
+            fixed_parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains
+    )
+    describe(chain)
 end
 
 # ╔═╡ cb7851b1-6510-48c1-896b-b94aa9bfe394
@@ -322,29 +325,35 @@ The first panel for each plot shows good mixing between the four chains. In the 
 "
 
 # ╔═╡ b0937f7d-3ae4-418c-b298-5b10572edc62
-let 
-	chτ = group(chain, :τ)
-	font_size = 12
-	p1 = plot(chτ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(chτ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(chτ, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    chτ = group(chain, :τ)
+    font_size = 12
+    p1 = plot(chτ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(chτ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(chτ, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ b0744896-81a6-44c1-80ca-84ae4870c074
 let
-	font_size = 12
-	chθg = group(chain, :θg)
-	p1 = plot(chθg, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-  grid=false, size=(250,100), titlefont=font(font_size))
-p2 = plot(chθg, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-  grid=false, size=(250,100), titlefont=font(font_size))
-p3 = plot(chθg, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-  grid=false, size=(250,100), titlefont=font(font_size))
-pcθg = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    font_size = 12
+    chθg = group(chain, :θg)
+    p1 = plot(chθg, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(chθg, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(chθg, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcθg = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ d2eaca5f-c15e-4b29-a687-c8963ef4303a
@@ -356,24 +365,26 @@ The posterior predictive distributions of correct responses are shown below for 
 
 # ╔═╡ 23928ff8-9684-4c47-8483-a4973984f4a1
 begin
-		preds = posterior_predictive(x -> simulate(fixed_parms, n_trials; x...), chain, 1000)
-	
-	let
-		font_size = 12
-		target = map(x -> x.target, preds)
-		p4 = histogram(target, xlabel="Yes Responses", ylabel="Frequency", xaxis=font(font_size), yaxis=font(font_size),
-		 grid=false, color=:grey, leg=false, bar_width=1, title="Target",
-		    titlefont=font(font_size), xlims=(0,100))
-	end
+    preds = posterior_predictive(x -> simulate(fixed_parms, n_trials; x...), chain, 1000)
+
+    let
+        font_size = 12
+        target = map(x -> x.target, preds)
+        p4 = histogram(target, xlabel = "Yes Responses", ylabel = "Frequency",
+            xaxis = font(font_size), yaxis = font(font_size),
+            grid = false, color = :grey, leg = false, bar_width = 1, title = "Target",
+            titlefont = font(font_size), xlims = (0, 100))
+    end
 end
 
 # ╔═╡ 5adc2159-99b3-4c2d-bd0d-e14ab1aa5ae4
-let 
-	font_size = 12
-	foil = map(x -> x.foil, preds)
-	p5 = histogram(foil, xlabel="Yes Responses",ylabel="Frequency", xaxis=font(font_size), yaxis=font(font_size),
- grid=false, color=:grey, leg=false, bar_width=1, title="Foil",
-    titlefont=font(font_size), xlims = (0, 100))
+let
+    font_size = 12
+    foil = map(x -> x.foil, preds)
+    p5 = histogram(foil, xlabel = "Yes Responses", ylabel = "Frequency",
+        xaxis = font(font_size), yaxis = font(font_size),
+        grid = false, color = :grey, leg = false, bar_width = 1, title = "Foil",
+        titlefont = font(font_size), xlims = (0, 100))
 end
 
 # ╔═╡ 68b2b7c5-f486-43d8-8453-0ce8dd0b46b9

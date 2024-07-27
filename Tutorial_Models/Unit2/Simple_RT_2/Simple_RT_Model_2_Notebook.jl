@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,26 +23,26 @@ end
 
 # ╔═╡ a12476c8-720e-11ec-02ca-0fa24a35f825
 begin
-	using Turing, StatsPlots, Revise, ACTRModels
-	using PlutoUI, Random, SequentialSamplingModels
-	Random.seed!(66501);
-	TableOfContents()
+    using Turing, StatsPlots, Revise, ACTRModels
+    using PlutoUI, Random, SequentialSamplingModels
+    Random.seed!(66501)
+    TableOfContents()
 end
 
 # ╔═╡ edff4c88-ea1d-48a0-88a7-bae3ee4a6e89
 begin
+    path_introduction = joinpath(pwd(), "../../Introduction/Introduction.jl")
 
-path_introduction = joinpath(pwd(), "../../Introduction/Introduction.jl")
+    path_u2_1 = joinpath(pwd(), "../Simple_RT_1/Simple_RT_Model_1_Notebook.jl")
 
-path_u2_1 = joinpath(pwd(), "../Simple_RT_1/Simple_RT_Model_1_Notebook.jl")
+    path_u2_3 = joinpath(pwd(), "../Simple_RT_3/Simple_RT_Model_3_Notebook.jl")
 
-path_u2_3 = joinpath(pwd(), "../Simple_RT_3/Simple_RT_Model_3_Notebook.jl")
+    path_u2_4 = joinpath(pwd(), "../Simple_RT_4/Simple_RT_Model_4_Notebook.jl")
 
-path_u2_4 = joinpath(pwd(), "../Simple_RT_4/Simple_RT_Model_4_Notebook.jl")
+    path_lognormal =
+        joinpath(pwd(), "../../../Background_Tutorials/Lognormal_Race_Process.jl")
 
-path_lognormal = joinpath(pwd(), "../../../Background_Tutorials/Lognormal_Race_Process.jl")
-
-nothing
+    nothing
 end
 
 # ╔═╡ f888f799-fc04-4f3d-8e3e-275caf7f5b7b
@@ -186,16 +193,16 @@ function simulate(parms; blc, τ)
     # Create chunk
     chunks = [Chunk()]
     # add chunk to declarative memory
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     # create ACTR object and pass parameters
-    actr = ACTR(;declarative=memory, parms..., blc, τ)
+    actr = ACTR(; declarative = memory, parms..., blc, τ)
     # retrieve chunk
     chunk = retrieve(actr)
     # 2 if empty, 1 otherwise
     resp = isempty(chunk) ? resp = 2 : 1
     # compute reaction time 
     rt = compute_RT(actr, chunk) + actr.parms.ter
-    return (resp = resp,rt = rt)
+    return (resp = resp, rt = rt)
 end
 
 # ╔═╡ e4f64f9e-9b43-4e98-a3fe-26f926c2213e
@@ -205,17 +212,17 @@ In the code block below, 50 simulated reaction times are simulated from the mode
 
 # ╔═╡ 374d7547-ee02-4f5b-b83d-f3ea3ffcbeac
 begin
-	# the number of trials
-	n_trials = 50
-	# true value of blc
-	blc = 1.25
-	# true value of τ
-	τ = 0.5
-	# perceptual-motor time
-	ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
-	parms = (noise = true,s = 0.3,ter = ter)
-	# generate data
-	data = map(x -> simulate(parms; blc, τ), 1:n_trials);
+    # the number of trials
+    n_trials = 50
+    # true value of blc
+    blc = 1.25
+    # true value of τ
+    τ = 0.5
+    # perceptual-motor time
+    ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
+    parms = (noise = true, s = 0.3, ter = ter)
+    # generate data
+    data = map(x -> simulate(parms; blc, τ), 1:n_trials)
 end
 
 # ╔═╡ 69d121b0-c77a-4f28-bf1c-4c7ed82a5720
@@ -241,35 +248,35 @@ In the following loop, the log likelihood is incremented for each data point.
 
 # ╔═╡ c56a16c2-f410-4c97-a285-ea0500e1298b
 begin
-	import Distributions: logpdf, rand, loglikelihood
-	
-	struct RT{T1,T2,T3} <: ContinuousUnivariateDistribution
-	    blc::T1
-	    τ::T2
-	    parms::T3
-	end
-	
-	RT(;blc, τ, parms) = RT(blc, τ, parms)
-	
-	loglikelihood(d::RT, data::Array{<:NamedTuple,1}) = logpdf(d, data)
-	
-	function logpdf(d::RT, data::Array{<:NamedTuple,1})
-	    LL = computeLL(d.blc, d.τ, d.parms, data)
-	    return LL
-	end
-	
-	function computeLL(blc, τ, parms, data)
-		(;s,ter) = parms
-		LL = 0.0
-		σ = fill(s * pi / sqrt(3), 2)
-		# define distribution object
-		dist = LNR(;ν = -[blc,τ], σ, τ = ter)
-		# compute log likelihood for each data point
-		for d in data
-			LL += logpdf(dist, d...)
-		end
-		return LL
-	end
+    import Distributions: logpdf, rand, loglikelihood
+
+    struct RT{T1, T2, T3} <: ContinuousUnivariateDistribution
+        blc::T1
+        τ::T2
+        parms::T3
+    end
+
+    RT(; blc, τ, parms) = RT(blc, τ, parms)
+
+    loglikelihood(d::RT, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
+
+    function logpdf(d::RT, data::Array{<:NamedTuple, 1})
+        LL = computeLL(d.blc, d.τ, d.parms, data)
+        return LL
+    end
+
+    function computeLL(blc, τ, parms, data)
+        (; s, ter) = parms
+        LL = 0.0
+        σ = fill(s * pi / sqrt(3), 2)
+        # define distribution object
+        dist = LNR(; ν = -[blc, τ], σ, τ = ter)
+        # compute log likelihood for each data point
+        for d in data
+            LL += logpdf(dist, d...)
+        end
+        return LL
+    end
 end
 
 # ╔═╡ ef51a1ce-66e4-4c3f-b68b-b2dc84131c44
@@ -285,49 +292,57 @@ The slider located below allows you to adjust the value of blc. As blc increases
 "
 
 # ╔═╡ 9114da87-927a-45b2-8afa-2a58a71d78da
-_blc = @bind _blc Slider(-1:.1:2, default=1.5, show_value=true)
+_blc = @bind _blc Slider(-1:0.1:2, default = 1.5, show_value = true)
 
 # ╔═╡ 8808e084-c300-4aa3-8078-0a5d4f6097cd
 let
-	n_trials = 10_000
-	blc = _blc
-	τ = 0.5
-	ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
-	parms = (noise = true,s = 0.3,ter = ter)
-	sim_data = map(x -> simulate(parms, blc=blc, τ=τ), 1:n_trials)
-	# correct rts
-	c_rt = filter(x-> x.resp == 1, sim_data)
-	c_rt = map(x->x.rt, c_rt)
-	# incorrect rts
-	i_rt = filter(x-> x.resp == 2, sim_data)
-	i_rt = map(x->x.rt, i_rt)
-	# probability of a correct response
-	prob_correct = length(c_rt)/length(sim_data)
-	# range of rt values for x-axis
-	times = 0.01:0.01:1.8
-	# density for correct rts
-	density_correct = map(x-> computeLL(blc, τ, parms, [(resp=1,rt=x)]) |> exp, times)
-	# plot correct density
-	p = plot(
-		layout = (2,1), 
-		leg = false, 
-		xlabel = "RT (seconds)", 
-		ylabel = "Density", 
-		xlims = (0,2.5),
-		ylims = (0,5)
-	)
-	# histogram of correct simulated rts
-	histogram!(c_rt, color=:darkgrey, grid=false, norm=true, title="Correct")
-	# weight normalized histogram according to response probability
-	p[1][1][:y] .*= prob_correct
-	plot!(times, density_correct, linewidth=2)
-	density_incorrect = map(x-> computeLL(blc, τ, parms, [(resp=2,rt=x)]) |> exp, times)
-	# plot simulated rts for incorrect responses
-	histogram!(i_rt, color=:darkgrey, grid=false, norm=true, title="Incorrect", subplot=2)
-	# weight normalized histogram according to response probability
-	p[2][1][:y] .*= (1-prob_correct)
-	# plot density for incorrect responses
-	plot!(times, density_incorrect, linewidth=2, subplot=2)
+    n_trials = 10_000
+    blc = _blc
+    τ = 0.5
+    ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
+    parms = (noise = true, s = 0.3, ter = ter)
+    sim_data = map(x -> simulate(parms, blc = blc, τ = τ), 1:n_trials)
+    # correct rts
+    c_rt = filter(x -> x.resp == 1, sim_data)
+    c_rt = map(x -> x.rt, c_rt)
+    # incorrect rts
+    i_rt = filter(x -> x.resp == 2, sim_data)
+    i_rt = map(x -> x.rt, i_rt)
+    # probability of a correct response
+    prob_correct = length(c_rt) / length(sim_data)
+    # range of rt values for x-axis
+    times = 0.01:0.01:1.8
+    # density for correct rts
+    density_correct = map(x -> computeLL(blc, τ, parms, [(resp = 1, rt = x)]) |> exp, times)
+    # plot correct density
+    p = plot(
+        layout = (2, 1),
+        leg = false,
+        xlabel = "RT (seconds)",
+        ylabel = "Density",
+        xlims = (0, 2.5),
+        ylims = (0, 5)
+    )
+    # histogram of correct simulated rts
+    histogram!(c_rt, color = :darkgrey, grid = false, norm = true, title = "Correct")
+    # weight normalized histogram according to response probability
+    p[1][1][:y] .*= prob_correct
+    plot!(times, density_correct, linewidth = 2)
+    density_incorrect =
+        map(x -> computeLL(blc, τ, parms, [(resp = 2, rt = x)]) |> exp, times)
+    # plot simulated rts for incorrect responses
+    histogram!(
+        i_rt,
+        color = :darkgrey,
+        grid = false,
+        norm = true,
+        title = "Incorrect",
+        subplot = 2
+    )
+    # weight normalized histogram according to response probability
+    p[2][1][:y] .*= (1 - prob_correct)
+    # plot density for incorrect responses
+    plot!(times, density_incorrect, linewidth = 2, subplot = 2)
 end
 
 # ╔═╡ 27cae51a-4dff-45ca-a9fb-bd4ed5f86f3d
@@ -367,22 +382,22 @@ Now that the priors, likelihood, and Turing model have been specified, we can no
 
 # ╔═╡ 34bae91a-bd92-4711-b8fa-a481843b4075
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(
-		model(data, parms), 
-		specs, 
-		MCMCThreads(), 
-		n_samples, 
-		n_chains, 
-		progress=true
-	)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(data, parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ d30f2d1c-2e76-4611-9689-af252dc6d872
@@ -393,29 +408,35 @@ A summary of the parameter estimates can be found in the output above. The diagn
 "
 
 # ╔═╡ c0b29c06-0f13-46a0-ba8a-6cd98e364be8
-let 
-	font_size = 12
-	ch = group(chain, :blc)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    font_size = 12
+    ch = group(chain, :blc)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ ddc79a55-dafd-45aa-a555-59bb91501350
 let
-		font_size = 12
-	ch = group(chain, :τ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    font_size = 12
+    ch = group(chain, :τ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 21a55174-1224-4119-841e-7da40a5b3ad9
@@ -427,23 +448,29 @@ The code block below plots the posterior predictive distributions for correct rt
 
 # ╔═╡ d4c074ee-fd72-442c-8238-4c82ed936855
 let
-	font_size = 12
-	preds = posterior_predictive(x -> simulate(parms; x...), chain, 1000)
-	correct = filter(x-> x.resp == 1, preds)
-	rts = map(x->x.rt, correct)
-	p_correct = mean(x->x.resp == 1, preds)
-	correct_dist = histogram(rts, xlabel="RT", ylabel="Density", xaxis=font(font_size), yaxis=font(font_size),
-	    grid=false, norm=true, color=:grey, leg=false, size=(600,300), title="Correct", titlefont=font(font_size),
-	    xlims=(0,1.5))
-	correct_dist[1][1][:y] *= p_correct
-	
-	incorrect = filter(x-> x.resp == 2, preds)
-	rts = map(x->x.rt, incorrect)
-	incorrect_dist = histogram(rts, xlabel="RT", ylabel="Density", xaxis=font(font_size), yaxis=font(font_size),
-	    grid=false, norm=true, color=:grey, leg=false, size=(600,300), title="Incorrect", titlefont=font(font_size),
-	    xlims=(0,1.5))
-	incorrect_dist[1][1][:y] *= (1 - p_correct)
-	plot(correct_dist, incorrect_dist, layout=(2,1), ylims=(0,3), size=(800, 500))
+    font_size = 12
+    preds = posterior_predictive(x -> simulate(parms; x...), chain, 1000)
+    correct = filter(x -> x.resp == 1, preds)
+    rts = map(x -> x.rt, correct)
+    p_correct = mean(x -> x.resp == 1, preds)
+    correct_dist =
+        histogram(rts, xlabel = "RT", ylabel = "Density", xaxis = font(font_size),
+            yaxis = font(font_size),
+            grid = false, norm = true, color = :grey, leg = false, size = (600, 300),
+            title = "Correct", titlefont = font(font_size),
+            xlims = (0, 1.5))
+    correct_dist[1][1][:y] *= p_correct
+
+    incorrect = filter(x -> x.resp == 2, preds)
+    rts = map(x -> x.rt, incorrect)
+    incorrect_dist =
+        histogram(rts, xlabel = "RT", ylabel = "Density", xaxis = font(font_size),
+            yaxis = font(font_size),
+            grid = false, norm = true, color = :grey, leg = false, size = (600, 300),
+            title = "Incorrect", titlefont = font(font_size),
+            xlims = (0, 1.5))
+    incorrect_dist[1][1][:y] *= (1 - p_correct)
+    plot(correct_dist, incorrect_dist, layout = (2, 1), ylims = (0, 3), size = (800, 500))
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

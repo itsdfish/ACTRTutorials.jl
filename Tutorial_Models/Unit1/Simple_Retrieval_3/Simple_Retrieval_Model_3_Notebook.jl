@@ -6,41 +6,43 @@ using InteractiveUtils
 
 # ╔═╡ b8af21e5-c433-4646-8d17-23d5976eb1e8
 begin
-	using Turing, StatsPlots, Revise, ACTRModels, Random
-	using PlutoUI, StatsBase, StatsFuns
-	# seed random number generator
-	Random.seed!(2341);
-	TableOfContents()
+    using Turing, StatsPlots, Revise, ACTRModels, Random
+    using PlutoUI, StatsBase, StatsFuns
+    # seed random number generator
+    Random.seed!(2341)
+    TableOfContents()
 end
 
 # ╔═╡ 52b30b5e-6f92-11ec-1ade-1d67bf8cd2d9
 begin
-	path_u1_1 = joinpath(pwd(), "../Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl")
-	path_u1_2= joinpath(pwd(), "../Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
-	nothing
+    path_u1_1 =
+        joinpath(pwd(), "../Simple_Retrieval_1/Simple_Retrieval_Model_1_Notebook.jl")
+    path_u1_2 =
+        joinpath(pwd(), "../Simple_Retrieval_2/Simple_Retrieval_Model_2_Notebook.jl")
+    nothing
 end
 
 # ╔═╡ 89c69b0b-64bf-4753-9364-ee045fa4f1c5
 Markdown.parse(
-	"""
-# Introduction
+    """
+   # Introduction
 
-In the present tutorial, we modify [Simple Retrievel Model 2](./open?path=$path_u1_2) to allow guessing in the event of a retrieval failure. This model is applicable to paired associates task which do not allow a person to response "I don't know", but instead require guessing when a retrieval failure occurs.
+   In the present tutorial, we modify [Simple Retrievel Model 2](./open?path=$path_u1_2) to allow guessing in the event of a retrieval failure. This model is applicable to paired associates task which do not allow a person to response "I don't know", but instead require guessing when a retrieval failure occurs.
 
-# Task
+   # Task
 
-The task is similar to the one described in the tutorial [Simple Retrievel Model 2](./open?path=$path_u1_2). In the paired associates task, subjects learn arbitrary letter number pairs, such as
+   The task is similar to the one described in the tutorial [Simple Retrievel Model 2](./open?path=$path_u1_2). In the paired associates task, subjects learn arbitrary letter number pairs, such as
 
-- (X, 2)
-- (M, 5)
+   - (X, 2)
+   - (M, 5)
 
-In the test phase, a letter is presented and the subject must recall the associated number and press the corresponding key on the keyboard. Unlike previous versions of the paired associates task, participants must guess if they do not know the answer. 
+   In the test phase, a letter is presented and the subject must recall the associated number and press the corresponding key on the keyboard. Unlike previous versions of the paired associates task, participants must guess if they do not know the answer. 
 
-# Simple Retrieval Model 3
+   # Simple Retrieval Model 3
 
-As with the model decribed in the [previous tutorial](./open?path=$path_u1_2), the present model encodes a cue and uses it as a retrieval request to find the answer. If a retrieval failure occurs, the model guesses with equal probability from a set of candidates.  
+   As with the model decribed in the [previous tutorial](./open?path=$path_u1_2), the present model encodes a cue and uses it as a retrieval request to find the answer. If a retrieval failure occurs, the model guesses with equal probability from a set of candidates.  
 
-"""
+   """
 )
 
 # ╔═╡ 975e6f95-0127-40fa-ad8e-dff74866cb54
@@ -194,48 +196,48 @@ Reveal the cell immediately below to see details about helper functions.
 
 # ╔═╡ 351f0950-de85-4748-9a30-4bdc5de1e7df
 begin
-	"""
-		sample_stimuli(n, m)
+    """
+    	sample_stimuli(n, m)
 
-	Generates `m` samples from set from set {1, 2, ..., `n`}, which represent stimuli
+    Generates `m` samples from set from set {1, 2, ..., `n`}, which represent stimuli
 
-	# Arguments
-	- `n`: upper bound on range of stimuli to be sampled
-	- `m': the number of samples taken from set {1, 2, ..., n}
-	"""
-	function sample_stimuli(n, m)
-		return rand(1:n, m)
-	end
+    # Arguments
+    - `n`: upper bound on range of stimuli to be sampled
+    - `m': the number of samples taken from set {1, 2, ..., n}
+    """
+    function sample_stimuli(n, m)
+        return rand(1:n, m)
+    end
 
-	"""
-		populate_memory(n, act=0.0)
+    """
+    	populate_memory(n, act=0.0)
 
-	Returns a vector of chunks with a slot-value pairs 1 through `n`
+    Returns a vector of chunks with a slot-value pairs 1 through `n`
 
-	# Arguments
-	- `n`: number of chunks
-	- `act=0': default activation value
-	"""
-	function populate_memory(n, act=0.0)
-		return [Chunk(;act=act, value=i) for i in 1:n]
-	end
+    # Arguments
+    - `n`: number of chunks
+    - `act=0': default activation value
+    """
+    function populate_memory(n, act = 0.0)
+        return [Chunk(; act = act, value = i) for i = 1:n]
+    end
 
-	"""
-		unique_data(data)
+    """
+    	unique_data(data)
 
-	Associates duplicate responses with a count
-	
-	"""
-	function unique_data(data)
-    	return map(x->add_counts(data, x), unique(data))
-	end
+    Associates duplicate responses with a count
 
-	function add_counts(data, u)
-	    N = count(x->x == u, data)
-	    return (u...,N=N)
-	end
+    """
+    function unique_data(data)
+        return map(x -> add_counts(data, x), unique(data))
+    end
 
-	nothing
+    function add_counts(data, u)
+        N = count(x -> x == u, data)
+        return (u..., N = N)
+    end
+
+    nothing
 end
 
 # ╔═╡ b52c2611-e336-498f-b913-14cce60e3d01
@@ -276,12 +278,12 @@ function computeLL(parms, n_items, data; τ, δ)
     # populate declarative memory
     chunks = populate_memory(n_items, act)
     # add chunks to declarative memory
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     # create ACTR object and pass parameters
-    actr = ACTR(;declarative=memory, parms..., τ, δ)
+    actr = ACTR(; declarative = memory, parms..., τ, δ)
     # pre-compute probabilities for correct, incorrect and failures
-    p_correct,p_failure = retrieval_prob(actr, chunks[1]; value=1)
-    p_incorrect,_ = retrieval_prob(actr, chunks[1]; value=2)
+    p_correct, p_failure = retrieval_prob(actr, chunks[1]; value = 1)
+    p_incorrect, _ = retrieval_prob(actr, chunks[1]; value = 2)
     p_guess = 1 / n_items
     LL = 0.0
     LLs = zeros(typeof(τ), 2)
@@ -300,70 +302,68 @@ end
 
 # ╔═╡ 27536366-d347-41a7-8f67-ebda1e18998d
 begin
-	using Distributions
-	import Distributions: logpdf, loglikelihood
-	
-	struct Retrieval{T1,T2,T3,T4} <: ContinuousUnivariateDistribution
-	    τ::T1
-	    δ::T2
-	    n_items::T3
-	    parms::T4
-	end
-	
-	loglikelihood(d::Retrieval, data::Array{<:NamedTuple,1}) = logpdf(d, data)
-	
-	function logpdf(d::Retrieval, data::Array{<:NamedTuple,1})
-	    return computeLL(d.parms, d.n_items, data; τ=d.τ, δ=d.δ)
-	end
+    using Distributions
+    import Distributions: logpdf, loglikelihood
+
+    struct Retrieval{T1, T2, T3, T4} <: ContinuousUnivariateDistribution
+        τ::T1
+        δ::T2
+        n_items::T3
+        parms::T4
+    end
+
+    loglikelihood(d::Retrieval, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
+
+    function logpdf(d::Retrieval, data::Array{<:NamedTuple, 1})
+        return computeLL(d.parms, d.n_items, data; τ = d.τ, δ = d.δ)
+    end
 end
 
 # ╔═╡ 5e448e46-2650-4af9-a1d3-d2bf312695a4
 begin
-
-	
-	function simulate_trial(actr, stimulus)
-	    # Compute the retrieval probability of the chunk
-	    Θ,_ = retrieval_probs(actr; value = stimulus)
-	    n = length(Θ)
-	    idx = sample(1:n, Weights(Θ))
-	    # if idx corresponds to retrieval failure, guess between 1 and n-1
-	    idx = idx == n ? rand(1:(n-1)) : idx
-	    # identify whether the response matches
-	    matches = idx == stimulus ? true : false
-	    return (matches=matches,)
-	end
+    function simulate_trial(actr, stimulus)
+        # Compute the retrieval probability of the chunk
+        Θ, _ = retrieval_probs(actr; value = stimulus)
+        n = length(Θ)
+        idx = sample(1:n, Weights(Θ))
+        # if idx corresponds to retrieval failure, guess between 1 and n-1
+        idx = idx == n ? rand(1:(n - 1)) : idx
+        # identify whether the response matches
+        matches = idx == stimulus ? true : false
+        return (matches = matches,)
+    end
 end
 
 # ╔═╡ c92aee5f-4a45-4af9-893b-ca863332945c
 function simulate(n_items, stimuli, parms; δ, τ)
-	# Create chunk
-	chunks = populate_memory(n_items)
-	# add chunk to declarative memory
-	memory = Declarative(;memory=chunks)
-	# create ACTR object and pass parameters
-	actr = ACTR(;declarative=memory, parms..., τ, δ)
-	data = map(x->simulate_trial(actr, x), stimuli)
-	return data
+    # Create chunk
+    chunks = populate_memory(n_items)
+    # add chunk to declarative memory
+    memory = Declarative(; memory = chunks)
+    # create ACTR object and pass parameters
+    actr = ACTR(; declarative = memory, parms..., τ, δ)
+    data = map(x -> simulate_trial(actr, x), stimuli)
+    return data
 end
 
 # ╔═╡ 28e84151-a22a-4ecb-a9b4-106aedf1cd32
 begin
-	# Number of trials
-	n_trials = 50
-	# number of items in stimulus list
-	n_items = 10
-	# Sample stimulis
-	stimuli = sample_stimuli(n_items, n_trials)
-	# Retrieval threshold parameter
-	τ = 0.5
-	# Mismatch penalty parameter
-	δ = 1.0
-	# Fixed parameters
-	parms = (blc = 1.5,s = 0.2, mmp=true)
-	# Simulate model
-	temp = simulate(n_items, stimuli, parms; δ, τ)
-	# Tabulate counts of unique responses
-	data = unique_data(temp)
+    # Number of trials
+    n_trials = 50
+    # number of items in stimulus list
+    n_items = 10
+    # Sample stimulis
+    stimuli = sample_stimuli(n_items, n_trials)
+    # Retrieval threshold parameter
+    τ = 0.5
+    # Mismatch penalty parameter
+    δ = 1.0
+    # Fixed parameters
+    parms = (blc = 1.5, s = 0.2, mmp = true)
+    # Simulate model
+    temp = simulate(n_items, stimuli, parms; δ, τ)
+    # Tabulate counts of unique responses
+    data = unique_data(temp)
 end
 
 # ╔═╡ 1d8fecc6-769c-48dc-bea1-f38d76f61d96
@@ -391,9 +391,9 @@ In Turing, the model is written as follows:
 
 # ╔═╡ 6f6ab667-67da-441e-81df-f537d1a2eb9e
 @model model(data, parms, n_items) = begin
-  δ ~ Normal(1.0, 0.5)
-  τ ~ Normal(0.5, 0.5)
-  data ~ Retrieval(τ, δ, n_items, parms)
+    δ ~ Normal(1.0, 0.5)
+    τ ~ Normal(0.5, 0.5)
+    data ~ Retrieval(τ, δ, n_items, parms)
 end
 
 # ╔═╡ 208d39f3-25a3-4d64-b8ae-52bf1af35c91
@@ -405,15 +405,22 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ f2f67537-819a-404d-9d6b-e5cc2655c5c7
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(model(data, parms, n_items), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(data, parms, n_items),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 29d4f1fe-5a53-4c87-b245-bd24c6cff081
@@ -427,28 +434,34 @@ The code below plots the diagnostics for the model. The first panel shows good m
 
 # ╔═╡ 57b99ea2-6f25-444f-935b-4c354ad9f526
 let
-	font_size = 12
-	ch = group(chain, :τ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    font_size = 12
+    ch = group(chain, :τ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ dc63bbff-2573-45c4-8b27-34454bdf4bf7
 let
-	font_size = 12
-	ch = group(chain, :δ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcδ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    font_size = 12
+    ch = group(chain, :δ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcδ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ c6b84b2c-5fce-49e8-9715-0a0be72020da
@@ -468,28 +481,29 @@ In the code block below, function `posterior_predictive` accepts the data simula
 
 # ╔═╡ 4f4f9851-b055-446c-96c0-af99fa68d93e
 begin
-	get_counts(data, v) = count(x->x.matches == v, data)
-	nothing
+    get_counts(data, v) = count(x -> x.matches == v, data)
+    nothing
 end
 
 # ╔═╡ 1fd43c22-63db-4f11-a3a4-4f0d4de88390
 begin
-	
-	preds = posterior_predictive(x -> simulate(n_items, stimuli, parms; x...), chain, 1000)
-	let
-		counts_correct = get_counts.(preds, true)
-		p4 = histogram(counts_correct, xlabel="Number Correct", ylabel="Density", xaxis=font(12), yaxis=font(12),
-		    grid=false, norm=true, color=:grey, leg=false, titlefont=font(12),
-		    bar_width=1)
-	end
+    preds = posterior_predictive(x -> simulate(n_items, stimuli, parms; x...), chain, 1000)
+    let
+        counts_correct = get_counts.(preds, true)
+        p4 = histogram(counts_correct, xlabel = "Number Correct", ylabel = "Density",
+            xaxis = font(12), yaxis = font(12),
+            grid = false, norm = true, color = :grey, leg = false, titlefont = font(12),
+            bar_width = 1)
+    end
 end
 
 # ╔═╡ 9859d477-4f7d-4b38-a430-ee6c81c9572a
 let
-	counts_incorrect = get_counts.(preds, false)
-	p4 = histogram(counts_incorrect, xlabel="Number Incorrect", ylabel="Density", xaxis=font(12), yaxis=font(12),
-	    grid=false, norm=true, color=:grey, leg=false, titlefont=font(12),
-	    bar_width=1)
+    counts_incorrect = get_counts.(preds, false)
+    p4 = histogram(counts_incorrect, xlabel = "Number Incorrect", ylabel = "Density",
+        xaxis = font(12), yaxis = font(12),
+        grid = false, norm = true, color = :grey, leg = false, titlefont = font(12),
+        bar_width = 1)
 end
 
 # ╔═╡ c304174f-0e7f-46d8-bf00-07a388fc9a87

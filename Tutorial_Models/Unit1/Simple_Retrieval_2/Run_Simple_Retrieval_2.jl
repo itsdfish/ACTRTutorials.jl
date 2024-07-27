@@ -28,7 +28,7 @@ stimuli = sample_stimuli(n_items, n_trials)
 # Mismatch penalty parameter
 δ = 1.0
 # Fixed parameters
-parms = (blc = 1.5,s = 0.2, mmp=true)
+parms = (blc = 1.5, s = 0.2, mmp = true)
 # Simulate model
 temp = simulate(n_items, stimuli, parms; δ, τ)
 # Tabulate counts of unique responses
@@ -37,9 +37,9 @@ data = unique_data(temp)
 #                                    Define Model
 #######################################################################################
 @model model(data, parms, n_items) = begin
-  δ ~ Normal(1.0, .5)
-  τ ~ Normal(.5, .5)
-  data ~ Retrieval(τ, δ, n_items, parms)
+    δ ~ Normal(1.0, 0.5)
+    τ ~ Normal(0.5, 0.5)
+    data ~ Retrieval(τ, δ, n_items, parms)
 end
 #######################################################################################
 #                                 Estimate Parameters
@@ -51,7 +51,14 @@ n_adapt = 1000
 n_chains = 4
 specs = NUTS(n_adapt, delta)
 # Start sampling.
-chain = sample(model(data, parms, n_items), specs, MCMCThreads(), n_samples, n_chains, progress=true)
+chain = sample(
+    model(data, parms, n_items),
+    specs,
+    MCMCThreads(),
+    n_samples,
+    n_chains,
+    progress = true
+)
 #######################################################################################
 #                                      Summarize
 #######################################################################################
@@ -62,38 +69,48 @@ println(chain)
 pyplot()
 font_size = 12
 ch = group(chain, :τ)
-p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-  grid=false, size=(250,100), titlefont=font(font_size))
-p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-  grid=false, size=(250,100), titlefont=font(font_size))
-p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-  grid=false, size=(250,100), titlefont=font(font_size))
-pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size), seriestype = (:traceplot),
+    grid = false, size = (250, 100), titlefont = font(font_size))
+p2 =
+    plot(ch, xaxis = font(font_size), yaxis = font(font_size), seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+p3 =
+    plot(ch, xaxis = font(font_size), yaxis = font(font_size), seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 
 ch = group(chain, :δ)
-p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-  grid=false, size=(250,100), titlefont=font(font_size))
-p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-  grid=false, size=(250,100), titlefont=font(font_size))
-p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-  grid=false, size=(250,100), titlefont=font(font_size))
-pcδ = plot(p1, p2, p3, layout=(3,1), size=(600,400))
+p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size), seriestype = (:traceplot),
+    grid = false, size = (250, 100), titlefont = font(font_size))
+p2 =
+    plot(ch, xaxis = font(font_size), yaxis = font(font_size), seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+p3 =
+    plot(ch, xaxis = font(font_size), yaxis = font(font_size), seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+pcδ = plot(p1, p2, p3, layout = (3, 1), size = (600, 400))
 #######################################################################################
 #                                  Posterior Predictive
 #######################################################################################
 preds = posterior_predictive(x -> simulate(n_items, stimuli, parms; x...), chain, 1000)
-get_counts(data, type) = count(x->x.resp == type, data)
+get_counts(data, type) = count(x -> x.resp == type, data)
 counts_correct = get_counts.(preds, :correct)
-p4 = histogram(counts_correct, xlabel="Number Correct", ylabel="Density", xaxis=font(12), yaxis=font(12),
-    grid=false, norm=true, color=:grey, leg=false, size=(800,400), titlefont=font(12),
-    bar_width=1)
+p4 = histogram(counts_correct, xlabel = "Number Correct", ylabel = "Density",
+    xaxis = font(12), yaxis = font(12),
+    grid = false, norm = true, color = :grey, leg = false, size = (800, 400),
+    titlefont = font(12),
+    bar_width = 1)
 
 counts_incorrect = get_counts.(preds, :incorrect)
-p4 = histogram(counts_incorrect, xlabel="Number Incorrect", ylabel="Density", xaxis=font(12), yaxis=font(12),
-    grid=false, norm=true, color=:grey, leg=false, size=(800,400), titlefont=font(12),
-    bar_width=1)
+p4 = histogram(counts_incorrect, xlabel = "Number Incorrect", ylabel = "Density",
+    xaxis = font(12), yaxis = font(12),
+    grid = false, norm = true, color = :grey, leg = false, size = (800, 400),
+    titlefont = font(12),
+    bar_width = 1)
 
 counts_failure = get_counts.(preds, :failure)
-p4 = histogram(counts_failure, xlabel="Number of Failures", ylabel="Density", xaxis=font(12), yaxis=font(12),
-    grid=false, norm=true, color=:grey, leg=false, size=(800,400), titlefont=font(12),
-    bar_width=1)
+p4 = histogram(counts_failure, xlabel = "Number of Failures", ylabel = "Density",
+    xaxis = font(12), yaxis = font(12),
+    grid = false, norm = true, color = :grey, leg = false, size = (800, 400),
+    titlefont = font(12),
+    bar_width = 1)

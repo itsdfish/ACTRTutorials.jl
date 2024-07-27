@@ -6,22 +6,21 @@ using InteractiveUtils
 
 # ╔═╡ 681643fe-7d51-11ec-3d89-63a1915fe18b
 begin
-	using StatsPlots, Random, ACTRModels, CSV, FFTDists
-	using DifferentialEvolutionMCMC, PlutoUI, Distributions
-	using MCMCChains
-	TableOfContents()
+    using StatsPlots, Random, ACTRModels, CSV, FFTDists
+    using DifferentialEvolutionMCMC, PlutoUI, Distributions
+    using MCMCChains
+    TableOfContents()
 end
 
 # ╔═╡ 5afb864c-6464-4a4c-a44d-db1cd10a9441
 begin
+    path_u2_1 = joinpath(pwd(), "../../Unit2/Simple_RT_1/Simple_RT_Model_1_Notebook.jl")
 
-path_u2_1 = joinpath(pwd(), "../../Unit2/Simple_RT_1/Simple_RT_Model_1_Notebook.jl")
+    path_u2_2 = joinpath(pwd(), "../../Unit2/Simple_RT_2/Simple_RT_Model_2_Notebook.jl")
 
-path_u2_2 = joinpath(pwd(), "../../Unit2/Simple_RT_2/Simple_RT_Model_2_Notebook.jl")
+    path_convolutions = joinpath(pwd(), "../../../Background_Tutorials/Convolutions.jl")
 
-path_convolutions = joinpath(pwd(), "../../../Background_Tutorials/Convolutions.jl")
-
-nothing
+    nothing
 end
 
 # ╔═╡ 2f374455-e9f3-4f59-a39f-dfebd0678d49
@@ -156,32 +155,32 @@ Fortunately, the Irwin-Hall distribution can be easily approximated with a norma
 
 # ╔═╡ 378b2a42-0283-46c3-b884-4b74d7656b55
 let
-	# simulate sum of n uniform random variables representing conflict resolution time
-	sum_n(n) = sum(rand(Uniform(0.033,0.0667), 10^5, n), dims=2)
-	
-	# normal approximation of n uniform random variables
-	function normal_density(n)
-	    μ,σ = convolve_normal(;cr=(μ=0.05,N=n))
-	    x = range(-3*σ + μ, 3*σ + μ, length = 100)
-	    d = pdf.(Normal(μ,σ), x)
-	    return x,d
-	end
-	
-	# simulate sum of n uniform random variables
-	samples = map(n -> sum_n(n), 1:4)
-	# density of normal approximation
-	density = map(n -> normal_density(n), 1:4)
-	#  plot histograms
-	hist_plot = histogram(samples, 
-		grid=false, 
-		layout=(2,2), 
-		title = ["1" "2" "3" "4"], 
-		leg=false, 
-		color=:darkgrey,
-	    norm=true, 
-	)
-	# superimpose densities
-	plot!(hist_plot, density, linewidth=2.5)
+    # simulate sum of n uniform random variables representing conflict resolution time
+    sum_n(n) = sum(rand(Uniform(0.033, 0.0667), 10^5, n), dims = 2)
+
+    # normal approximation of n uniform random variables
+    function normal_density(n)
+        μ, σ = convolve_normal(; cr = (μ = 0.05, N = n))
+        x = range(-3 * σ + μ, 3 * σ + μ, length = 100)
+        d = pdf.(Normal(μ, σ), x)
+        return x, d
+    end
+
+    # simulate sum of n uniform random variables
+    samples = map(n -> sum_n(n), 1:4)
+    # density of normal approximation
+    density = map(n -> normal_density(n), 1:4)
+    #  plot histograms
+    hist_plot = histogram(samples,
+        grid = false,
+        layout = (2, 2),
+        title = ["1" "2" "3" "4"],
+        leg = false,
+        color = :darkgrey,
+        norm = true
+    )
+    # superimpose densities
+    plot!(hist_plot, density, linewidth = 2.5)
 end
 
 # ╔═╡ 2df41c89-fc17-4c69-9b16-18f6e9ad48d5
@@ -246,27 +245,27 @@ First, `construct_model` generates the parameters $\mu$ and $\sigma$ for sum of 
 
 # ╔═╡ 7eee58d9-045c-43b7-8d85-19294664df54
 begin
-	function simulate(N; s, blc)
-	    # construct the model object
-	    model = construct_model(blc, s)
-	    # generate N simulated trials
-	    return rand(model, N)
-	end
-	
-	function construct_model(α, s)
-	    # standard deviation of activation noise in log space
-	    λ = s * π / sqrt(3)
-	    # μ and σ parameters for perceptual motor processes
-	    μ,σ = convolve_normal(
-			motor = (μ=0.21,N=1), 
-			cr = (μ=0.05,N=11),
-			visual = (μ=0.085,N=2),
-	    	imaginal = (μ=0.2,N=1)
-		)
-	    # create a model object: perceptual motor processes with two memory retrievals
-	    model = Normal(μ, σ) + LogNormal(-α, λ) + LogNormal(-α, λ)
-	    return model
-	end
+    function simulate(N; s, blc)
+        # construct the model object
+        model = construct_model(blc, s)
+        # generate N simulated trials
+        return rand(model, N)
+    end
+
+    function construct_model(α, s)
+        # standard deviation of activation noise in log space
+        λ = s * π / sqrt(3)
+        # μ and σ parameters for perceptual motor processes
+        μ, σ = convolve_normal(
+            motor = (μ = 0.21, N = 1),
+            cr = (μ = 0.05, N = 11),
+            visual = (μ = 0.085, N = 2),
+            imaginal = (μ = 0.2, N = 1)
+        )
+        # create a model object: perceptual motor processes with two memory retrievals
+        model = Normal(μ, σ) + LogNormal(-α, λ) + LogNormal(-α, λ)
+        return model
+    end
 end
 
 # ╔═╡ e58b11ca-7c39-4cb1-80c1-7f2a630f68ed
@@ -276,14 +275,14 @@ In the code block below, 50 simulated reaction times are simulated from the mode
 
 # ╔═╡ 6a97ff72-03f2-4864-b333-c94227dbf1a5
 begin
-	# number of simulated trials
-	n_trials = 50
-	# logistic scalar for activation noise
-	s = 0.3
-	# base level constant
-	blc = 1.5
-	# generate simulated data
-	data = simulate(n_trials; s, blc)
+    # number of simulated trials
+    n_trials = 50
+    # logistic scalar for activation noise
+    s = 0.3
+    # base level constant
+    blc = 1.5
+    # generate simulated data
+    data = simulate(n_trials; s, blc)
 end
 
 # ╔═╡ 913d0d24-b782-4d96-b841-f4c2133ce911
@@ -317,13 +316,13 @@ The function `loglike` computes the log likelihood of the data, which has the fo
 
 # ╔═╡ 9e535fd5-f571-4959-8f68-6855d9d8ae6d
 function loglike(data, blc, s)
-  # construct model object
-  model = construct_model(blc, s)
-  # convolve the component distributions
-  convolve!(model)
-  # compute the sum log likelihood across all data points
-  LL = logpdf.(model, data)
-  return sum(LL)
+    # construct model object
+    model = construct_model(blc, s)
+    # convolve the component distributions
+    convolve!(model)
+    # compute the sum log likelihood across all data points
+    LL = logpdf.(model, data)
+    return sum(LL)
 end
 
 # ╔═╡ d235e9f1-281c-4d11-9407-e445024ea9c7
@@ -335,23 +334,23 @@ In the following code block, we will validate the likelihood function by overlay
 
 # ╔═╡ 0b4d3654-6594-45e2-bde3-fbe506763eac
 let
-	n_trials = 10_000
-	s = 0.3
-	blc = 1.5
-	times = 1:0.01:3.0
-	sim_data = simulate(n_trials; s=s, blc=blc);
-	histogram(
-		sim_data, 
-		color=:darkgrey, 
-		grid=false, 
-		norm=true, 
-		leg=false, 
-	    xlabel="Reaction Time",
-		ylabel="Density"
-	)
-	density = map(x-> loglike(x, blc, s) |> exp, times)
-	# plot density 
-	plot!(times, density, linewidth=2)
+    n_trials = 10_000
+    s = 0.3
+    blc = 1.5
+    times = 1:0.01:3.0
+    sim_data = simulate(n_trials; s = s, blc = blc)
+    histogram(
+        sim_data,
+        color = :darkgrey,
+        grid = false,
+        norm = true,
+        leg = false,
+        xlabel = "Reaction Time",
+        ylabel = "Density"
+    )
+    density = map(x -> loglike(x, blc, s) |> exp, times)
+    # plot density 
+    plot!(times, density, linewidth = 2)
 end
 
 # ╔═╡ b9fdaf92-e533-4c53-aff9-75f83a20c44e
@@ -379,38 +378,38 @@ In computer code, the model is specified as follows:
 function prior_loglike(blc, s)
     LL = 0.0
     LL += logpdf(Normal(1.5, 1), blc)
-    LL += logpdf(truncated(Normal(0.3, .5), 0, Inf), s)
+    LL += logpdf(truncated(Normal(0.3, 0.5), 0, Inf), s)
     return LL
 end
 
 # ╔═╡ cd183b98-4db9-4f15-9499-382f3a4c6072
 function sample_prior()
     blc = rand(Normal(1.5, 1))
-    s = rand(truncated(Normal(.3, .5), 0, Inf))
-    return [blc,s]
+    s = rand(truncated(Normal(0.3, 0.5), 0, Inf))
+    return [blc, s]
 end
 
 # ╔═╡ 5ac83c7f-81de-4d50-986a-25652c8e1822
 begin
-	# lower and upper bounds of each parameter
-	bounds = ((-Inf,Inf),(eps(),Inf))
-	# define DE sampler object
-	names = (:blc, :s)
-	model = DEModel(; 
-	    sample_prior, 
-	    prior_loglike, 
-	    loglike, 
-	    data,
-	    names
-	)
+    # lower and upper bounds of each parameter
+    bounds = ((-Inf, Inf), (eps(), Inf))
+    # define DE sampler object
+    names = (:blc, :s)
+    model = DEModel(;
+        sample_prior,
+        prior_loglike,
+        loglike,
+        data,
+        names
+    )
 end
 
 # ╔═╡ 67a2ad9a-4908-4256-bd37-aa6a7f282f90
 de = DE(;
-	sample_prior, 
-	bounds, 
-	burnin = 1000, 
-	Np = 6
+    sample_prior,
+    bounds,
+    burnin = 1000,
+    Np = 6
 )
 
 # ╔═╡ a9f99a2e-b16e-47e8-b9c4-a9b22948d5d7
@@ -422,9 +421,9 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ d2e492a3-a202-4f0a-84c1-bfd8e6fb7bbc
 begin
-	n_iter = 2000
-	chain = sample(model, de, MCMCThreads(), n_iter, progress=false)
-	describe(chain)
+    n_iter = 2000
+    chain = sample(model, de, MCMCThreads(), n_iter, progress = false)
+    describe(chain)
 end
 
 # ╔═╡ 1a0e2562-952f-478d-aa58-90d023f6aefb
@@ -436,30 +435,36 @@ The posterior distributions for each parameter are summarized in the output abov
 "
 
 # ╔═╡ 8f3acf76-a1b9-4645-8a75-3d2c87e927b6
-begin 
-	font_size = 12
-	let
-	ch = group(chain,:blc)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
-	end
+begin
+    font_size = 12
+    let
+        ch = group(chain, :blc)
+        p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:traceplot),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:autocorplot),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:mixeddensity),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
+    end
 end
 
 # ╔═╡ e3844343-3b80-4d84-8f57-40f49a4f8b3e
-let 
-	ch = group(chain,:s)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    ch = group(chain, :s)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 5ce9e642-834c-4f50-90ea-8fe59ceb4e4b
@@ -468,8 +473,10 @@ It is reasonable to pool together chains to generate smoother density plots. Thi
 "
 
 # ╔═╡ 80d36142-6fc4-4161-9b87-efe32b4ebd26
-post_plot = plot(chain, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:pooleddensity),
-  grid=false, titlefont=font(font_size), size=(600,600), color=:gray, linewidth=2)
+post_plot = plot(chain, xaxis = font(font_size), yaxis = font(font_size),
+    seriestype = (:pooleddensity),
+    grid = false, titlefont = font(font_size), size = (600, 600), color = :gray,
+    linewidth = 2)
 
 # ╔═╡ 0e3eb8f2-bfd1-4093-a962-1fc280b15383
 md"
@@ -480,11 +487,11 @@ In the code block below, we generate a posterier predictive distribution for the
 
 # ╔═╡ 85829178-7fd0-4c07-8a37-ec84987b0bca
 let
-	preds = posterior_predictive(x->simulate(n_trials; x...), chain, 1000)
-rts = vcat(preds...)
-post_pred = histogram(rts, xlabel = "RT", ylabel="Frequency",
-    grid=false, color=:grey, leg=false,  titlefont=font(7),
-    xlims=(.5,3.0))
+    preds = posterior_predictive(x -> simulate(n_trials; x...), chain, 1000)
+    rts = vcat(preds...)
+    post_pred = histogram(rts, xlabel = "RT", ylabel = "Frequency",
+        grid = false, color = :grey, leg = false, titlefont = font(7),
+        xlims = (0.5, 3.0))
 end
 
 # ╔═╡ 97f63590-ec65-4ae2-8da2-faad8494cecf
@@ -494,18 +501,18 @@ Note that it is possible to pass a summary function in order to generate the pos
 
 # ╔═╡ f6436baf-6ddf-4a86-a10b-0c180153bc01
 let
-	preds = posterior_predictive(x->simulate(n_trials; x...), chain, 1000, mean)
-rts = vcat(preds...)
-post_pred = histogram(
-	rts, 
-	xlabel = "RT", 
-	ylabel="Frequency", 
-    grid=false, 
-	color=:grey, 
-	leg=false,  
-	titlefont=font(7),
-    xlims=(.5,2.5)
-)
+    preds = posterior_predictive(x -> simulate(n_trials; x...), chain, 1000, mean)
+    rts = vcat(preds...)
+    post_pred = histogram(
+        rts,
+        xlabel = "RT",
+        ylabel = "Frequency",
+        grid = false,
+        color = :grey,
+        leg = false,
+        titlefont = font(7),
+        xlims = (0.5, 2.5)
+    )
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,54 +23,54 @@ end
 
 # ╔═╡ aed58afc-71fd-11ec-3e73-71ee735796ae
 begin
-	using Turing, StatsPlots, Revise, ACTRModels, KernelDensity
-	using PlutoUI, SequentialSamplingModels
-	TableOfContents()
+    using Turing, StatsPlots, Revise, ACTRModels, KernelDensity
+    using PlutoUI, SequentialSamplingModels
+    TableOfContents()
 end
 
 # ╔═╡ 9ab5a2c2-2403-40ae-a18c-54500c80a0f9
 begin
-	using  Distributions
-	import Distributions: logpdf, loglikelihood
-		
-	struct RT{T1,T2} <: ContinuousUnivariateDistribution
-	    blc::T1
-	    parms::T2
-	end
-	
-	RT(; blc, parms) = RT(blc, parms)
+    using Distributions
+    import Distributions: logpdf, loglikelihood
 
-	loglikelihood(d::RT, rts::Array{Float64,1}) = logpdf(d, rts)
-	
-	function logpdf(d::RT, rts::Array{Float64,1})
-	    LL = computeLL(rts; blc=d.blc, d.parms...)
-	    return LL
-	end
+    struct RT{T1, T2} <: ContinuousUnivariateDistribution
+        blc::T1
+        parms::T2
+    end
 
-	function computeLL(rts; blc, ter, s, kwargs...)
-		# define standard deviation of activation noise
-		σ = [s * pi / sqrt(3)]
-		# Define the lognormal distribution
-		dist = LNR(;ν=[-blc], σ, τ = ter)
-		# sum the log likelihood of all rts
-		return sum(logpdf.(dist, 1, rts))
-	end
+    RT(; blc, parms) = RT(blc, parms)
+
+    loglikelihood(d::RT, rts::Array{Float64, 1}) = logpdf(d, rts)
+
+    function logpdf(d::RT, rts::Array{Float64, 1})
+        LL = computeLL(rts; blc = d.blc, d.parms...)
+        return LL
+    end
+
+    function computeLL(rts; blc, ter, s, kwargs...)
+        # define standard deviation of activation noise
+        σ = [s * pi / sqrt(3)]
+        # Define the lognormal distribution
+        dist = LNR(; ν = [-blc], σ, τ = ter)
+        # sum the log likelihood of all rts
+        return sum(logpdf.(dist, 1, rts))
+    end
 end
 
 # ╔═╡ f4f3b9dd-fcf8-44a6-a3c5-b8d56c989e61
 begin
+    path_introduction = joinpath(pwd(), "../../Introduction/Introduction.jl")
 
-path_introduction = joinpath(pwd(), "../../Introduction/Introduction.jl")
+    path_u2_2 = joinpath(pwd(), "../Simple_RT_2/Simple_RT_Model_2_Notebook.jl")
 
-path_u2_2 = joinpath(pwd(), "../Simple_RT_2/Simple_RT_Model_2_Notebook.jl")
+    path_u2_3 = joinpath(pwd(), "../Simple_RT_3/Simple_RT_Model_3_Notebook.jl")
 
-path_u2_3 = joinpath(pwd(), "../Simple_RT_3/Simple_RT_Model_3_Notebook.jl")
+    path_u2_4 = joinpath(pwd(), "../Simple_RT_4/Simple_RT_Model_4_Notebook.jl")
 
-path_u2_4 = joinpath(pwd(), "../Simple_RT_4/Simple_RT_Model_4_Notebook.jl")
+    path_lognormal =
+        joinpath(pwd(), "../../../Background_Tutorials/Lognormal_Race_Process.jl")
 
-path_lognormal = joinpath(pwd(), "../../../Background_Tutorials/Lognormal_Race_Process.jl")
-
-nothing
+    nothing
 end
 
 # ╔═╡ 39ff213c-020d-4d73-8999-2810340b786b
@@ -210,9 +217,9 @@ function simulate(parms; blc)
     # create a chunk
     chunks = [Chunk()]
     # add the chunk to declarative memory
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     # create the ACTR object and pass parameters
-    actr = ACTR(;declarative=memory, parms..., blc)
+    actr = ACTR(; declarative = memory, parms..., blc)
     # retrieve the chunk
     chunk = retrieve(actr)
     # compute the reaction time 
@@ -227,18 +234,18 @@ Now that the `simulate` function has been defined, we can now generate some data
 
 # ╔═╡ 501b4fde-9e9a-4110-83f8-c73bf3064c30
 begin
-	# number of simulated trials
-	n_trials = 50
-	# true value of base level constant
-	blc = 1.5
-	# perceptual-motor processing time
-	ter = (0.05 + 0.085) + 0.05 + (0.06 + 0.05)
-	# logistic scale parameter
-	s = 0.3
-	# fixed paraemters
-	parms = (;noise=true,τ=-10.0,s,ter)
-	# simulated data
-	data = map(x->simulate(parms; blc), 1:n_trials);
+    # number of simulated trials
+    n_trials = 50
+    # true value of base level constant
+    blc = 1.5
+    # perceptual-motor processing time
+    ter = (0.05 + 0.085) + 0.05 + (0.06 + 0.05)
+    # logistic scale parameter
+    s = 0.3
+    # fixed paraemters
+    parms = (; noise = true, τ = -10.0, s, ter)
+    # simulated data
+    data = map(x -> simulate(parms; blc), 1:n_trials)
 end
 
 # ╔═╡ 2e46d91a-69f3-489d-aac9-36990a108f3c
@@ -263,34 +270,34 @@ In the code block below, we superimpose the density from the likelihood function
 "
 
 # ╔═╡ 5fad10a9-f0fc-4c82-acc1-b891be43f8d2
-_blc = @bind _blc Slider(-1:.1:2, default=1.5, show_value=true)
+_blc = @bind _blc Slider(-1:0.1:2, default = 1.5, show_value = true)
 
 # ╔═╡ 377bc5bb-6b06-4d20-b570-02fe668c4e68
-let 
-	n_trials = 10_000
-	ter = (0.05 + 0.085) + 0.05 + (0.06 + 0.05)
-	s = 0.3
-	parms = (;noise=true,τ=-10.0,s,ter)
-	rts = map(x->simulate(parms; blc = _blc), 1:n_trials);
-	# range of rt values for x-axis
-	times = 0.01:0.05:4
-	# density for correct rts
-	density_correct = map(x-> computeLL([x]; blc=_blc, parms...) |> exp, times)
-	# histogram of correct simulated rts
-	histogram(rts, color=:darkgrey, grid=false, norm=true)
-	# plot correct density
-	plot!(
-		times,
-		density_correct, 
-		leg=false, 
-		xlims = (0, 4),
-		ylims = (0, 6),
-		xlabel="RT (seconds)", 
-		ylabel="Density", 
-		size=(600,300),
-	    linewidth=1.5, 
-		color=:darkorange
-	)
+let
+    n_trials = 10_000
+    ter = (0.05 + 0.085) + 0.05 + (0.06 + 0.05)
+    s = 0.3
+    parms = (; noise = true, τ = -10.0, s, ter)
+    rts = map(x -> simulate(parms; blc = _blc), 1:n_trials)
+    # range of rt values for x-axis
+    times = 0.01:0.05:4
+    # density for correct rts
+    density_correct = map(x -> computeLL([x]; blc = _blc, parms...) |> exp, times)
+    # histogram of correct simulated rts
+    histogram(rts, color = :darkgrey, grid = false, norm = true)
+    # plot correct density
+    plot!(
+        times,
+        density_correct,
+        leg = false,
+        xlims = (0, 4),
+        ylims = (0, 6),
+        xlabel = "RT (seconds)",
+        ylabel = "Density",
+        size = (600, 300),
+        linewidth = 1.5,
+        color = :darkorange
+    )
 end
 
 # ╔═╡ ca4ef098-a1a5-4969-a11c-f943b5cc1c2b
@@ -334,23 +341,23 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ ebb0650d-8b78-411b-b9b2-b2a15a8da2b2
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(
-				model(data, parms), 
-				specs, 
-				MCMCThreads(), 
-				n_samples, 
-				n_chains, 
-				progress=true
-	)
-	# summarize the results
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(data, parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    # summarize the results
+    describe(chain)
 end
 
 # ╔═╡ ca7d54be-6916-4182-9ba3-740546bce19b
@@ -361,16 +368,19 @@ A summary of the parameter estimates can be found in the output above. Diagnosti
 "
 
 # ╔═╡ cd3599da-0aa6-46a1-a0c4-ae4799f15749
-let 
-	ch = group(chain,:blc)
-	font_size = 12
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+let
+    ch = group(chain, :blc)
+    font_size = 12
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 0ebf8d64-e72b-4783-b8dd-f1c045c311c7
@@ -382,10 +392,12 @@ In the code block below, we create a posterior predictive distribution for the r
 
 # ╔═╡ ca0ed549-7149-4236-944f-a4557cc3c9f1
 begin
-	font_size = 12
-	preds = posterior_predictive(x->simulate(parms; x...), chain, 1000)
-	p4 = histogram(preds, xlabel = "Reaction Time (seconds)", ylabel="Density", xaxis=font(font_size), yaxis=font(font_size),
-	    grid=false, norm=true, color=:grey, leg=false, titlefont=font(font_size), xlims=(0,1.5))
+    font_size = 12
+    preds = posterior_predictive(x -> simulate(parms; x...), chain, 1000)
+    p4 = histogram(preds, xlabel = "Reaction Time (seconds)", ylabel = "Density",
+        xaxis = font(font_size), yaxis = font(font_size),
+        grid = false, norm = true, color = :grey, leg = false,
+        titlefont = font(font_size), xlims = (0, 1.5))
 end
 
 # ╔═╡ 39b46ed0-1d9f-4a49-a23a-6796e10160c6
@@ -395,29 +407,29 @@ The next plot illustrates that the predictive posterior distribution is a mixtur
 "
 
 # ╔═╡ 9330e138-124d-4573-830a-4e3d533aa425
-let 
-	# sample blc values from posterior distribution
-	blcs = sample(chain[:blc], 10)
-	# set time step for x-axis
-	times = 0.01:0.01:1.5
-	# create a kernel density distribution object
-	posterior_blc= kde(Array(chain))
-	# estimate the posterior densities for blcs empirically
-	posterior_densities = pdf(posterior_blc, blcs)
-	# weight likelihood by posterior density
-	f(blc, w) = map(x-> computeLL([x]; blc, parms...) |> exp, times) * w
-	predictive_density = map((x, y)->f(x, y), blcs, posterior_densities)
-	# plot mixture components
-	plot(
-		times, 
-		predictive_density, 
-		grid=false, 
-		xlabel="Reaction Time (seconds)", 
-		ylabel="Density",
-	    legendtitle = "blc", 
-		label=round.(blcs', digits=3), 
-		size(800,300)
-	)
+let
+    # sample blc values from posterior distribution
+    blcs = sample(chain[:blc], 10)
+    # set time step for x-axis
+    times = 0.01:0.01:1.5
+    # create a kernel density distribution object
+    posterior_blc = kde(Array(chain))
+    # estimate the posterior densities for blcs empirically
+    posterior_densities = pdf(posterior_blc, blcs)
+    # weight likelihood by posterior density
+    f(blc, w) = map(x -> computeLL([x]; blc, parms...) |> exp, times) * w
+    predictive_density = map((x, y) -> f(x, y), blcs, posterior_densities)
+    # plot mixture components
+    plot(
+        times,
+        predictive_density,
+        grid = false,
+        xlabel = "Reaction Time (seconds)",
+        ylabel = "Density",
+        legendtitle = "blc",
+        label = round.(blcs', digits = 3),
+        size(800, 300)
+    )
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

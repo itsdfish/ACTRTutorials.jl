@@ -21,14 +21,14 @@ using SafeTestsets
     # perceptual-motor time
     ter = (0.05 + 0.085 + 0.05) + (0.05 + 0.06)
     σ = s * π / sqrt(3)
-    parms = (noise = true,s = s,ter = ter)
+    parms = (noise = true, s = s, ter = ter)
     # generate data
     data = map(x -> simulate(parms; blc, τ), 1:n_trials)
-    resp = map(x->x.resp, data)
-    rts = map(x->x.rt, data)
+    resp = map(x -> x.resp, data)
+    rts = map(x -> x.rt, data)
     stanLLs = map(1:length(data)) do i
         stanLL(blc, τ, σ, ter, resp[i], rts[i])
     end
-    turingLLs = map(x->computeLL(blc, τ, parms, [x]), data)
-    @test turingLLs ≈ stanLLs atol=1e-6
+    turingLLs = map(x -> computeLL(blc, τ, parms, [x]), data)
+    @test turingLLs ≈ stanLLs atol = 1e-6
 end

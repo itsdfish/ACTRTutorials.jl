@@ -6,8 +6,8 @@ using InteractiveUtils
 
 # ╔═╡ 30a54f6a-6ee1-11ec-3f27-c92c9cfb91e0
 begin
-	using PlutoUI, StatsBase, Plots, CommonMark
-	TableOfContents()
+    using PlutoUI, StatsBase, Plots, CommonMark
+    TableOfContents()
 end
 
 # ╔═╡ 5995895c-e47a-47f1-ae06-6a327ad21485
@@ -139,9 +139,9 @@ function simulate_markov(s0, tmat, n_years)
     # sample first state
     r = sample(1:n, Weights(s0))
     data[1] = r
-    for i in 2:n_years
+    for i = 2:n_years
         # sample next state given state r
-        c = sample(1:n, Weights(tmat[r,:]))
+        c = sample(1:n, Weights(tmat[r, :]))
         data[i] = c
         # update current state r
         r = c
@@ -156,29 +156,29 @@ Now that the simulation function is defined, we can generate some data. In the c
 
 # ╔═╡ 9f65682a-d975-4cf7-82d3-e4036d594426
 begin
-	# initial state
-	s0 = [1.,0.,0.]
-	# transition matrix
-	tmat = [
-	        0.8 0.2 0.0;
-	        0.0 0.95 0.05;
-	        0.0 0.1 0.9
-	]
-	# number of years/time steps
-	n_years = 20
-	data = simulate_markov(s0, tmat, n_years)
+    # initial state
+    s0 = [1.0, 0.0, 0.0]
+    # transition matrix
+    tmat = [
+        0.8 0.2 0.0;
+        0.0 0.95 0.05;
+        0.0 0.1 0.9
+    ]
+    # number of years/time steps
+    n_years = 20
+    data = simulate_markov(s0, tmat, n_years)
 end
 
 # ╔═╡ f3507252-69f4-4945-9655-6ae1c3833eda
 plot(
-	data,
-	grid=false,
-	leg=false,
-	linewidth = 3,
-	xlabel = "Years",
-	ylabel = "State",
-	yticks = [1,2,3],
-	ylims = (.9,3)
+    data,
+    grid = false,
+    leg = false,
+    linewidth = 3,
+    xlabel = "Years",
+    ylabel = "State",
+    yticks = [1, 2, 3],
+    ylims = (0.9, 3)
 )
 
 # ╔═╡ 07e9f324-a230-44df-8630-c70cb27a7312
@@ -189,7 +189,6 @@ Ross, S. M., Kelly, J. J., Sullivan, R. J., Perry, W. J., Mercer, D., Davis, R. 
 
 Weaver, R. (2008). Parameters, predictions, and evidence in computational modeling: A statistical view informed by ACT–R. Cognitive Science, 32(8), 1349-1375.
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

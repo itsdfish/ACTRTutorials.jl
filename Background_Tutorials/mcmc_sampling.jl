@@ -6,10 +6,10 @@ using InteractiveUtils
 
 # ╔═╡ d3ee1516-582b-11ec-09c9-ad88f606e221
 begin
-	using StatsPlots, PlutoUI, ACTRModels
-	using Turing, PlutoTest,Distributions, Random
-	using MCMCChains, StatsPlots, ARFIMA
-	TableOfContents()
+    using StatsPlots, PlutoUI, ACTRModels
+    using Turing, PlutoTest, Distributions, Random
+    using MCMCChains, StatsPlots, ARFIMA
+    TableOfContents()
 end
 
 # ╔═╡ e6496a18-40b8-41a0-8f0e-4c3a661aba72
@@ -30,10 +30,10 @@ The following code generates $n=50$ trials of a binomial model with probability 
 
 # ╔═╡ 50867820-5e92-4158-b69f-2f2f7e573748
 begin
-	Random.seed!(89605)
-	n = 50
-	θ = 0.5
-	k = rand(Binomial(n, θ))
+    Random.seed!(89605)
+    n = 50
+    θ = 0.5
+    k = rand(Binomial(n, θ))
 end
 
 # ╔═╡ 4c6442c1-50ca-4549-85f2-d6c0b3884873
@@ -67,11 +67,11 @@ Now that we have generated data and specified a model, we can perform Bayesian p
 
 # ╔═╡ 983b875f-6325-4ddc-8fa0-8be1ee8a09c2
 begin
-	n_samples = 1000
-	n_adapt = 1000
-	n_chains = 4
-	δ = 0.65
-	specs = NUTS(n_adapt, δ);
+    n_samples = 1000
+    n_adapt = 1000
+    n_chains = 4
+    δ = 0.65
+    specs = NUTS(n_adapt, δ)
 end
 
 # ╔═╡ 98860ab6-8f85-4502-8532-e4ddd44ec033
@@ -83,14 +83,14 @@ Next, we will pass the model, sampler configuration details to the `sample` func
 
 # ╔═╡ fa67e049-9140-4596-9a35-cf0094b22939
 begin
-	chain = sample(
-		model(n, k),
-		specs, 
-		MCMCThreads(), 
-		n_samples, 
-		n_chains
-	)
-	describe(chain)
+    chain = sample(
+        model(n, k),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains
+    )
+    describe(chain)
 end
 
 # ╔═╡ 732d3ad2-7498-43bd-82a1-3bec8348a1aa
@@ -103,7 +103,7 @@ By default, the `plot` function generates two plots for each parameter. The trac
 "
 
 # ╔═╡ 4628180d-b38e-4336-bff9-a5a095072f57
-plot(chain, grid=false)
+plot(chain, grid = false)
 
 # ╔═╡ 051ed3f7-5b60-4cc2-a177-1b9335c43777
 md"
@@ -126,14 +126,14 @@ There are many symptoms of chains that fail to coverge on the same distribution.
 "
 
 # ╔═╡ 173acc01-6220-444b-894c-cf9af13c14c0
-begin 
-	bad_chain1 = Chains(rand(2,2,1))
-	let
-		x = randn(1000, 1, 4)
-		x[:,:,4] .+= 2
-		bad_chain1 = Chains(x)
-		plot(bad_chain1)
-	end
+begin
+    bad_chain1 = Chains(rand(2, 2, 1))
+    let
+        x = randn(1000, 1, 4)
+        x[:, :, 4] .+= 2
+        bad_chain1 = Chains(x)
+        plot(bad_chain1)
+    end
 end
 
 # ╔═╡ f7dfd6cf-419b-4ef5-b8d2-94ebd586c304
@@ -149,17 +149,17 @@ Note that the r hat statistic is not garrenteed to detect this problem. For this
 "
 
 # ╔═╡ ea0fa33a-6b41-48e5-a54f-5eb4b2483576
-begin 
-	bad_chains2 = Chains(rand(2,2,1))
-	let
-		x = randn(1000, 1, 4)
-		x[1:200,:,:] .+= 1
-		x[400:800,:,:] .+= -1
-		x[:801:end,:,:] .+= .3
-		
-		bad_chains2 = Chains(x)
-		plot(bad_chains2)
-	end
+begin
+    bad_chains2 = Chains(rand(2, 2, 1))
+    let
+        x = randn(1000, 1, 4)
+        x[1:200, :, :] .+= 1
+        x[400:800, :, :] .+= -1
+        x[(:801):end, :, :] .+= 0.3
+
+        bad_chains2 = Chains(x)
+        plot(bad_chains2)
+    end
 end
 
 # ╔═╡ cf4204a1-62b4-425a-8fec-566a2d9c0ac1
@@ -168,16 +168,16 @@ Another potential problem is that the sampler may get stuck in certain regions f
 "
 
 # ╔═╡ e18048e2-6d5a-489c-b3d2-cee51f264813
-begin 
-	bad_chains3 = Chains(rand(2,2,1))
-	let
-		x = randn(1000, 1, 4)
-		x[1:400,:,1] .= 3
-		x[401:600,:,1] .= 2.3
-		x[300:500,:,4] .= -2
-		bad_chains3 = Chains(x)
-		plot(bad_chains3)
-	end
+begin
+    bad_chains3 = Chains(rand(2, 2, 1))
+    let
+        x = randn(1000, 1, 4)
+        x[1:400, :, 1] .= 3
+        x[401:600, :, 1] .= 2.3
+        x[300:500, :, 4] .= -2
+        bad_chains3 = Chains(x)
+        plot(bad_chains3)
+    end
 end
 
 # ╔═╡ fd716b08-18b6-4092-8865-39e2e51b24fd
@@ -211,7 +211,7 @@ end
 # 	bad_chains4 = Chains(x)
 # 	plot(bad_chains4)
 # 	#bad_chains4
-	
+
 # end
 
 # ╔═╡ 613ee009-307f-4f64-9ad4-93fde4f2a560
@@ -232,7 +232,7 @@ Effective sample size can be found in the chain summaries above. In addition, au
 "
 
 # ╔═╡ f3c272b0-96fa-4afe-ad2b-641fede8724b
-autocorplot(chain, grid=false)
+autocorplot(chain, grid = false)
 
 # ╔═╡ 540299ab-2863-47da-891f-49479b6a5e8b
 md"
@@ -241,17 +241,17 @@ The autocorrelation plot below provides an example of high autocorrelation betwe
 "
 
 # ╔═╡ 9e359272-03ef-4344-9dd5-4a1220b35419
-begin 
-	bad_chains4 = Chains(rand(2,2,1))
-	let
-		N = fill(1000, 4)
-		σ =  1.0
-		x = arfima.(N, σ, 0.5) 
-		x = mapreduce(permutedims, vcat, x)'
-		x = reshape(x, (1000, 1, 4))
-		bad_chains4 = Chains(x)
-		autocorplot(bad_chains4, grid = false)
-	end
+begin
+    bad_chains4 = Chains(rand(2, 2, 1))
+    let
+        N = fill(1000, 4)
+        σ = 1.0
+        x = arfima.(N, σ, 0.5)
+        x = mapreduce(permutedims, vcat, x)'
+        x = reshape(x, (1000, 1, 4))
+        bad_chains4 = Chains(x)
+        autocorplot(bad_chains4, grid = false)
+    end
 end
 
 # ╔═╡ 07e08df2-bef4-4fd3-b8b6-a0edbc161989
@@ -263,14 +263,15 @@ If the chains have converged, it is sometimes desirable to smooth out the densit
 "
 
 # ╔═╡ 0f389b99-5840-476b-b334-26fe128d5ff2
-pooleddensity(chain, grid=false)
+pooleddensity(chain, grid = false)
 
 # ╔═╡ 6e92d586-1933-4e3c-b6fd-e5d180e563f1
 begin
-	simulate(;θ) = rand(Binomial(n, θ))
-	preds = posterior_predictive(x -> simulate(;x...), chain, 10000)
-	histogram( preds, xlabel="H=h", leg=false, color=:grey, grid=false, yaxis=font(10), xaxis=font(10),
-	    ylim=(0,2000), xlim=(10,40), title="posterior predictive")
+    simulate(; θ) = rand(Binomial(n, θ))
+    preds = posterior_predictive(x -> simulate(; x...), chain, 10000)
+    histogram(preds, xlabel = "H=h", leg = false, color = :grey, grid = false,
+        yaxis = font(10), xaxis = font(10),
+        ylim = (0, 2000), xlim = (10, 40), title = "posterior predictive")
 end
 
 # ╔═╡ d7dfe957-f1d3-486f-a87b-db9c178404d3
@@ -282,16 +283,16 @@ In the previous example, the commonly used beta and binomial distribution functi
 
 # ╔═╡ 7e8c1e06-2240-41e3-8a28-957f12024ed3
 begin
-	import Distributions: logpdf
-	
-	struct My_Dist{T} <: ContinuousUnivariateDistribution
-	    n::Int
-	    θ::T
-	end
-	
-	function logpdf(dist::My_Dist, k::Int)
-	    return logpdf(Binomial(dist.n, dist.θ), k)
-	end
+    import Distributions: logpdf
+
+    struct My_Dist{T} <: ContinuousUnivariateDistribution
+        n::Int
+        θ::T
+    end
+
+    function logpdf(dist::My_Dist, k::Int)
+        return logpdf(Binomial(dist.n, dist.θ), k)
+    end
 end
 
 # ╔═╡ 4db5c8cb-a016-4a12-aeb9-cebd26fee2a0
@@ -302,8 +303,8 @@ end
 
 # ╔═╡ 2b26c8a6-aeb7-4b65-863e-fa81be2f0c2c
 begin
-	chain1 = sample(awesome_model(n, k), specs, MCMCThreads(), n_samples, n_chains)
-	describe(chain1)
+    chain1 = sample(awesome_model(n, k), specs, MCMCThreads(), n_samples, n_chains)
+    describe(chain1)
 end
 
 # ╔═╡ 6a8df808-c671-47d8-9a8e-4309218902c1
@@ -313,7 +314,6 @@ md"
 
 Van Ravenzwaaij, D., Cassey, P., & Brown, S. D. (2018). A simple introduction to Markov Chain Monte–Carlo sampling. Psychonomic bulletin & review, 25(1), 143-154. [Link](https://core.ac.uk/download/pdf/157691414.pdf)
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

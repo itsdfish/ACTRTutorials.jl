@@ -6,29 +6,29 @@ using InteractiveUtils
 
 # ╔═╡ 90feb1a2-fc4a-11ec-1fb3-bb5d1d9fd934
 begin
-	using StatsPlots, Revise, ACTRModels, Random
-	using PlutoUI, DataFrames, CommonMark,NamedTupleTools
-	using FFTDists, DifferentialEvolutionMCMC, MCMCChains
-	using Distributions
-	# seed random number generator
-	Random.seed!(9851);
-	TableOfContents()
+    using StatsPlots, Revise, ACTRModels, Random
+    using PlutoUI, DataFrames, CommonMark, NamedTupleTools
+    using FFTDists, DifferentialEvolutionMCMC, MCMCChains
+    using Distributions
+    # seed random number generator
+    Random.seed!(9851)
+    TableOfContents()
 end
 
 # ╔═╡ b2505b48-dab3-4051-b008-9bf5bfbe87da
 begin
-	path_u5_1 = joinpath(pwd(), "../../Unit5/Semantic/Semantic_Model_Notebook.jl")
+    path_u5_1 = joinpath(pwd(), "../../Unit5/Semantic/Semantic_Model_Notebook.jl")
 
-	nothing
+    nothing
 end
 
 # ╔═╡ 5fa6fcc2-0c09-4074-8f15-6e2ac17a354f
 Markdown.parse(
-"""
-# Introduction
+    """
+    # Introduction
 
-In this tutorial, we will use fast Fourier transform to develop a version of the [semantic model](./open?path=$path_u5_1) that predicts reaction time distributions. As will be illustrated below, the model predicts multimodal distributions when a variable number of memory retrievals can lead to a response through category chaining. The structure of the present model is identical to the Markov process version presented earlier. Some details of the model will be presented below. Please review the first version of the [model](./open?path=$path_u5_1) if you need to refamiliarize yourself with the details. 
-"""
+    In this tutorial, we will use fast Fourier transform to develop a version of the [semantic model](./open?path=$path_u5_1) that predicts reaction time distributions. As will be illustrated below, the model predicts multimodal distributions when a variable number of memory retrievals can lead to a response through category chaining. The structure of the present model is identical to the Markov process version presented earlier. Some details of the model will be presented below. Please review the first version of the [model](./open?path=$path_u5_1) if you need to refamiliarize yourself with the details. 
+    """
 )
 
 # ╔═╡ d64fbbaa-25f4-4aa7-95c6-d58e56e833a3
@@ -257,495 +257,550 @@ Reveal the cell below to see other functions for the log likelihood
 
 # ╔═╡ 4444a1d6-406f-4129-8ec3-145876d940a2
 begin
-	import Distributions: pdf, rand, logpdf
-	
-	struct LNRC{T1,T2,T3} <: ContinuousUnivariateDistribution
-	    μ::T1
-	    σ::T2
-	    ϕ::T3
-	    c::Int
-	end
-	
-	Broadcast.broadcastable(x::LNRC) = Ref(x)
-	
-	LNRC(;μ, σ, ϕ, c) = LNRC(μ, σ, ϕ, c)
-	
-	function rand(dist::LNRC)
-	    (;μ,σ,ϕ,c) = dist
-	    x = @. rand(LogNormal(μ, σ)) + ϕ
-	    rt,resp = findmin(x)
-	    return rt
-	end
-	
-	function rand_sim(dists)
-	    total_rt = 0.0
-	    resps = fill(0, length(dists))
-	    for (i,d) in enumerate(dists)
-	        (;μ,σ,ϕ) = d 
-	        x = @. rand(LogNormal(μ, σ)) + ϕ
-	        rt,resp = findmin(x)
-	        total_rt += rt
-	        resps[i] = resp
-	    end
-	    return resps,total_rt
-	end
-	
-	rand(dist::LNRC, N::Int) = [rand(dist) for i in 1:N]
-	
-	function logpdf(d::T, t::Float64) where {T <: LNRC}
-	    (;μ,σ,ϕ,c) = d
-	    LL = 0.0
-	    for (i,m) in enumerate(μ)
-	        if i == c
-	            LL += logpdf(LogNormal(m, σ), t - ϕ)
-	        else
-	            LL += logccdf(LogNormal(m, σ), t - ϕ)
-	        end
-	    end
-	    return LL
-	end
-	
-	function logpdf(d::LNRC{T1,T2,Vector{T3}}, t::Float64) where {T1,T2,T3}
-	    (;μ,σ,ϕ,c) = d
-	    LL = 0.0
-	    for (i,m) in enumerate(μ)
-	        if i == c
-	            LL += logpdf(LogNormal(m, σ), t - ϕ[i])
-	        else
-	            LL += logccdf(LogNormal(m, σ), t - ϕ[i])
-	        end
-	    end
-	    return LL
-	end
-	
-	function pdf(d::T, t::Float64) where {T <: LNRC}
-	    (;μ,σ,ϕ,c) = d
-	    density = 1.0
-	    for (i,m) in enumerate(μ)
-	        if i == c
-	            density *= pdf(LogNormal(m, σ), t - ϕ)
-	        else
-	            density *= (1 - cdf(LogNormal(m, σ), t - ϕ))
-	        end
-	    end
-	    return density
-	end
+    import Distributions: pdf, rand, logpdf
+
+    struct LNRC{T1, T2, T3} <: ContinuousUnivariateDistribution
+        μ::T1
+        σ::T2
+        ϕ::T3
+        c::Int
+    end
+
+    Broadcast.broadcastable(x::LNRC) = Ref(x)
+
+    LNRC(; μ, σ, ϕ, c) = LNRC(μ, σ, ϕ, c)
+
+    function rand(dist::LNRC)
+        (; μ, σ, ϕ, c) = dist
+        x = @. rand(LogNormal(μ, σ)) + ϕ
+        rt, resp = findmin(x)
+        return rt
+    end
+
+    function rand_sim(dists)
+        total_rt = 0.0
+        resps = fill(0, length(dists))
+        for (i, d) in enumerate(dists)
+            (; μ, σ, ϕ) = d
+            x = @. rand(LogNormal(μ, σ)) + ϕ
+            rt, resp = findmin(x)
+            total_rt += rt
+            resps[i] = resp
+        end
+        return resps, total_rt
+    end
+
+    rand(dist::LNRC, N::Int) = [rand(dist) for i = 1:N]
+
+    function logpdf(d::T, t::Float64) where {T <: LNRC}
+        (; μ, σ, ϕ, c) = d
+        LL = 0.0
+        for (i, m) in enumerate(μ)
+            if i == c
+                LL += logpdf(LogNormal(m, σ), t - ϕ)
+            else
+                LL += logccdf(LogNormal(m, σ), t - ϕ)
+            end
+        end
+        return LL
+    end
+
+    function logpdf(d::LNRC{T1, T2, Vector{T3}}, t::Float64) where {T1, T2, T3}
+        (; μ, σ, ϕ, c) = d
+        LL = 0.0
+        for (i, m) in enumerate(μ)
+            if i == c
+                LL += logpdf(LogNormal(m, σ), t - ϕ[i])
+            else
+                LL += logccdf(LogNormal(m, σ), t - ϕ[i])
+            end
+        end
+        return LL
+    end
+
+    function pdf(d::T, t::Float64) where {T <: LNRC}
+        (; μ, σ, ϕ, c) = d
+        density = 1.0
+        for (i, m) in enumerate(μ)
+            if i == c
+                density *= pdf(LogNormal(m, σ), t - ϕ)
+            else
+                density *= (1 - cdf(LogNormal(m, σ), t - ϕ))
+            end
+        end
+        return density
+    end
 end
 
 # ╔═╡ 95037ee7-feaa-433b-a2c5-f17136272e4a
 begin
-	function populate_memory(act=0.0)
-	    chunks = [
-	        Chunk(object=:shark, attribute=:dangerous, value=:True, act=act),
-	        Chunk(object=:shark, attribute=:locomotion, value=:swimming, act=act),
-	        Chunk(object=:shark, attribute=:category, value=:fish, act=act),
-	        Chunk(object=:salmon, attribute=:edible, value=:True, act=act),
-	        Chunk(object=:salmon, attribute=:locomotion, value=:swimming, act=act),
-	        Chunk(object=:salmon, attribute=:category, value=:fish, act=act),
-	        Chunk(object=:fish, attribute=:breath, value=:gills, act=act),
-	        Chunk(object=:fish, attribute=:locomotion, value=:swimming, act=act),
-	        Chunk(object=:fish, attribute=:category, value=:animal, act=act),
-	        Chunk(object=:animal, attribute=:moves, value=:True, act=act),
-	        Chunk(object=:animal, attribute=:skin, value=:True, act=act),
-	        Chunk(object=:canary, attribute=:color, value=:yellow, act=act),
-	        Chunk(object=:canary, attribute=:sings, value=:True, act=act),
-	        Chunk(object=:canary, attribute=:category, value=:bird, act=act),
-	        Chunk(object=:ostritch, attribute=:flies, value=:False, act=act),
-	        Chunk(object=:ostritch, attribute=:height, value=:tall, act=act),
-	        Chunk(object=:ostritch, attribute=:category, value=:bird, act=act),
-	        Chunk(object=:bird, attribute=:wings, value=:True, act=act),
-	        Chunk(object=:bird, attribute=:locomotion, value=:flying, act=act),
-	        Chunk(object=:bird, attribute=:category, value=:animal, act=act),
-	    ]
-	    return chunks
-	end
-	
-	function simulate(fixed_parms, stimulus, n_reps; blc, δ)
-	    # generate chunks 
-	    chunks = populate_memory()
-	    # add chunks to declarative memory
-	    memory = Declarative(;memory=chunks)
-	    # add declarative memory and parameters to ACT-R object
-	    actr = ACTR(;declarative=memory, fixed_parms..., blc, δ)
-	    # rts for yes responses
-	    yes_rts = Float64[]
-	    # rates for no respones
-	    no_rts = Float64[]
-	    for rep in 1:n_reps
-	        # simulate a single trial
-	        resp,rt = simulate_trial(actr, stimulus)
-	        # save simulated data
-	        resp == :yes ? push!(yes_rts, rt) : push!(no_rts, rt)
-	    end
-	    return (stimulus=stimulus, yes_rts = yes_rts, no_rts = no_rts)
-	end
-	
-	function simulate_trial(actr, stimulus)
-	    retrieving = true
-	    probe = stimulus
-	    response = :_
-	    # add conflict resolution times
-	    rt = mapreduce(_ -> process_time(.05), +, 1:7)
-	    # add stimulus encoding times
-	    rt += mapreduce(_ -> process_time(.085), +, 1:2)
-	    while retrieving
-	        # conflict resolution
-	        rt += process_time(.05)
-	        chunk = retrieve(actr; object=probe.object, attribute=:category)
-	        rt += compute_RT(actr, chunk)
-	        # retrieval failure, respond "no"
-	        if isempty(chunk)
-	            # add motor execution time
-	            rt += process_time(.05) + process_time(.21)
-	            retrieving = false
-	            response = :no
-	        # can respond "yes"
-	        elseif direct_verify(chunk[1], probe)
-	            # add motor execution time
-	            rt += process_time(.05) + process_time(.21)
-	            retrieving = false
-	            response = :yes
-	        # category chain
-	        elseif chain_category(chunk[1], probe) 
-	            probe = delete(probe, :object)
-	            # update memory probe for category chain
-	            probe = (object = chunk[1].slots.value, probe...)
-	        else
-	            response = :no
-	            rt += process_time(.05) + process_time(.21)
-	            retrieving = false
-	        end
-	    end
-	    return response, rt
-	end
-	
-	process_time(μ) = rand(Uniform(μ * (2 / 3), μ * (4 / 3)))
-	
-	function direct_verify(chunk, stim)
-	    return match(chunk, object=stim.object,
-	        value=stim.category, attribute=:category)
-	end
-	
-	function chain_category(chunk, stim)
-	    return match(chunk, ==, !=, ==, object=stim.object,
-	        value=stim.category, attribute=:category)
-	end
-	
-	function get_stimuli()
-	    stimuli = NamedTuple[]
-	    push!(stimuli, (object = :canary, category = :bird, ans = :yes))
-	    push!(stimuli, (object = :canary, category = :animal, ans = :yes))
-	    push!(stimuli, (object = :bird, category = :fish, ans = :no))
-	    push!(stimuli, (object = :canary, category = :fish, ans = :no))
-	    return vcat(stimuli...)
-	end
+    function populate_memory(act = 0.0)
+        chunks = [
+            Chunk(object = :shark, attribute = :dangerous, value = :True, act = act),
+            Chunk(object = :shark, attribute = :locomotion, value = :swimming, act = act),
+            Chunk(object = :shark, attribute = :category, value = :fish, act = act),
+            Chunk(object = :salmon, attribute = :edible, value = :True, act = act),
+            Chunk(object = :salmon, attribute = :locomotion, value = :swimming, act = act),
+            Chunk(object = :salmon, attribute = :category, value = :fish, act = act),
+            Chunk(object = :fish, attribute = :breath, value = :gills, act = act),
+            Chunk(object = :fish, attribute = :locomotion, value = :swimming, act = act),
+            Chunk(object = :fish, attribute = :category, value = :animal, act = act),
+            Chunk(object = :animal, attribute = :moves, value = :True, act = act),
+            Chunk(object = :animal, attribute = :skin, value = :True, act = act),
+            Chunk(object = :canary, attribute = :color, value = :yellow, act = act),
+            Chunk(object = :canary, attribute = :sings, value = :True, act = act),
+            Chunk(object = :canary, attribute = :category, value = :bird, act = act),
+            Chunk(object = :ostritch, attribute = :flies, value = :False, act = act),
+            Chunk(object = :ostritch, attribute = :height, value = :tall, act = act),
+            Chunk(object = :ostritch, attribute = :category, value = :bird, act = act),
+            Chunk(object = :bird, attribute = :wings, value = :True, act = act),
+            Chunk(object = :bird, attribute = :locomotion, value = :flying, act = act),
+            Chunk(object = :bird, attribute = :category, value = :animal, act = act)
+        ]
+        return chunks
+    end
+
+    function simulate(fixed_parms, stimulus, n_reps; blc, δ)
+        # generate chunks 
+        chunks = populate_memory()
+        # add chunks to declarative memory
+        memory = Declarative(; memory = chunks)
+        # add declarative memory and parameters to ACT-R object
+        actr = ACTR(; declarative = memory, fixed_parms..., blc, δ)
+        # rts for yes responses
+        yes_rts = Float64[]
+        # rates for no respones
+        no_rts = Float64[]
+        for rep = 1:n_reps
+            # simulate a single trial
+            resp, rt = simulate_trial(actr, stimulus)
+            # save simulated data
+            resp == :yes ? push!(yes_rts, rt) : push!(no_rts, rt)
+        end
+        return (stimulus = stimulus, yes_rts = yes_rts, no_rts = no_rts)
+    end
+
+    function simulate_trial(actr, stimulus)
+        retrieving = true
+        probe = stimulus
+        response = :_
+        # add conflict resolution times
+        rt = mapreduce(_ -> process_time(0.05), +, 1:7)
+        # add stimulus encoding times
+        rt += mapreduce(_ -> process_time(0.085), +, 1:2)
+        while retrieving
+            # conflict resolution
+            rt += process_time(0.05)
+            chunk = retrieve(actr; object = probe.object, attribute = :category)
+            rt += compute_RT(actr, chunk)
+            # retrieval failure, respond "no"
+            if isempty(chunk)
+                # add motor execution time
+                rt += process_time(0.05) + process_time(0.21)
+                retrieving = false
+                response = :no
+                # can respond "yes"
+            elseif direct_verify(chunk[1], probe)
+                # add motor execution time
+                rt += process_time(0.05) + process_time(0.21)
+                retrieving = false
+                response = :yes
+                # category chain
+            elseif chain_category(chunk[1], probe)
+                probe = delete(probe, :object)
+                # update memory probe for category chain
+                probe = (object = chunk[1].slots.value, probe...)
+            else
+                response = :no
+                rt += process_time(0.05) + process_time(0.21)
+                retrieving = false
+            end
+        end
+        return response, rt
+    end
+
+    process_time(μ) = rand(Uniform(μ * (2 / 3), μ * (4 / 3)))
+
+    function direct_verify(chunk, stim)
+        return match(chunk, object = stim.object,
+            value = stim.category, attribute = :category)
+    end
+
+    function chain_category(chunk, stim)
+        return match(chunk, ==, !=, ==, object = stim.object,
+            value = stim.category, attribute = :category)
+    end
+
+    function get_stimuli()
+        stimuli = NamedTuple[]
+        push!(stimuli, (object = :canary, category = :bird, ans = :yes))
+        push!(stimuli, (object = :canary, category = :animal, ans = :yes))
+        push!(stimuli, (object = :bird, category = :fish, ans = :no))
+        push!(stimuli, (object = :canary, category = :fish, ans = :no))
+        return vcat(stimuli...)
+    end
 end
 
 # ╔═╡ 4fcce086-5c9c-4365-bf8f-abf5708ab372
 begin
-	# true value for base level constant
-	blc = 1.5
-	# true value for mismatch penalty
-	δ = 1.0
-	# fixed parameters
-	fixed_parms = (noise = true, τ = 0.0, s = 0.2, mmp = true)
-	stimuli = get_stimuli()
-	# repeat simulation 10 times per stimulus
-	n_reps = 10
-	data = map(s -> simulate(fixed_parms, s, n_reps; blc, δ), stimuli);
-	first(data)
+    # true value for base level constant
+    blc = 1.5
+    # true value for mismatch penalty
+    δ = 1.0
+    # fixed parameters
+    fixed_parms = (noise = true, τ = 0.0, s = 0.2, mmp = true)
+    stimuli = get_stimuli()
+    # repeat simulation 10 times per stimulus
+    n_reps = 10
+    data = map(s -> simulate(fixed_parms, s, n_reps; blc, δ), stimuli)
+    first(data)
 end
 
 # ╔═╡ 80bae102-3727-4353-bc1b-a7b64ec448b1
 begin
-	function one_chain_yes(actr, stimulus, rts)
-		probe = stimulus
-		(;τ,s) = actr.parms
-		chunks = actr.declarative.memory
-		σ = s * π / sqrt(3)
-		μpm,σpm = convolve_normal(motor=(μ = .21,N = 1), cr=(μ = .05,N = 10), visual=(μ = .085,N = 2))
-		compute_activation!(actr; object=get_object(stimulus), attribute=:category)
-		μ = map(x -> x.act, chunks)
-		push!(μ, τ)
-		chain_idx = find_index(actr, ==, !=, ==, object=get_object(probe), value=get_category(probe), attribute=:category)
-		chain1_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=chain_idx)
-		
-		probe = (object = get_chunk_value(chunks[chain_idx]), delete(probe, :object)...)
-		compute_activation!(actr; object=get_object(probe), attribute=:category)
-		yes_idx = find_index(actr, object=get_object(probe), attribute=:category)
-		μ = map(x -> x.act, chunks)
-		push!(μ, τ)
-		yes_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=yes_idx)
-		model = Normal(μpm, σpm) + chain1_dist + yes_dist
-		convolve!(model)
-		LLs = logpdf.(model, rts)
-		return sum(LLs)
-	end
-	
-	function one_chain_no_branch1(actr, stimulus, rts)
-		# respond no after initial retrieval
-		probe = stimulus
-		(;τ,s) = actr.parms
-		chunks = actr.declarative.memory
-		σ = s * π / sqrt(3)
-		μpm,σpm = convolve_normal(motor=(μ = .21,N = 1), cr=(μ = .05,N = 9), visual=(μ = .085,N = 2))
-		compute_activation!(actr; object=get_object(stimulus), attribute=:category)
-		μ = map(x -> x.act, chunks)
-		push!(μ, τ)
-		chain_idx = find_index(actr, ==, !=, ==, object=get_object(probe), value=get_category(probe), attribute=:category)
-		# Initialize likelihood
-		n_resp = length(rts)
-		likelihoods = fill(0.0, n_resp)
-		Nc = length(chunks) + 1
-		# Marginalize over all of the possible chunks that could have lead to the
-		# observed response
-		for i in 1:Nc
-			# Exclude the chunk representing the stimulus because the response was "no"
-			if i != chain_idx
-				no_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=i)
-				model = Normal(μpm, σpm) + no_dist
-				convolve!(model)
-				likelihoods .+= pdf.(model, rts)
-			end
-		end
-		return likelihoods
-	end
-	
-	function one_chain_no_branch2(actr, stimulus, rts)
-		# respond no after first category chain
-		probe = stimulus
-		(;τ,s) = actr.parms
-		chunks = actr.declarative.memory
-		σ = s * π / sqrt(3)
-		# perceptual motor time
-		μpm,σpm = convolve_normal(motor=(μ = .21,N = 1), cr=(μ = .05,N = 10), visual=(μ = .085,N = 2))
-		# compute activations
-		compute_activation!(actr; object=get_object(stimulus), attribute=:category)
-		# get activations
-		μ = map(x -> x.act, chunks)
-		# add retrieval threshold
-		push!(μ, τ)
-		# index to chain chunk
-		chain_idx = find_index(actr, ==, !=, ==, object=get_object(probe), value=get_category(probe), attribute=:category)
-		chain1_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=chain_idx)
-		
-		# change probe for second retrieval
-		probe = (object = get_chunk_value(chunks[chain_idx]), delete(probe, :object)...)
-		compute_activation!(actr; object=get_object(probe), attribute=:category)
-		yes_idx = find_index(actr, object=get_object(probe), attribute=:category)
-		μ = map(x -> x.act, chunks)
-		push!(μ, τ)
-	
-		# Initialize likelihood
-		n_resp = length(rts)
-		likelihoods = fill(0.0, n_resp)
-		Nc = length(chunks) + 1
-		# Marginalize over all of the possible chunks that could have lead to the
-		# observed response
-		for i in 1:Nc
-			# Exclude the chunk representing the stimulus because the response was "no"
-			if i != yes_idx
-				no_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=i)
-				model = Normal(μpm, σpm) + chain1_dist + no_dist
-				convolve!(model)
-				likelihoods .+= pdf.(model, rts)
-			end
-		end
-		return likelihoods
-	end
-	
-	
-	function two_chains_no_branch3(actr, stimulus, rts)
-		probe = stimulus
-		(;τ,s) = actr.parms
-		chunks = actr.declarative.memory
-		σ = s * π / sqrt(3)
-		# perceptual motor time
-		μpm,σpm = convolve_normal(motor=(μ = .21,N = 1), cr=(μ = .05,N = 11), visual=(μ = .085,N = 2))
-		# compute activations
-		compute_activation!(actr; object=get_object(stimulus), attribute=:category)
-		# get activations
-		μ = map(x -> x.act, chunks)
-		# add retrieval threshold
-		push!(μ, τ)
-		# index to chain chunk
-		chain_idx1 = find_index(actr, ==, !=, ==, object=get_object(probe), value=get_category(probe), attribute=:category)
-		chain1_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=chain_idx1)
-		
-		# change probe for second retrieval
-		probe = (object = get_chunk_value(chunks[chain_idx1]), delete(probe, :object)...)
-		compute_activation!(actr; object=get_object(probe), attribute=:category)
-		μ = map(x -> x.act, chunks)
-		push!(μ, τ)
-		chain2_idx = find_index(actr, object=get_object(probe), attribute=:category)
-		chain2_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=chain2_idx)
-	
-		# change probe for third retrieval
-		probe = (object = get_chunk_value(chunks[chain2_idx]), delete(probe, :object)...)
-		compute_activation!(actr; object=get_object(probe), attribute=:category)
-		μ = map(x -> x.act, chunks)
-		push!(μ, τ)
-		chain3_idx = find_index(actr, object=get_object(probe), attribute=:category)
-	
-		# Initialize likelihood
-		n_resp = length(rts)
-		likelihoods = fill(0.0, n_resp)
-		Nc = length(chunks) + 1
-		# Marginalize over all of the possible chunks that could have lead to the
-		# observed response
-		for i in 1:Nc
-			# Exclude the chunk representing the stimulus because the response was "no"
-			if i != chain3_idx
-				no_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=i)
-				model = Normal(μpm, σpm) + chain1_dist + chain2_dist + no_dist
-				convolve!(model)
-				likelihoods .+= pdf.(model, rts)
-			end
-		end
-		return likelihoods
-	end
-	
-	get_object(x) = x.object
-	get_category(x) = x.category
-	get_chunk_value(x) = x.slots.value 
-	
-	function merge(data)
-		yes = map(x->x.yes_rts, data) |> x->vcat(x...)
-		no = map(x->x.no_rts, data) |> x->vcat(x...)
-		return (yes=yes, no=no)
-	end
-	
+    function one_chain_yes(actr, stimulus, rts)
+        probe = stimulus
+        (; τ, s) = actr.parms
+        chunks = actr.declarative.memory
+        σ = s * π / sqrt(3)
+        μpm, σpm = convolve_normal(
+            motor = (μ = 0.21, N = 1),
+            cr = (μ = 0.05, N = 10),
+            visual = (μ = 0.085, N = 2)
+        )
+        compute_activation!(actr; object = get_object(stimulus), attribute = :category)
+        μ = map(x -> x.act, chunks)
+        push!(μ, τ)
+        chain_idx = find_index(
+            actr,
+            ==,
+            !=,
+            ==,
+            object = get_object(probe),
+            value = get_category(probe),
+            attribute = :category
+        )
+        chain1_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = chain_idx)
+
+        probe = (object = get_chunk_value(chunks[chain_idx]), delete(probe, :object)...)
+        compute_activation!(actr; object = get_object(probe), attribute = :category)
+        yes_idx = find_index(actr, object = get_object(probe), attribute = :category)
+        μ = map(x -> x.act, chunks)
+        push!(μ, τ)
+        yes_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = yes_idx)
+        model = Normal(μpm, σpm) + chain1_dist + yes_dist
+        convolve!(model)
+        LLs = logpdf.(model, rts)
+        return sum(LLs)
+    end
+
+    function one_chain_no_branch1(actr, stimulus, rts)
+        # respond no after initial retrieval
+        probe = stimulus
+        (; τ, s) = actr.parms
+        chunks = actr.declarative.memory
+        σ = s * π / sqrt(3)
+        μpm, σpm = convolve_normal(
+            motor = (μ = 0.21, N = 1),
+            cr = (μ = 0.05, N = 9),
+            visual = (μ = 0.085, N = 2)
+        )
+        compute_activation!(actr; object = get_object(stimulus), attribute = :category)
+        μ = map(x -> x.act, chunks)
+        push!(μ, τ)
+        chain_idx = find_index(
+            actr,
+            ==,
+            !=,
+            ==,
+            object = get_object(probe),
+            value = get_category(probe),
+            attribute = :category
+        )
+        # Initialize likelihood
+        n_resp = length(rts)
+        likelihoods = fill(0.0, n_resp)
+        Nc = length(chunks) + 1
+        # Marginalize over all of the possible chunks that could have lead to the
+        # observed response
+        for i = 1:Nc
+            # Exclude the chunk representing the stimulus because the response was "no"
+            if i != chain_idx
+                no_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = i)
+                model = Normal(μpm, σpm) + no_dist
+                convolve!(model)
+                likelihoods .+= pdf.(model, rts)
+            end
+        end
+        return likelihoods
+    end
+
+    function one_chain_no_branch2(actr, stimulus, rts)
+        # respond no after first category chain
+        probe = stimulus
+        (; τ, s) = actr.parms
+        chunks = actr.declarative.memory
+        σ = s * π / sqrt(3)
+        # perceptual motor time
+        μpm, σpm = convolve_normal(
+            motor = (μ = 0.21, N = 1),
+            cr = (μ = 0.05, N = 10),
+            visual = (μ = 0.085, N = 2)
+        )
+        # compute activations
+        compute_activation!(actr; object = get_object(stimulus), attribute = :category)
+        # get activations
+        μ = map(x -> x.act, chunks)
+        # add retrieval threshold
+        push!(μ, τ)
+        # index to chain chunk
+        chain_idx = find_index(
+            actr,
+            ==,
+            !=,
+            ==,
+            object = get_object(probe),
+            value = get_category(probe),
+            attribute = :category
+        )
+        chain1_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = chain_idx)
+
+        # change probe for second retrieval
+        probe = (object = get_chunk_value(chunks[chain_idx]), delete(probe, :object)...)
+        compute_activation!(actr; object = get_object(probe), attribute = :category)
+        yes_idx = find_index(actr, object = get_object(probe), attribute = :category)
+        μ = map(x -> x.act, chunks)
+        push!(μ, τ)
+
+        # Initialize likelihood
+        n_resp = length(rts)
+        likelihoods = fill(0.0, n_resp)
+        Nc = length(chunks) + 1
+        # Marginalize over all of the possible chunks that could have lead to the
+        # observed response
+        for i = 1:Nc
+            # Exclude the chunk representing the stimulus because the response was "no"
+            if i != yes_idx
+                no_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = i)
+                model = Normal(μpm, σpm) + chain1_dist + no_dist
+                convolve!(model)
+                likelihoods .+= pdf.(model, rts)
+            end
+        end
+        return likelihoods
+    end
+
+    function two_chains_no_branch3(actr, stimulus, rts)
+        probe = stimulus
+        (; τ, s) = actr.parms
+        chunks = actr.declarative.memory
+        σ = s * π / sqrt(3)
+        # perceptual motor time
+        μpm, σpm = convolve_normal(
+            motor = (μ = 0.21, N = 1),
+            cr = (μ = 0.05, N = 11),
+            visual = (μ = 0.085, N = 2)
+        )
+        # compute activations
+        compute_activation!(actr; object = get_object(stimulus), attribute = :category)
+        # get activations
+        μ = map(x -> x.act, chunks)
+        # add retrieval threshold
+        push!(μ, τ)
+        # index to chain chunk
+        chain_idx1 = find_index(
+            actr,
+            ==,
+            !=,
+            ==,
+            object = get_object(probe),
+            value = get_category(probe),
+            attribute = :category
+        )
+        chain1_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = chain_idx1)
+
+        # change probe for second retrieval
+        probe = (object = get_chunk_value(chunks[chain_idx1]), delete(probe, :object)...)
+        compute_activation!(actr; object = get_object(probe), attribute = :category)
+        μ = map(x -> x.act, chunks)
+        push!(μ, τ)
+        chain2_idx = find_index(actr, object = get_object(probe), attribute = :category)
+        chain2_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = chain2_idx)
+
+        # change probe for third retrieval
+        probe = (object = get_chunk_value(chunks[chain2_idx]), delete(probe, :object)...)
+        compute_activation!(actr; object = get_object(probe), attribute = :category)
+        μ = map(x -> x.act, chunks)
+        push!(μ, τ)
+        chain3_idx = find_index(actr, object = get_object(probe), attribute = :category)
+
+        # Initialize likelihood
+        n_resp = length(rts)
+        likelihoods = fill(0.0, n_resp)
+        Nc = length(chunks) + 1
+        # Marginalize over all of the possible chunks that could have lead to the
+        # observed response
+        for i = 1:Nc
+            # Exclude the chunk representing the stimulus because the response was "no"
+            if i != chain3_idx
+                no_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = i)
+                model = Normal(μpm, σpm) + chain1_dist + chain2_dist + no_dist
+                convolve!(model)
+                likelihoods .+= pdf.(model, rts)
+            end
+        end
+        return likelihoods
+    end
+
+    get_object(x) = x.object
+    get_category(x) = x.category
+    get_chunk_value(x) = x.slots.value
+
+    function merge(data)
+        yes = map(x -> x.yes_rts, data) |> x -> vcat(x...)
+        no = map(x -> x.no_rts, data) |> x -> vcat(x...)
+        return (yes = yes, no = no)
+    end
 end
 
 # ╔═╡ cfb6f30b-ccd2-488b-9d1c-7b5d4908c5dd
 begin
-	function zero_chain_no(actr, stimulus, rts)
-		(;τ,s) = actr.parms
-		chunks = actr.declarative.memory
-		σ = s * π / sqrt(3)
-		# normal approximation for perceptual-motor time
-		μpm,σpm = convolve_normal(motor=(μ = .21,N = 1), cr=(μ = .05,N = 9), visual=(μ = .085,N = 2))
-		# compute the activation for all chunks
-		compute_activation!(actr; object=get_object(stimulus), attribute=:category)
-		# extract the mean activation values
-		μ = map(x -> x.act, chunks)
-		# add retrieval threshold to mean activation values
-		push!(μ, τ)
-		# find the chunk index corresponding to a "yes" response
-		yes_idx = find_index(actr, object=get_object(stimulus), value=get_category(stimulus))
-		# Initialize likelihood
-		n_resp = length(rts)
-		# initialize likelihoods for each no response
-		likelihoods = fill(0.0, n_resp)
-		Nc = length(chunks) + 1
-		# Marginalize over all of the possible chunks that could have lead to the
-		# observed response
-		for i in 1:Nc
-			# Exclude the chunk representing the stimulus because the response was "no"
-			if i != yes_idx
-				# create Lognormal race distribution for chunk i
-				retrieval_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=i)
-				# sum the percptual-motor distribution and the retrieval distribution
-				model = Normal(μpm, σpm) + retrieval_dist
-				# convolve the distributions
-				convolve!(model)
-				# compute likelihood for each rt using "." broadcasting
-				likelihoods .+= pdf.(model, rts)
-			end
-		end
-		return sum(log.(likelihoods))
-	end
-	
-	function zero_chain_yes(actr, stimulus, rts)
-		(;τ,s) = actr.parms
-		chunks = actr.declarative.memory
-		σ = s * π / sqrt(3)
-		μpm,σpm = convolve_normal(motor=(μ = .21,N = 1), cr=(μ = .05,N = 9), visual=(μ = .085,N = 2))
-		compute_activation!(actr; object=get_object(stimulus), attribute=:category)
-		μ = map(x -> x.act, chunks)
-		push!(μ, τ)
-		yes_idx = find_index(actr, object=get_object(stimulus), value=get_category(stimulus))
-		retrieval_dist = LNRC(;μ=-μ, σ=σ, ϕ=0.0, c=yes_idx)
-		model = Normal(μpm, σpm) + retrieval_dist
-		convolve!(model)
-		LLs = logpdf.(model, rts)
-		return sum(LLs)
-	end
+    function zero_chain_no(actr, stimulus, rts)
+        (; τ, s) = actr.parms
+        chunks = actr.declarative.memory
+        σ = s * π / sqrt(3)
+        # normal approximation for perceptual-motor time
+        μpm, σpm = convolve_normal(
+            motor = (μ = 0.21, N = 1),
+            cr = (μ = 0.05, N = 9),
+            visual = (μ = 0.085, N = 2)
+        )
+        # compute the activation for all chunks
+        compute_activation!(actr; object = get_object(stimulus), attribute = :category)
+        # extract the mean activation values
+        μ = map(x -> x.act, chunks)
+        # add retrieval threshold to mean activation values
+        push!(μ, τ)
+        # find the chunk index corresponding to a "yes" response
+        yes_idx =
+            find_index(actr, object = get_object(stimulus), value = get_category(stimulus))
+        # Initialize likelihood
+        n_resp = length(rts)
+        # initialize likelihoods for each no response
+        likelihoods = fill(0.0, n_resp)
+        Nc = length(chunks) + 1
+        # Marginalize over all of the possible chunks that could have lead to the
+        # observed response
+        for i = 1:Nc
+            # Exclude the chunk representing the stimulus because the response was "no"
+            if i != yes_idx
+                # create Lognormal race distribution for chunk i
+                retrieval_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = i)
+                # sum the percptual-motor distribution and the retrieval distribution
+                model = Normal(μpm, σpm) + retrieval_dist
+                # convolve the distributions
+                convolve!(model)
+                # compute likelihood for each rt using "." broadcasting
+                likelihoods .+= pdf.(model, rts)
+            end
+        end
+        return sum(log.(likelihoods))
+    end
+
+    function zero_chain_yes(actr, stimulus, rts)
+        (; τ, s) = actr.parms
+        chunks = actr.declarative.memory
+        σ = s * π / sqrt(3)
+        μpm, σpm = convolve_normal(
+            motor = (μ = 0.21, N = 1),
+            cr = (μ = 0.05, N = 9),
+            visual = (μ = 0.085, N = 2)
+        )
+        compute_activation!(actr; object = get_object(stimulus), attribute = :category)
+        μ = map(x -> x.act, chunks)
+        push!(μ, τ)
+        yes_idx =
+            find_index(actr, object = get_object(stimulus), value = get_category(stimulus))
+        retrieval_dist = LNRC(; μ = -μ, σ = σ, ϕ = 0.0, c = yes_idx)
+        model = Normal(μpm, σpm) + retrieval_dist
+        convolve!(model)
+        LLs = logpdf.(model, rts)
+        return sum(LLs)
+    end
 end
 
 # ╔═╡ 07f39cc2-6591-40d1-84c3-ff8b6fd44270
 begin
-		
-	function zero_chains(actr, stimulus, data)
-	    # this function computes yes and no responses that can be answered directly
-	    # no category chaining
-	    # log likelihood for yes responses
-	    LL = zero_chain_yes(actr, stimulus, data.yes_rts)
-	    # log likelihood for no responses
-	    LL += zero_chain_no(actr, stimulus, data.no_rts)
-	    return LL
-	end
-	
-	function one_chain(actr, stimulus, data)
-	    # handles yes and no responses for a single category chain
-	    LL = one_chain_yes(actr, stimulus, data.yes_rts)
-	    LL += one_chain_no(actr, stimulus, data.no_rts)
-	    return LL
-	end
-	
-	function two_chains(actr, stimulus, data)
-	    # no is the only response for two category chains
-	    return two_chains_no(actr, stimulus, data.no_rts)
-	end
-	
-	function one_chain_no(actr, stimulus, rts)
-	    # likelihood of respond no after initial retrieval
-	    likelihoods = one_chain_no_branch1(actr, stimulus, rts)
-	    # likelihood of responding no after first category chain
-	    likelihoods .+= one_chain_no_branch2(actr, stimulus, rts)
-	    return sum(log.(likelihoods))
-	end
-	
-	function two_chains_no(actr, stimulus, rts)
-	    # no category chains
-	    likelihoods = two_chains_no_branch1(actr, stimulus, rts)
-	    # one category chain
-	    likelihoods .+= two_chains_no_branch2(actr, stimulus, rts)
-	    # two category chains
-	    likelihoods .+= two_chains_no_branch3(actr, stimulus, rts)
-	    return sum(log.(likelihoods))
-	end
-	
-	function two_chains_no_branch1(actr, stimulus, rts)
-	    return one_chain_no_branch1(actr, stimulus, rts)
-	end
-	
-	function two_chains_no_branch2(actr, stimulus, rts)
-	    return one_chain_no_branch2(actr, stimulus, rts)
-	end
+    function zero_chains(actr, stimulus, data)
+        # this function computes yes and no responses that can be answered directly
+        # no category chaining
+        # log likelihood for yes responses
+        LL = zero_chain_yes(actr, stimulus, data.yes_rts)
+        # log likelihood for no responses
+        LL += zero_chain_no(actr, stimulus, data.no_rts)
+        return LL
+    end
+
+    function one_chain(actr, stimulus, data)
+        # handles yes and no responses for a single category chain
+        LL = one_chain_yes(actr, stimulus, data.yes_rts)
+        LL += one_chain_no(actr, stimulus, data.no_rts)
+        return LL
+    end
+
+    function two_chains(actr, stimulus, data)
+        # no is the only response for two category chains
+        return two_chains_no(actr, stimulus, data.no_rts)
+    end
+
+    function one_chain_no(actr, stimulus, rts)
+        # likelihood of respond no after initial retrieval
+        likelihoods = one_chain_no_branch1(actr, stimulus, rts)
+        # likelihood of responding no after first category chain
+        likelihoods .+= one_chain_no_branch2(actr, stimulus, rts)
+        return sum(log.(likelihoods))
+    end
+
+    function two_chains_no(actr, stimulus, rts)
+        # no category chains
+        likelihoods = two_chains_no_branch1(actr, stimulus, rts)
+        # one category chain
+        likelihoods .+= two_chains_no_branch2(actr, stimulus, rts)
+        # two category chains
+        likelihoods .+= two_chains_no_branch3(actr, stimulus, rts)
+        return sum(log.(likelihoods))
+    end
+
+    function two_chains_no_branch1(actr, stimulus, rts)
+        return one_chain_no_branch1(actr, stimulus, rts)
+    end
+
+    function two_chains_no_branch2(actr, stimulus, rts)
+        return one_chain_no_branch2(actr, stimulus, rts)
+    end
 end
 
 # ╔═╡ b9d25ba5-ee4c-47f4-8bce-5d9dbad8b687
 function loglike(data, fixed_parms, blc, δ)
-	# populate memory
-	chunks = populate_memory()
-	# add chunks to declarative memory object
-	memory = Declarative(;memory=chunks)
-	# add declarative memory and parameters to ACT-R object
-	actr = ACTR(;declarative=memory, fixed_parms..., blc, δ, noise=false)
-	LL = 0.0
-	for d in data
-		stimulus = d.stimulus
-		# evaluate log likelihood based on maximum number of catory chains
-		if (stimulus.object == :canary) && (stimulus.category == :bird)
-			LL += zero_chains(actr, stimulus, d)
-		elseif (stimulus.object == :canary) && (stimulus.category == :fish)
-			LL += two_chains(actr, stimulus, d)
-		else
-			LL += one_chain(actr, stimulus, d)
-		end
-	end
-	return LL
+    # populate memory
+    chunks = populate_memory()
+    # add chunks to declarative memory object
+    memory = Declarative(; memory = chunks)
+    # add declarative memory and parameters to ACT-R object
+    actr = ACTR(; declarative = memory, fixed_parms..., blc, δ, noise = false)
+    LL = 0.0
+    for d in data
+        stimulus = d.stimulus
+        # evaluate log likelihood based on maximum number of catory chains
+        if (stimulus.object == :canary) && (stimulus.category == :bird)
+            LL += zero_chains(actr, stimulus, d)
+        elseif (stimulus.object == :canary) && (stimulus.category == :fish)
+            LL += two_chains(actr, stimulus, d)
+        else
+            LL += one_chain(actr, stimulus, d)
+        end
+    end
+    return LL
 end
 
 # ╔═╡ 44f8d6f0-b9ef-4148-989b-a3fc25480aff
@@ -776,7 +831,7 @@ let
 	    bins=75, leg=false, title="Yes, Zero Chains")
 	plot_yes[1][1][:y] .*= p_correct
 	plot!(x, exact_density_yes, linewidth=2, color=:black)
-	
+
 	exact_density_no = map(i -> zero_chain_no(actr, stimulus, i) |> exp, x)
 	plot_no = histogram(sim_data.no_rts, norm=true, grid=false, xlabel="Reaction Time (seconds)", yaxis="Density", 
 	    bins=75, leg=false, title="No, Zero Chains")
@@ -787,51 +842,54 @@ end
   ╠═╡ =#
 
 # ╔═╡ 441c4a21-f4df-4f73-8399-f38ae1ae2918
-let 
-	blc = 1.0
-	δ = 1.0
-	fixed_parms = (noise = true, τ = 0.0, s = 0.2, mmp = true)
-	chunks = populate_memory()
-	memory = Declarative(;memory=chunks)
-	actr = ACTR(;declarative=memory, fixed_parms..., blc=blc, δ=δ, noise=false)
-	stimuli = get_stimuli()
-	sim_reps = 10_000
-	stimulus = stimuli[2]
-	sim_data = simulate(fixed_parms, stimulus, sim_reps; blc=blc, δ=δ)
-	p_correct = length(sim_data.yes_rts) / sim_reps
-	x = .8:.01:2.25
-	exact_density_yes = map(i -> one_chain_yes(actr, stimulus, i) |> exp, x)
-	plot_yes = histogram(sim_data.yes_rts, norm=true, grid=false, xlabel="Reaction Time (seconds)", yaxis="Density", 
-	    leg=false, bins=75, title="Yes, One Chain")
-	plot_yes[1][1][:y] .*= p_correct
-	plot!(x, exact_density_yes, linewidth=2, color=:black)
-	
-	exact_density_no = map(i -> one_chain_no(actr, stimulus, i) |> exp, x)
-	plot_no = histogram(sim_data.no_rts, norm=true, grid=false, xlabel="Reaction Time (seconds)", yaxis="Density", 
-	    leg=false, bins=75, title="No, One Chain")
-	plot_no[1][1][:y] .*= (1-p_correct)
-	plot!(x, exact_density_no, linewidth=2, color=:black)
-	plot(plot_yes, plot_no, layout=(2,1))
+let
+    blc = 1.0
+    δ = 1.0
+    fixed_parms = (noise = true, τ = 0.0, s = 0.2, mmp = true)
+    chunks = populate_memory()
+    memory = Declarative(; memory = chunks)
+    actr = ACTR(; declarative = memory, fixed_parms..., blc = blc, δ = δ, noise = false)
+    stimuli = get_stimuli()
+    sim_reps = 10_000
+    stimulus = stimuli[2]
+    sim_data = simulate(fixed_parms, stimulus, sim_reps; blc = blc, δ = δ)
+    p_correct = length(sim_data.yes_rts) / sim_reps
+    x = 0.8:0.01:2.25
+    exact_density_yes = map(i -> one_chain_yes(actr, stimulus, i) |> exp, x)
+    plot_yes = histogram(sim_data.yes_rts, norm = true, grid = false,
+        xlabel = "Reaction Time (seconds)", yaxis = "Density",
+        leg = false, bins = 75, title = "Yes, One Chain")
+    plot_yes[1][1][:y] .*= p_correct
+    plot!(x, exact_density_yes, linewidth = 2, color = :black)
+
+    exact_density_no = map(i -> one_chain_no(actr, stimulus, i) |> exp, x)
+    plot_no = histogram(sim_data.no_rts, norm = true, grid = false,
+        xlabel = "Reaction Time (seconds)", yaxis = "Density",
+        leg = false, bins = 75, title = "No, One Chain")
+    plot_no[1][1][:y] .*= (1 - p_correct)
+    plot!(x, exact_density_no, linewidth = 2, color = :black)
+    plot(plot_yes, plot_no, layout = (2, 1))
 end
 
 # ╔═╡ 786b69c7-bada-4ef6-97a8-cc1a70c68966
 let
-	blc = 1.0
-	δ = 1.0
-	fixed_parms = (noise = true, τ = 0.0, s = 0.2, mmp = true)
-	chunks = populate_memory()
-	memory = Declarative(;memory=chunks)
-	actr = ACTR(;declarative=memory, fixed_parms..., blc=blc, δ=δ, noise=false)
-	stimuli = get_stimuli()
-	sim_reps = 10_000
-	stimulus = stimuli[4]
-	sim_data = simulate(fixed_parms, stimulus, sim_reps; blc=blc, δ=δ)
-	x = .8:.01:3.25
-	
-	exact_density_no = map(i -> two_chains_no(actr, stimulus, i) |> exp, x)
-	plot_no = histogram(sim_data.no_rts, norm=true, grid=false, xlabel="Reaction Time (seconds)", yaxis="Density", 
-	    bins=100, leg=false, title="No, Two Chains")
-	plot!(x, exact_density_no, linewidth=2, color=:black)
+    blc = 1.0
+    δ = 1.0
+    fixed_parms = (noise = true, τ = 0.0, s = 0.2, mmp = true)
+    chunks = populate_memory()
+    memory = Declarative(; memory = chunks)
+    actr = ACTR(; declarative = memory, fixed_parms..., blc = blc, δ = δ, noise = false)
+    stimuli = get_stimuli()
+    sim_reps = 10_000
+    stimulus = stimuli[4]
+    sim_data = simulate(fixed_parms, stimulus, sim_reps; blc = blc, δ = δ)
+    x = 0.8:0.01:3.25
+
+    exact_density_no = map(i -> two_chains_no(actr, stimulus, i) |> exp, x)
+    plot_no = histogram(sim_data.no_rts, norm = true, grid = false,
+        xlabel = "Reaction Time (seconds)", yaxis = "Density",
+        bins = 100, leg = false, title = "No, Two Chains")
+    plot!(x, exact_density_no, linewidth = 2, color = :black)
 end
 
 # ╔═╡ b2f13250-056f-4998-acb6-9160a7e67b10
@@ -862,23 +920,23 @@ In computer code, the model is specified as follows:
 
 # ╔═╡ 9cc6b9dc-379c-40a0-af4d-0d53318a00df
 begin
-	# define prior distribution of parameters
-	function sample_prior()
-	   	blc = rand(Normal(1.5, 1))
-	    δ = rand(truncated(Normal(1, .5), 0.0, Inf))
-		return [blc,δ]
-	end
+    # define prior distribution of parameters
+    function sample_prior()
+        blc = rand(Normal(1.5, 1))
+        δ = rand(truncated(Normal(1, 0.5), 0.0, Inf))
+        return [blc, δ]
+    end
 
-	function prior_loglike(blc, δ)
-	    LL = 0.0
-	   	LL += logpdf(Normal(1.5, 1), blc)
-	    LL += logpdf(truncated(Normal(1, .5), 0.0, Inf), δ)
-	    return LL
-	end
-	
-	# lower and upper bounds for each parameter
-	bounds = ((-Inf,Inf),(eps(),Inf))
-	names = (:blc,:δ)
+    function prior_loglike(blc, δ)
+        LL = 0.0
+        LL += logpdf(Normal(1.5, 1), blc)
+        LL += logpdf(truncated(Normal(1, 0.5), 0.0, Inf), δ)
+        return LL
+    end
+
+    # lower and upper bounds for each parameter
+    bounds = ((-Inf, Inf), (eps(), Inf))
+    names = (:blc, :δ)
 end
 
 # ╔═╡ 06f52cc9-63b6-4aad-b46c-cbf037989aa7
@@ -890,13 +948,13 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ 34bf98ae-7699-43cf-972d-ef1f7ab1cb13
 begin
-	# create model object
-	de_model = DEModel(fixed_parms; sample_prior, prior_loglike, loglike, data, names)
-	# create DE sampler object
-	de = DE(;bounds, burnin=1000, sample_prior, n_groups=2, Np=4)
-	# total iterations
-	n_iter = 2000
-	chains = sample(de_model, de, MCMCThreads(), n_iter, progress=false)
+    # create model object
+    de_model = DEModel(fixed_parms; sample_prior, prior_loglike, loglike, data, names)
+    # create DE sampler object
+    de = DE(; bounds, burnin = 1000, sample_prior, n_groups = 2, Np = 4)
+    # total iterations
+    n_iter = 2000
+    chains = sample(de_model, de, MCMCThreads(), n_iter, progress = false)
 end
 
 # ╔═╡ 98e4ca33-dfef-4bfd-837a-a156571cd1bc
@@ -909,20 +967,20 @@ The trace plot below shows acceptable mixing among the chains.  In the density p
 
 # ╔═╡ b7e35ff1-cc27-4b23-86a2-f8c6799448ae
 let
-	ch = group(chains, :blc)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    ch = group(chains, :blc)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ e1bf7215-512c-407f-95c4-4f985ed1023b
 let
-	ch = group(chains, :δ)
-	p1 = plot(ch, seriestype=(:traceplot), grid=false)
-	p2 = plot(ch, seriestype=(:autocorplot), grid=false)
-	p3 = plot(ch, seriestype=(:mixeddensity), grid=false)
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    ch = group(chains, :δ)
+    p1 = plot(ch, seriestype = (:traceplot), grid = false)
+    p2 = plot(ch, seriestype = (:autocorplot), grid = false)
+    p3 = plot(ch, seriestype = (:mixeddensity), grid = false)
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 31c3f03d-b1ca-4af0-a84a-add078fb5c3b
@@ -936,36 +994,42 @@ The plot below shows the posterior predictive distribution of reaction times of 
 function grid_plot(preds, stimuli; kwargs...)
     posterior_plots = Plots.Plot[]
     for (pred, stimulus) in zip(preds, stimuli)
-        prob_yes = length(pred.yes)/(length(pred.yes) + length(pred.no))
+        prob_yes = length(pred.yes) / (length(pred.yes) + length(pred.no))
         object = stimulus.object
         category = stimulus.category
-        hist = histogram(layout=(1,2), xlims=(0,2.5),  ylims=(0,3.5), title="$object-$category",
-            grid=false, titlefont=font(12), xaxis=font(12), yaxis=font(12), xlabel="Yes RT", 
-            xticks = 0:2, yticks=0:3)
+        hist = histogram(layout = (1, 2), xlims = (0, 2.5), ylims = (0, 3.5),
+            title = "$object-$category",
+            grid = false, titlefont = font(12), xaxis = font(12), yaxis = font(12),
+            xlabel = "Yes RT",
+            xticks = 0:2, yticks = 0:3)
 
         if !isempty(pred.yes)
-            histogram!(hist, pred.yes, xlabel="Yes RT", norm=true, grid=false, color=:grey, leg=false, 
-                size=(300,250), subplot=1)
+            histogram!(hist, pred.yes, xlabel = "Yes RT", norm = true, grid = false,
+                color = :grey, leg = false,
+                size = (300, 250), subplot = 1)
             hist[1][1][:y] *= prob_yes
         end
 
         prob_no = 1 - prob_yes
         object = stimulus.object
         category = stimulus.category
-        histogram!(hist, pred.no, xlabel="No RT", norm=true, grid=false, color=:grey, leg=false, 
-            size=(300,250), subplot=2)
+        histogram!(hist, pred.no, xlabel = "No RT", norm = true, grid = false,
+            color = :grey, leg = false,
+            size = (300, 250), subplot = 2)
         hist[2][1][:y] *= prob_no
         push!(posterior_plots, hist)
     end
-    return posterior_plot = plot(posterior_plots..., layout=(2,2), size=(800,600); kwargs...)
+    return posterior_plot =
+        plot(posterior_plots..., layout = (2, 2), size = (800, 600); kwargs...)
 end
 
 # ╔═╡ 087084a3-fd37-4826-b8af-42ab7e4d111a
 begin
-	rt_preds(s) = posterior_predictive(x -> simulate(fixed_parms, s, n_reps; x...), chains, 1000)
-	temp_preds = map(s -> rt_preds(s), stimuli)
-	preds = merge.(temp_preds)
-	grid_plot(preds, stimuli)
+    rt_preds(s) =
+        posterior_predictive(x -> simulate(fixed_parms, s, n_reps; x...), chains, 1000)
+    temp_preds = map(s -> rt_preds(s), stimuli)
+    preds = merge.(temp_preds)
+    grid_plot(preds, stimuli)
 end
 
 # ╔═╡ b3aba7ef-b498-40fd-b069-0acc3adc93de
@@ -974,7 +1038,6 @@ md"""
 
 Weaver, R. (2008). Parameters, predictions, and evidence in computational modeling: A statistical view informed by ACT–R. Cognitive Science, 32(8), 1349-1375.
 """
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

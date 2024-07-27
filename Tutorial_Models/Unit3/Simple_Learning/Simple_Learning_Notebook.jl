@@ -6,10 +6,10 @@ using InteractiveUtils
 
 # ╔═╡ db486192-6502-42fb-a140-976f4d7e3a21
 begin
-	using Turing, StatsPlots, ACTRModels
-	using PlutoUI, Random
-	Random.seed!(99061)
-	TableOfContents()
+    using Turing, StatsPlots, ACTRModels
+    using PlutoUI, Random
+    Random.seed!(99061)
+    TableOfContents()
 end
 
 # ╔═╡ a2d139e2-738b-11ec-1828-4dabf50bd241
@@ -105,27 +105,32 @@ The plot below shows how activation changes after 10 uses of a chunk over a 60 s
 
 # ╔═╡ 6e96acc4-ed91-41d7-a1ce-a4e3d89a5dba
 begin
-	
-	function activation_dynamics(time_steps, retrieval_times, n_retrievals=10, duration=60, d=.5)
-	    sort!(retrieval_times)
-	    chunk = Chunk()
-	    declarative = Declarative(memory=[chunk])
-	    actr = ACTR(declarative=declarative, bll=true, d=d)
-	    time_stamp = retrieval_times[1]
-	    activations = fill(0.0, length(time_steps))
-	    cnt = 1
-	    for (s,t) in enumerate(time_steps)
-	        compute_activation!(actr, t)
-	        activations[s] = chunk.act
-	        if (time_stamp < t) && (cnt <= n_retrievals)
-	            update_chunk!(chunk, time_stamp)
-	            time_stamp = retrieval_times[cnt]
-	            cnt += 1
-	        end
-	    end
-	    return activations
-	end
-	nothing
+    function activation_dynamics(
+        time_steps,
+        retrieval_times,
+        n_retrievals = 10,
+        duration = 60,
+        d = 0.5
+    )
+        sort!(retrieval_times)
+        chunk = Chunk()
+        declarative = Declarative(memory = [chunk])
+        actr = ACTR(declarative = declarative, bll = true, d = d)
+        time_stamp = retrieval_times[1]
+        activations = fill(0.0, length(time_steps))
+        cnt = 1
+        for (s, t) in enumerate(time_steps)
+            compute_activation!(actr, t)
+            activations[s] = chunk.act
+            if (time_stamp < t) && (cnt <= n_retrievals)
+                update_chunk!(chunk, time_stamp)
+                time_stamp = retrieval_times[cnt]
+                cnt += 1
+            end
+        end
+        return activations
+    end
+    nothing
 end
 
 # ╔═╡ 107ddda0-a3b2-4596-b540-1737217fd5b0
@@ -180,12 +185,12 @@ The plot below shows the expected learning effect over the course of 50 trials, 
 
 # ╔═╡ b8ab7f0b-59e7-4e4e-9c25-019de1351d46
 begin
-	function learning_block(data, bsize=10)
-	    resp = map(x -> x.resp, data)
-	    N = Int(length(data) / bsize)
-	    return [mean(resp[((i - 1) * bsize + 1):(i * bsize)]) for i in 1:N]
-	end
-	nothing
+    function learning_block(data, bsize = 10)
+        resp = map(x -> x.resp, data)
+        N = Int(length(data) / bsize)
+        return [mean(resp[((i - 1) * bsize + 1):(i * bsize)]) for i = 1:N]
+    end
+    nothing
 end
 
 # ╔═╡ a99867ab-325d-41e6-ad51-337b8af389ed
@@ -203,56 +208,57 @@ The data are organized as an array of `NamedTuples`, with each `NamedTuple` cont
 
 # ╔═╡ bbdd7211-3194-4fab-b55c-ec9eb3166155
 begin
-	import Distributions: logpdf, rand, loglikelihood
-	struct Retrieval{T1,T2} <: ContinuousUnivariateDistribution
-	    d::T1
-	    parms::T2
-	end
-	
-	Retrieval(;d, parms) = Retrieval(d, parms)
-	
-	function logpdf(d::Retrieval, data::Array{<:NamedTuple,1})
-	    return computeLL(d.parms, data; d=d.d)
-	end
+    import Distributions: logpdf, rand, loglikelihood
+    struct Retrieval{T1, T2} <: ContinuousUnivariateDistribution
+        d::T1
+        parms::T2
+    end
 
-	loglikelihood(d::Retrieval, data::Array{<:NamedTuple,1}) = logpdf(d, data)
-	
-	function computeLL(parms, data; d)
-	    act = zero(typeof(d))
-	    # create chunk
-	    chunk = Chunk(;act=act)
-	    # add chunk to declarative memory
-	    memory = Declarative(;memory=[chunk])
-	    # create ACTR object and pass parameters
-	    actr = ACTR(;declarative=memory, parms..., d=d)
-	    LL = act
-	    for k in data
-	        # add time stamps and lags to chunk
-	        modify!(chunk; N=k.N, lags=k.lags, recent=k.recent)
-	        # compute retrieval probability r and retrieval failure probability f
-	        r,f = retrieval_prob(actr, chunk, k.L)
-	        # compute log likelihood for each response (resp = true -> correct, resp = false->incorrect)
-	        if k.resp
-	            LL += log(r)
-	        else
-	            LL += log(f)
-	        end
-	    end
-	    return LL
-	end
+    Retrieval(; d, parms) = Retrieval(d, parms)
+
+    function logpdf(d::Retrieval, data::Array{<:NamedTuple, 1})
+        return computeLL(d.parms, data; d = d.d)
+    end
+
+    loglikelihood(d::Retrieval, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
+
+    function computeLL(parms, data; d)
+        act = zero(typeof(d))
+        # create chunk
+        chunk = Chunk(; act = act)
+        # add chunk to declarative memory
+        memory = Declarative(; memory = [chunk])
+        # create ACTR object and pass parameters
+        actr = ACTR(; declarative = memory, parms..., d = d)
+        LL = act
+        for k in data
+            # add time stamps and lags to chunk
+            modify!(chunk; N = k.N, lags = k.lags, recent = k.recent)
+            # compute retrieval probability r and retrieval failure probability f
+            r, f = retrieval_prob(actr, chunk, k.L)
+            # compute log likelihood for each response (resp = true -> correct, resp = false->incorrect)
+            if k.resp
+                LL += log(r)
+            else
+                LL += log(f)
+            end
+        end
+        return LL
+    end
 end
 
 # ╔═╡ 2d87d12d-52b7-47d4-9bef-28b2cb2d30ba
-let 
-	duration = 60
-	n_retrievals = 10
-	retrieval_times = rand(Uniform(0, duration), n_retrievals)
-	time_steps = 0.01:0.01:duration
-	d = [0.0,0.5,0.8]
-	sim(d) = activation_dynamics(time_steps, retrieval_times, n_retrievals, duration, d)
-	activations = map(x->sim(x), d)
-	plot(time_steps, activations, grid=false, xaxis="time (seconds)", yaxis="activation", size(1000,800), linewidth=1.5,
-	    label=["d=0" "d=.5"  "d=.8"], xlims=(0,65))
+let
+    duration = 60
+    n_retrievals = 10
+    retrieval_times = rand(Uniform(0, duration), n_retrievals)
+    time_steps = 0.01:0.01:duration
+    d = [0.0, 0.5, 0.8]
+    sim(d) = activation_dynamics(time_steps, retrieval_times, n_retrievals, duration, d)
+    activations = map(x -> sim(x), d)
+    plot(time_steps, activations, grid = false, xaxis = "time (seconds)",
+        yaxis = "activation", size(1000, 800), linewidth = 1.5,
+        label = ["d=0" "d=.5" "d=.8"], xlims = (0, 65))
 end
 
 # ╔═╡ ec3dd284-c6d6-4b07-8fa8-af187dcf3bb7
@@ -260,14 +266,14 @@ function simulate(parms, n_trials; d)
     # create a chunk
     chunk = Chunk()
     # add the chunk to declarative memory
-    memory = Declarative(;memory=[chunk])
+    memory = Declarative(; memory = [chunk])
     # create ACTR object and pass parameters
-    actr = ACTR(;declarative=memory, parms..., d=d)
+    actr = ACTR(; declarative = memory, parms..., d = d)
     # initialize data array
-    data = Array{NamedTuple,1}(undef, n_trials)
+    data = Array{NamedTuple, 1}(undef, n_trials)
     # initialize response variable and initialize current time at 0.0
     cur_time = 0.0
-    for i in 1:n_trials
+    for i = 1:n_trials
         # random wait time
         cur_time += rand(Uniform(5, 15))
         # time to encode stimulus and select retrieval production
@@ -279,16 +285,16 @@ function simulate(parms, n_trials; d)
         # incorrect if empty, correct otherwise
         resp = isempty(requested) ? false : true
         # extract information to reconstruct activation
-        (;N,L,lags,recent) = chunk
+        (; N, L, lags, recent) = chunk
         # add information to data for trial i
-        data[i] = (recent = copy(recent),lags = lags,L = L,N = N,resp = resp)
+        data[i] = (recent = copy(recent), lags = lags, L = L, N = N, resp = resp)
         # add retrieval time 
         cur_time += rt
         # respond 
         cur_time += 0.05 + 0.06
         # update chunk with the time
         # time to encode feedback and update
-        cur_time += 0.05 + 0.085 + 0.05 
+        cur_time += 0.05 + 0.085 + 0.05
         # reinforce the memory
         update_chunk!(chunk, cur_time)
     end
@@ -297,19 +303,20 @@ end
 
 # ╔═╡ 395b5381-257a-49cd-8c8c-34df1c3b357a
 begin
-	n_trials = 50
-	d = 0.5
-	parms = (τ = 0.5,s = 0.4,bll = true,noise = true)
-	temp = simulate(parms, n_trials; d)
-	data = vcat(temp...)
+    n_trials = 50
+    d = 0.5
+    parms = (τ = 0.5, s = 0.4, bll = true, noise = true)
+    temp = simulate(parms, n_trials; d)
+    data = vcat(temp...)
 end
 
 # ╔═╡ 5c5427a9-e96e-462a-81be-abdbe37d093c
 block_accuracy = learning_block(data)
 
 # ╔═╡ eb1256fe-2998-4480-aa2b-e5aa9eefec80
-plot(1:5, block_accuracy, grid=false, leg=false, color=:grey, xlabel="Block", ylabel="Accuracy",
-    xaxis=font(14), yaxis=font(14), linewidth=2)
+plot(1:5, block_accuracy, grid = false, leg = false, color = :grey, xlabel = "Block",
+    ylabel = "Accuracy",
+    xaxis = font(14), yaxis = font(14), linewidth = 2)
 
 # ╔═╡ d80a3605-f881-4237-90c9-8e63075c5561
 md"
@@ -344,15 +351,22 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ 5d44933e-fff8-49b4-9652-482c97e03602
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	delta = 0.85
-	n_adapt = 1000
-	n_chains = 4
-	specs = NUTS(n_adapt, delta)
-	# Start sampling.
-	chain = sample(model(data, parms), specs, MCMCThreads(), n_samples, n_chains, progress=true)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    delta = 0.85
+    n_adapt = 1000
+    n_chains = 4
+    specs = NUTS(n_adapt, delta)
+    # Start sampling.
+    chain = sample(
+        model(data, parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains,
+        progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ c27404fa-63f6-407c-bf97-38b62a2555bc
@@ -365,25 +379,35 @@ The trace plot and autocorrelation plots in the first and second panels, respect
 
 # ╔═╡ 2bd1a079-3147-4d61-a065-e12fface1b85
 let
-	ch = group(chain, :d)
-	font_size = 12
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
+    ch = group(chain, :d)
+    font_size = 12
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
 end
 
 # ╔═╡ 0d3bf9e0-0376-4e20-a1b1-98232c4e1a03
-let 
-	font_size = 12
-		preds = posterior_predictive(x -> simulate(parms, n_trials; x...), chain, 100, learning_block)
-	p4 = plot(1:5, preds,xlabel="Block", ylabel="Accuracy", leg=false, grid=false,xaxis=font(font_size), 
-	yaxis=font(font_size), size=(600,300), titlefont=font(font_size), color=:grey, linewidth=1)
-	mean_pred = mean(hcat(preds...), dims=2)
-	plot!(p4, 1:5, mean_pred, color=:black, linewidth=1.5)
+let
+    font_size = 12
+    preds = posterior_predictive(
+        x -> simulate(parms, n_trials; x...),
+        chain,
+        100,
+        learning_block
+    )
+    p4 = plot(1:5, preds, xlabel = "Block", ylabel = "Accuracy", leg = false, grid = false,
+        xaxis = font(font_size),
+        yaxis = font(font_size), size = (600, 300), titlefont = font(font_size),
+        color = :grey, linewidth = 1)
+    mean_pred = mean(hcat(preds...), dims = 2)
+    plot!(p4, 1:5, mean_pred, color = :black, linewidth = 1.5)
 end
 
 # ╔═╡ 60543399-1562-41f3-8ad8-362757a81454

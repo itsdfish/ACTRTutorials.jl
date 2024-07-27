@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,10 +23,10 @@ end
 
 # ╔═╡ 153bc210-73d0-11ec-1cd6-d5e40e5ff2fe
 begin
-	using StatsPlots, Distributions, Turing, Random
-	using ACTRModels, KernelDensity, PlutoUI
-	Random.seed!(357601)
-	TableOfContents()
+    using StatsPlots, Distributions, Turing, Random
+    using ACTRModels, KernelDensity, PlutoUI
+    Random.seed!(357601)
+    TableOfContents()
 end
 
 # ╔═╡ 4e176300-b5c5-4752-a7d8-3054fdc3cecb
@@ -235,32 +242,31 @@ In the plot below, each solid distribution corresponds to a component of the mix
 
 # ╔═╡ 7b8f418d-4778-4ac1-93b8-af92ebb22a42
 begin
-	
-	function show_cycles(n_cycles)
-	    output = []
-	    non_att ="CR(0) "
-	    for i in 1:(n_cycles-1)
-	        non_att = non_att*string("CR(", i, ") ")
-	    end
-	    non_att = non_att*string("R(", n_cycles-1, ")")
-	    push!(output, non_att)
-	    for n_lapses in 0:(n_cycles-2)
-	        temp = "CR(0) "
-	        for i in 1:(n_lapses)
-	            temp = temp*string("CR(", i, ") ")
-	        end
-	        temp = temp*string("A(", n_lapses, ") ")
-	
-	        for i in n_lapses:(n_cycles-2)
-	            temp = temp*string("CR(", i, ") ")
-	        end
-	        temp = temp*string("R(", n_cycles-2, ")")
-	        push!(output, temp)
-	    end
-	    return output
-	end
-	
-	nothing
+    function show_cycles(n_cycles)
+        output = []
+        non_att = "CR(0) "
+        for i = 1:(n_cycles - 1)
+            non_att = non_att * string("CR(", i, ") ")
+        end
+        non_att = non_att * string("R(", n_cycles - 1, ")")
+        push!(output, non_att)
+        for n_lapses = 0:(n_cycles - 2)
+            temp = "CR(0) "
+            for i = 1:(n_lapses)
+                temp = temp * string("CR(", i, ") ")
+            end
+            temp = temp * string("A(", n_lapses, ") ")
+
+            for i = n_lapses:(n_cycles - 2)
+                temp = temp * string("CR(", i, ") ")
+            end
+            temp = temp * string("R(", n_cycles - 2, ")")
+            push!(output, temp)
+        end
+        return output
+    end
+
+    nothing
 end
 
 # ╔═╡ bb11a35f-d8fb-4f64-83e2-2ab5ce871855
@@ -270,7 +276,7 @@ show_cycles(3)
 show_cycles(6)
 
 # ╔═╡ fa50de07-c545-492f-b912-df77922eb452
-υ₁ = @bind υ₁ Slider(3.5:0.05:5, default=4.1, show_value = true)
+υ₁ = @bind υ₁ Slider(3.5:0.05:5, default = 4.1, show_value = true)
 
 # ╔═╡ a538a38b-e8b6-45cc-9737-8ce321ed67ab
 md"
@@ -279,78 +285,78 @@ Reveal the cell below to see the helper functions.
 
 # ╔═╡ 0a0bb070-8f92-4bf0-9b8f-5b443b618774
 begin
-	function prob_nonattentive_lapse(υ, τ, λ, s, n_lapses)
-		v1 = exp((υ*(λ^n_lapses))./s)
-		v2 = exp(τ/s)
-		return v2/(1 + v1 + v2)
-	end
-	
-	function prob_attentive_lapse(υ, τ, λ, s, n_lapses)
-		v1 = exp((υ*(λ^n_lapses))./s)
-		v2 = exp(τ/s)
-		return v2/(v1 + v2)
-	end
-	
-	function prob_attentive_resp(υ, τ, λ, s, n_lapses)
-		v1 = exp((υ*(λ^n_lapses))/s)
-		v2 = exp(τ/s)
-		return v1/(v1 + v2)
-	end
-	
-	function prob_attend(υ, τ, λ, s, n_lapses)
-		v1 = exp((υ*(λ^n_lapses))/s)
-		v2 = exp(τ/s)
-		return v1/(1 + v1 + v2)
-	end
-	
-	function prob_nonattentive_resp(υ, τ, λ, s, n_lapses)
-		v1 = exp((υ*(λ^n_lapses))/s)
-		v2 = exp(τ/s)
-		return 1/(1 + v1 + v2)
-	end
-	
-	function nonattentive_mixture(υ, τ, λ, s, n_cycles)
-		weight = 1.0
-		# compute joint probability of n_cycles - 1 lapses 
-		for n_lapses in 0:(n_cycles-2)
-			weight *= prob_nonattentive_lapse(υ, τ, λ, s, n_lapses)
-		end
-		# multiply weight by probability of non-attentive response
-		return weight *= prob_nonattentive_resp(υ, τ, λ, s, n_cycles-1)
-	end
-	
-	function attentive_mixture(υ, τ, λ, s, n_cycles)
-		weight = 0.0
-		# loop through all of the ways of attending and respond with n_cycles - 2 lapses
-		# e.g. (A,L,L,R), (L,A,L,R), (L,L,A,R) for n_cycles = 3
-		for n_lapses in 0:(n_cycles-2)
-			lapse_weight = 1.0
-			# joint probability of n_lapses prior to attending
-			for i in 0:(n_lapses-1)
-				lapse_weight *= prob_nonattentive_lapse(υ, τ, λ, s, i)
-			end
-			# multiply lapse_weight by attend probabilty
-			lapse_weight *= prob_attend(υ, τ, λ, s, n_lapses)
-			# multiply lapse_weight by the joint probability of lapses after attending
-			for i in n_lapses:(n_cycles-3)
-				lapse_weight *= prob_attentive_lapse(υ, τ, λ, s, i)
-			end
-			# add sequence to weight variable
-			weight += lapse_weight
-		end
-		# multiply weight by probability of attentive response
-		return weight *= prob_attentive_resp(υ, τ, λ, s, n_cycles-2)
-	end
-	
-	function post_stimulus_prob(υ, τ, λ, s, n_cycles)
-		# non attentive respose mixture probability
-		nonatt_resp = nonattentive_mixture(υ, τ, λ, s, n_cycles)
-		# attentive Response mixture probability
-		att_resp = attentive_mixture(υ, τ, λ, s, n_cycles)
-		return [nonatt_resp att_resp]
-	end
+    function prob_nonattentive_lapse(υ, τ, λ, s, n_lapses)
+        v1 = exp((υ * (λ^n_lapses)) ./ s)
+        v2 = exp(τ / s)
+        return v2 / (1 + v1 + v2)
+    end
 
-	nothing
+    function prob_attentive_lapse(υ, τ, λ, s, n_lapses)
+        v1 = exp((υ * (λ^n_lapses)) ./ s)
+        v2 = exp(τ / s)
+        return v2 / (v1 + v2)
+    end
+
+    function prob_attentive_resp(υ, τ, λ, s, n_lapses)
+        v1 = exp((υ * (λ^n_lapses)) / s)
+        v2 = exp(τ / s)
+        return v1 / (v1 + v2)
+    end
+
+    function prob_attend(υ, τ, λ, s, n_lapses)
+        v1 = exp((υ * (λ^n_lapses)) / s)
+        v2 = exp(τ / s)
+        return v1 / (1 + v1 + v2)
+    end
+
+    function prob_nonattentive_resp(υ, τ, λ, s, n_lapses)
+        v1 = exp((υ * (λ^n_lapses)) / s)
+        v2 = exp(τ / s)
+        return 1 / (1 + v1 + v2)
+    end
+
+    function nonattentive_mixture(υ, τ, λ, s, n_cycles)
+        weight = 1.0
+        # compute joint probability of n_cycles - 1 lapses 
+        for n_lapses = 0:(n_cycles - 2)
+            weight *= prob_nonattentive_lapse(υ, τ, λ, s, n_lapses)
+        end
+        # multiply weight by probability of non-attentive response
+        return weight *= prob_nonattentive_resp(υ, τ, λ, s, n_cycles - 1)
+    end
+
+    function attentive_mixture(υ, τ, λ, s, n_cycles)
+        weight = 0.0
+        # loop through all of the ways of attending and respond with n_cycles - 2 lapses
+        # e.g. (A,L,L,R), (L,A,L,R), (L,L,A,R) for n_cycles = 3
+        for n_lapses = 0:(n_cycles - 2)
+            lapse_weight = 1.0
+            # joint probability of n_lapses prior to attending
+            for i = 0:(n_lapses - 1)
+                lapse_weight *= prob_nonattentive_lapse(υ, τ, λ, s, i)
+            end
+            # multiply lapse_weight by attend probabilty
+            lapse_weight *= prob_attend(υ, τ, λ, s, n_lapses)
+            # multiply lapse_weight by the joint probability of lapses after attending
+            for i = n_lapses:(n_cycles - 3)
+                lapse_weight *= prob_attentive_lapse(υ, τ, λ, s, i)
+            end
+            # add sequence to weight variable
+            weight += lapse_weight
+        end
+        # multiply weight by probability of attentive response
+        return weight *= prob_attentive_resp(υ, τ, λ, s, n_cycles - 2)
+    end
+
+    function post_stimulus_prob(υ, τ, λ, s, n_cycles)
+        # non attentive respose mixture probability
+        nonatt_resp = nonattentive_mixture(υ, τ, λ, s, n_cycles)
+        # attentive Response mixture probability
+        att_resp = attentive_mixture(υ, τ, λ, s, n_cycles)
+        return [nonatt_resp att_resp]
+    end
+
+    nothing
 end
 
 # ╔═╡ 7f3fd9fb-9f77-46e0-b75b-d133124022c5
@@ -389,118 +395,122 @@ The function `mixture_parms` computes the parameters of the normal distribution 
 "
 
 # ╔═╡ fa621c74-6b88-4be2-b221-4c5ec7b49d72
-function mixture_parms(max_cycles; γ, mt=.06, ρ=2/3)
-	mu = fill(0.0, max_cycles, 2)
-	sigma = similar(mu)
-	cycles = 1:max_cycles
-	# non-attentive process
-	@. mu[:,1] = cycles * γ + mt 
-	# attentive process
-	@. mu[:,2] = cycles * γ  + .085 + mt 
-	# non-attentive process
-	@. sigma[:,1] = 1.05 * sqrt(
-		(1/12) * (cycles * (γ * ρ).^2 + (mt * ρ)^2)) 
-	# attentive process
-	@. sigma[:,2] = 1.05*sqrt.(
-	(1/12) * (cycles * (γ * ρ)^2  + (.085 * ρ)^2
-		+ (mt * ρ)^2))
-	return mu,sigma
+function mixture_parms(max_cycles; γ, mt = 0.06, ρ = 2 / 3)
+    mu = fill(0.0, max_cycles, 2)
+    sigma = similar(mu)
+    cycles = 1:max_cycles
+    # non-attentive process
+    @. mu[:, 1] = cycles * γ + mt
+    # attentive process
+    @. mu[:, 2] = cycles * γ + 0.085 + mt
+    # non-attentive process
+    @. sigma[:, 1] = 1.05 * sqrt(
+        (1 / 12) * (cycles * (γ * ρ) .^ 2 + (mt * ρ)^2))
+    # attentive process
+    @. sigma[:, 2] =
+        1.05 * sqrt.(
+            (1 / 12) * (cycles * (γ * ρ)^2 + (0.085 * ρ)^2
+                        + (mt * ρ)^2))
+    return mu, sigma
 end
 
 # ╔═╡ 7695a909-4d67-488f-acd2-ec898a55e135
 begin
+    rand_time(μ) = rand(Uniform(2 / 3 * μ, 4 / 3 * μ))
 
-	rand_time(μ) = rand(Uniform(2 / 3 * μ, 4 / 3 * μ))
-		
-	function compute_mixture_weights(υ, τ, λ, s, max_cycles)
-	    probs = zeros(typeof(υ), max_cycles, 2)
-	    for n_cycles in 1:max_cycles
-	        probs[n_cycles,:] = post_stimulus_prob(υ, τ, λ, s, n_cycles)
-	    end
-	    return probs
-	end
-	nothing
+    function compute_mixture_weights(υ, τ, λ, s, max_cycles)
+        probs = zeros(typeof(υ), max_cycles, 2)
+        for n_cycles = 1:max_cycles
+            probs[n_cycles, :] = post_stimulus_prob(υ, τ, λ, s, n_cycles)
+        end
+        return probs
+    end
+    nothing
 
-		"""
-	    pvt_log_like(rt::Float64; υ, τ, λ, γ, s=.45345, max_cycles=15)
-	
-	Computes the log likelihood of a vector of rts for the PVT model. Note that
-	this does not handle false starts. The parameters are as follows:
-	-`υ`: utility
-	-`τ`: threshold
-	-`λ`: FPdec
-	-`γ`: conflict resolution time
-	-`rts`: the data
-	-`s`: utility noise default
-	-`max_cycles`: maximum number of component distributions,  each corresponding
-	    to a latent number of production cycles. 15 is sufficient for most parameterizations.
-	"""
-	pvt_log_like(rt::Float64; υ, τ, λ, γ, s=.45345, max_cycles=15) = pvt_log_like([rt]; υ, τ, λ, γ, s, max_cycles)
-	
-	function pvt_log_like(RTs::Vector{Float64}; υ, τ, λ, γ, s=.45345, max_cycles=15)
-	    LL = 0.0
-	    # compute parameters of Normal distribution for for production cycles up to max_cycles
-	    mus, sigmas = mixture_parms(max_cycles; γ)
-	    # compute weights for each mixture distribution for for production cycles up to max_cycles
-	    weights = compute_mixture_weights(υ, τ, λ, s, max_cycles)
-	    for rt in RTs
-	        # compute marginal likelihood of rt
-	        L = likelihood_trial(rt, mus, sigmas, weights, max_cycles)
-	        LL += log(L)
-	    end
-	    return LL
-	end
-	
-	function likelihood_trial(rt, mus, sigmas, weights, max_cycles)
-	    L = 0.0
-	    # loop over non-attend and attend states
-	    for att in 1:2
-	        # loop over each number of production cycles
-	        for n_cycles in 1:max_cycles
-	            # add mixture density to likelihood L
-	            L += weights[n_cycles, att] * pdf(
-					Normal(mus[n_cycles, att], 
-					sigmas[n_cycles, att]
-				), rt)
-	        end
-	    end
-	    return L
-	end
+    """
+       pvt_log_like(rt::Float64; υ, τ, λ, γ, s=.45345, max_cycles=15)
+
+   Computes the log likelihood of a vector of rts for the PVT model. Note that
+   this does not handle false starts. The parameters are as follows:
+   -`υ`: utility
+   -`τ`: threshold
+   -`λ`: FPdec
+   -`γ`: conflict resolution time
+   -`rts`: the data
+   -`s`: utility noise default
+   -`max_cycles`: maximum number of component distributions,  each corresponding
+       to a latent number of production cycles. 15 is sufficient for most parameterizations.
+   """
+    pvt_log_like(rt::Float64; υ, τ, λ, γ, s = 0.45345, max_cycles = 15) =
+        pvt_log_like([rt]; υ, τ, λ, γ, s, max_cycles)
+
+    function pvt_log_like(RTs::Vector{Float64}; υ, τ, λ, γ, s = 0.45345, max_cycles = 15)
+        LL = 0.0
+        # compute parameters of Normal distribution for for production cycles up to max_cycles
+        mus, sigmas = mixture_parms(max_cycles; γ)
+        # compute weights for each mixture distribution for for production cycles up to max_cycles
+        weights = compute_mixture_weights(υ, τ, λ, s, max_cycles)
+        for rt in RTs
+            # compute marginal likelihood of rt
+            L = likelihood_trial(rt, mus, sigmas, weights, max_cycles)
+            LL += log(L)
+        end
+        return LL
+    end
+
+    function likelihood_trial(rt, mus, sigmas, weights, max_cycles)
+        L = 0.0
+        # loop over non-attend and attend states
+        for att = 1:2
+            # loop over each number of production cycles
+            for n_cycles = 1:max_cycles
+                # add mixture density to likelihood L
+                L +=
+                    weights[n_cycles, att] * pdf(
+                        Normal(mus[n_cycles, att],
+                            sigmas[n_cycles, att]
+                        ), rt)
+            end
+        end
+        return L
+    end
 end
 
 # ╔═╡ fbf46a7e-6fd4-4742-b5bb-ad8c8b090188
 let
-	# initial utility parameter
-	υ = Float64(υ₁)
-	# utility threshold parameter
-	τ = 3.5
-	# utlity decrement rate
-	λ = 0.98
-	# conflict resolution time
-	γ = 0.05
-	# utility noise
-	s = 0.45345
-	# maximum number of production cycles for mixture
-	max_cycles = 6
-	x = range(.08, .6, length=200)
-	# μ and σ parameters for normal distribution
-	mus, sigmas = mixture_parms(max_cycles; γ)
-	# mixture weights for each number of production cycles 1, .., max_cycles 
-	weights = compute_mixture_weights(υ, τ, λ, s, max_cycles)
-	# compute the density for a given value x and given mu, sigma, and weight, summing across
-	# attentive and non-attentive paths
-	density(x, mu, sigma, weight) = weight.*pdf.(Normal.(mu, sigma), x) |> sum
-	# compute densities across all values of x for a given value x and given mu, sigma, and weight, summing across
-	# attentive and non-attentive paths
-	densities(x, mu, sigma, weight) = map(x->density(x, mu, sigma, weight), x)
-	mixture_densities = map(c->densities(x, mus[c,:], sigmas[c,:], weights[c,:]), 1:max_cycles)
-	# plot mixture densities
-	plot(x, mixture_densities, grid=false, xlabel="RT (seconds)", ylabel="Density", leg=false, linewidth=1.8, ylims = (0, 15),
-	    xaxis=font(14), yaxis=font(14), title= "Mixture and Mixture Components")
-	# sum across mixtures for each x value
-	marginal_densities = sum(mixture_densities)
-	# plot marignal density
-	plot!(x, marginal_densities, color=:black, linestyle=:dot, linewidth=1.8)
+    # initial utility parameter
+    υ = Float64(υ₁)
+    # utility threshold parameter
+    τ = 3.5
+    # utlity decrement rate
+    λ = 0.98
+    # conflict resolution time
+    γ = 0.05
+    # utility noise
+    s = 0.45345
+    # maximum number of production cycles for mixture
+    max_cycles = 6
+    x = range(0.08, 0.6, length = 200)
+    # μ and σ parameters for normal distribution
+    mus, sigmas = mixture_parms(max_cycles; γ)
+    # mixture weights for each number of production cycles 1, .., max_cycles 
+    weights = compute_mixture_weights(υ, τ, λ, s, max_cycles)
+    # compute the density for a given value x and given mu, sigma, and weight, summing across
+    # attentive and non-attentive paths
+    density(x, mu, sigma, weight) = weight .* pdf.(Normal.(mu, sigma), x) |> sum
+    # compute densities across all values of x for a given value x and given mu, sigma, and weight, summing across
+    # attentive and non-attentive paths
+    densities(x, mu, sigma, weight) = map(x -> density(x, mu, sigma, weight), x)
+    mixture_densities =
+        map(c -> densities(x, mus[c, :], sigmas[c, :], weights[c, :]), 1:max_cycles)
+    # plot mixture densities
+    plot(x, mixture_densities, grid = false, xlabel = "RT (seconds)", ylabel = "Density",
+        leg = false, linewidth = 1.8, ylims = (0, 15),
+        xaxis = font(14), yaxis = font(14), title = "Mixture and Mixture Components")
+    # sum across mixtures for each x value
+    marginal_densities = sum(mixture_densities)
+    # plot marignal density
+    plot!(x, marginal_densities, color = :black, linestyle = :dot, linewidth = 1.8)
 end
 
 # ╔═╡ 9f4bbdc1-5629-44fa-b422-1d0e307262f1
@@ -508,14 +518,14 @@ function simulate_trial(υ, τ, λ, γ)
     s = 0.45345     # utility noise
     a_time = 0.085  # encoding time
     r_time = 0.06   # response time
-    ub = 10 		# time limit in seconds
-    state = 1 		# [1 = attend 2 = respond]
-    t = 0.0 		# model run time
-    n_ml = 0 		# microlapse count
+    ub = 10 # time limit in seconds
+    state = 1 # [1 = attend 2 = respond]
+    t = 0.0 # model run time
+    n_ml = 0 # microlapse count
     while (state == 1) && (t < ub) ##signal present
-        utility =  υ*λ^n_ml*[1.0,  0.0] .+ rand(Logistic(0.0, s), 2)
+        utility = υ * λ^n_ml * [1.0, 0.0] .+ rand(Logistic(0.0, s), 2)
         t += rand_time(γ)  ## duration of conflict resolution
-        max_util,max_idx = findmax(utility) ##conflict resolution
+        max_util, max_idx = findmax(utility) ##conflict resolution
         if max_util < τ ##no production exceeds threshold
             n_ml += 1 ## increase microlapse count
         elseif max_idx == 1 ## attend utility exceeds threshold
@@ -528,7 +538,7 @@ function simulate_trial(υ, τ, λ, γ)
     end
 
     while (state == 2) && (t < ub) ## encoding complete
-        utility = υ*λ^n_ml + rand(Logistic(0.0, s))
+        utility = υ * λ^n_ml + rand(Logistic(0.0, s))
         t += rand_time(γ) ## duration of conflict resolution
         if utility < τ ## no production exceeds threshold
             n_ml += 1 ## increase microlapse count
@@ -542,47 +552,46 @@ end
 
 # ╔═╡ e3d5b726-2a0b-43b6-b68c-0f8f62d4cec1
 begin
-	simulate(;υ, τ, λ, γ, n_trials) = simulate(υ, τ, λ, γ, n_trials)
-	
-	function simulate(υ, τ, λ, γ, n_trials)
-	    rts = zeros(n_trials)
-	    for trial in 1:n_trials
-	        rts[trial] = simulate_trial(υ, τ, λ, γ)
-	    end
-	    return rts
-	end
+    simulate(; υ, τ, λ, γ, n_trials) = simulate(υ, τ, λ, γ, n_trials)
+
+    function simulate(υ, τ, λ, γ, n_trials)
+        rts = zeros(n_trials)
+        for trial = 1:n_trials
+            rts[trial] = simulate_trial(υ, τ, λ, γ)
+        end
+        return rts
+    end
 end
 
 # ╔═╡ 0ccb0d60-3a0c-4302-bf05-1270e0ebbcac
 begin
-	# initial utility value
-	υ = 4.0
-	# utility decrement rate for microlapses
-	λ = 0.98
-	fixed_parms = (τ = 3.5, γ = 0.045)
-	n_trials = 100
-	rts = simulate(; υ, λ, fixed_parms..., n_trials);
+    # initial utility value
+    υ = 4.0
+    # utility decrement rate for microlapses
+    λ = 0.98
+    fixed_parms = (τ = 3.5, γ = 0.045)
+    n_trials = 100
+    rts = simulate(; υ, λ, fixed_parms..., n_trials)
 end
 
 # ╔═╡ e1197ad0-628d-4023-b3d9-5f4dea8f5f9a
 begin
-	import Distributions: logpdf, loglikelihood
-	
-	struct SimplePVT{T1,T2,T3} <: ContinuousUnivariateDistribution
-	    υ::T1
-	    λ::T2
-	    parms::T3
-	end
-	
-	loglikelihood(d::SimplePVT, data::Array{Float64,1}) = logpdf(d, data)
-	
-	SimplePVT(;υ, parms) = SimplePVT(υ, parms)
-	
-	function logpdf(d::SimplePVT, data::Array{Float64,1})
-	    LL = pvt_log_like(data; υ=d.υ,λ=d.λ, d.parms...)
-	    return LL
-	end
-	
+    import Distributions: logpdf, loglikelihood
+
+    struct SimplePVT{T1, T2, T3} <: ContinuousUnivariateDistribution
+        υ::T1
+        λ::T2
+        parms::T3
+    end
+
+    loglikelihood(d::SimplePVT, data::Array{Float64, 1}) = logpdf(d, data)
+
+    SimplePVT(; υ, parms) = SimplePVT(υ, parms)
+
+    function logpdf(d::SimplePVT, data::Array{Float64, 1})
+        LL = pvt_log_like(data; υ = d.υ, λ = d.λ, d.parms...)
+        return LL
+    end
 end
 
 # ╔═╡ 6879ea3d-b6d7-474e-8ee1-16615e8cf60c
@@ -593,21 +602,22 @@ To verify the likelihood function has been specified correctly, we will plot the
 "
 
 # ╔═╡ 78b08f04-2a50-4788-9044-2509a3f96940
-let 
-	# initial utility parameter
-	υ = 4.0
-	# utility threshold parameter
-	τ = 3.5
-	# utlity decrement rate
-	λ = 0.98
-	# conflict resolution time
-	γ = 0.045
-	sim_rts = simulate(υ, τ, λ, γ, 10_000)
-	histogram(sim_rts, norm=true, color=:grey)
-	x = range(.08, .6, length=300)
-	dens = pvt_log_like.(x; υ, τ, λ, γ) .|> exp
-	plot!(x, dens, leg=false, grid=false, xlabel="RT seconds", ylabel="Density", linewidth=1.8,
-	    xaxis=font(12), yaxis=font(12), xlims=(0,.7))
+let
+    # initial utility parameter
+    υ = 4.0
+    # utility threshold parameter
+    τ = 3.5
+    # utlity decrement rate
+    λ = 0.98
+    # conflict resolution time
+    γ = 0.045
+    sim_rts = simulate(υ, τ, λ, γ, 10_000)
+    histogram(sim_rts, norm = true, color = :grey)
+    x = range(0.08, 0.6, length = 300)
+    dens = pvt_log_like.(x; υ, τ, λ, γ) .|> exp
+    plot!(x, dens, leg = false, grid = false, xlabel = "RT seconds", ylabel = "Density",
+        linewidth = 1.8,
+        xaxis = font(12), yaxis = font(12), xlims = (0, 0.7))
 end
 
 # ╔═╡ 8c0fa6ab-b8db-46c0-88d8-256845a925c4
@@ -639,19 +649,19 @@ end
 
 # ╔═╡ 12b819c2-af80-4fe0-971c-325bc1222f49
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1000
-	n_adapt = 1000
-	specs = NUTS(n_adapt, 0.65)
-	n_chains = 4
-	chain = sample(
-		model(rts, fixed_parms), 
-		specs, 
-		MCMCThreads(), 
-		n_samples, 
-		n_chains, 
-	)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1000
+    n_adapt = 1000
+    specs = NUTS(n_adapt, 0.65)
+    n_chains = 4
+    chain = sample(
+        model(rts, fixed_parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains
+    )
+    describe(chain)
 end
 
 # ╔═╡ 2270c83e-6747-47e5-8917-89e1b2830a32
@@ -673,16 +683,19 @@ md"
 "
 
 # ╔═╡ b6eac70e-1af8-401a-8121-facee71410c0
-let 
-	font_size = 12
-	ch = group(chain, :υ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+let
+    font_size = 12
+    ch = group(chain, :υ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ 111433bb-dcfa-4d16-95a9-23a87abe5e73
@@ -691,16 +704,19 @@ md"
 "
 
 # ╔═╡ c56094c0-35ac-4df5-96fb-32d90845315b
-let 
-	font_size = 12
-	ch = group(chain, :λ)
-	p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-	  grid=false, size=(250,100), titlefont=font(font_size))
-	pcτ = plot(p1, p2, p3, layout=(3,1), size=(800,600))
+let
+    font_size = 12
+    ch = group(chain, :λ)
+    p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:traceplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:autocorplot),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+        seriestype = (:mixeddensity),
+        grid = false, size = (250, 100), titlefont = font(font_size))
+    pcτ = plot(p1, p2, p3, layout = (3, 1), size = (800, 600))
 end
 
 # ╔═╡ c1b88379-c876-4996-869e-8511c809e6ed
@@ -711,48 +727,75 @@ The plots below compare the posterior predictive distribution of the mean, stand
 "
 
 # ╔═╡ 9ecefc1a-bcd6-4842-ba01-b38742c67e81
-let 
-	font_size = 12
-	preds = posterior_predictive(x -> simulate(;x..., fixed_parms..., n_trials), chain, 1000, mean)
-preds = vcat(preds...)
-histogram(preds, norm=true, grid=false, leg=false, xlabel="Mean", ylabel="Density", 
-    xlims=(.1,.5), color=:darkgrey, title="Posterior Predictive of Mean", xaxis=font(font_size),
-    yaxis=font(font_size))
-vline!([mean(rts)], color=:darkred, linewidth=2)
+let
+    font_size = 12
+    preds = posterior_predictive(
+        x -> simulate(; x..., fixed_parms..., n_trials),
+        chain,
+        1000,
+        mean
+    )
+    preds = vcat(preds...)
+    histogram(preds, norm = true, grid = false, leg = false, xlabel = "Mean",
+        ylabel = "Density",
+        xlims = (0.1, 0.5), color = :darkgrey, title = "Posterior Predictive of Mean",
+        xaxis = font(font_size),
+        yaxis = font(font_size))
+    vline!([mean(rts)], color = :darkred, linewidth = 2)
 end
 
 # ╔═╡ 546a6abd-1332-4996-9e34-972148637a14
 let
-	font_size = 12
-	preds = posterior_predictive(x -> simulate(;x..., fixed_parms..., n_trials), chain, 1000, std)
-preds = vcat(preds...)
-histogram(preds, norm=true, grid=false, leg=false, xlabel="Standard Deviation", ylabel="Density", 
-    xlims=(0,.5), color=:darkgrey, title="Posterior Predictive of Standard Deviation", xaxis=font(font_size),
-    yaxis=font(font_size))
-vline!([std(rts)], color=:darkred, linewidth=2)
+    font_size = 12
+    preds = posterior_predictive(
+        x -> simulate(; x..., fixed_parms..., n_trials),
+        chain,
+        1000,
+        std
+    )
+    preds = vcat(preds...)
+    histogram(preds, norm = true, grid = false, leg = false, xlabel = "Standard Deviation",
+        ylabel = "Density",
+        xlims = (0, 0.5), color = :darkgrey,
+        title = "Posterior Predictive of Standard Deviation", xaxis = font(font_size),
+        yaxis = font(font_size))
+    vline!([std(rts)], color = :darkred, linewidth = 2)
 end
 
 # ╔═╡ 7f7d370f-664e-4f8b-b208-fb3c03b2a8a0
 let
-	font_size = 12
-		preds = posterior_predictive(x -> simulate(;x..., fixed_parms..., n_trials), chain, 1000, skewness)
-	preds = vcat(preds...)
-	histogram(preds, norm=true, grid=false, leg=false, xlabel="Skewness", ylabel="Density", 
-	    xlims=(0,4), color=:darkgrey, title="Posterior Predictive of Skewness", xaxis=font(font_size),
-	    yaxis=font(font_size))
-	vline!([skewness(rts)], color=:darkred, linewidth=2)
+    font_size = 12
+    preds = posterior_predictive(
+        x -> simulate(; x..., fixed_parms..., n_trials),
+        chain,
+        1000,
+        skewness
+    )
+    preds = vcat(preds...)
+    histogram(preds, norm = true, grid = false, leg = false, xlabel = "Skewness",
+        ylabel = "Density",
+        xlims = (0, 4), color = :darkgrey, title = "Posterior Predictive of Skewness",
+        xaxis = font(font_size),
+        yaxis = font(font_size))
+    vline!([skewness(rts)], color = :darkred, linewidth = 2)
 end
-	
 
 # ╔═╡ f7e71cd5-b7db-4495-91f3-9cdbddadc7fe
-let 
-	font_size = 12
-		preds = posterior_predictive(x -> simulate(;x..., fixed_parms..., n_trials), chain, 1000, x->mean(x .>.5))
-	preds = vcat(preds...)
-	histogram(preds, norm=true, grid=false, leg=false, xlabel="Proportion of Lapses", ylabel="Density", 
-	    xlims=(-.001,.1), color=:darkgrey, title="Posterior Predictive of Lapses", xaxis=font(font_size),
-	    yaxis=font(font_size), bins=20)
-	vline!([mean(rts .> .5)], color=:darkred, linewidth=2)
+let
+    font_size = 12
+    preds = posterior_predictive(
+        x -> simulate(; x..., fixed_parms..., n_trials),
+        chain,
+        1000,
+        x -> mean(x .> 0.5)
+    )
+    preds = vcat(preds...)
+    histogram(preds, norm = true, grid = false, leg = false,
+        xlabel = "Proportion of Lapses", ylabel = "Density",
+        xlims = (-0.001, 0.1), color = :darkgrey, title = "Posterior Predictive of Lapses",
+        xaxis = font(font_size),
+        yaxis = font(font_size), bins = 20)
+    vline!([mean(rts .> 0.5)], color = :darkred, linewidth = 2)
 end
 
 # ╔═╡ 719a4447-ed90-4ecb-9550-c88ca96fc277
@@ -763,7 +806,6 @@ Dinges, D. F., & Powell, J. W. (1985). Microcomputer analyses of performance on 
 
 Gunzelmann, G., Gross, J. B., Gluck, K. A., & Dinges, D. F. (2009). Sleep deprivation and sustained attention performance: Integrating mathematical and cognitive modeling. Cognitive science, 33(5), 880-910.
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

@@ -6,19 +6,18 @@ using InteractiveUtils
 
 # ╔═╡ 64f37044-7f5b-11ec-06c4-7bbf703bc91a
 begin
-	using StatsPlots, ACTRModels, Distributions, Turing, NamedArrays
-	using PlutoUI, NamedTupleTools, StatsBase
-	TableOfContents()
+    using StatsPlots, ACTRModels, Distributions, Turing, NamedArrays
+    using PlutoUI, NamedTupleTools, StatsBase
+    TableOfContents()
 end
 
 # ╔═╡ d84f7491-3bfe-47aa-88e8-5833700522f2
 begin
+    path_Markov = joinpath(pwd(), "../../../Background_Tutorials/Markov_Process.jl")
 
-path_Markov = joinpath(pwd(), "../../../Background_Tutorials/Markov_Process.jl")
+    path_notation = joinpath(pwd(), "../../../Background_Tutorials/Notation.jl")
 
-path_notation = joinpath(pwd(), "../../../Background_Tutorials/Notation.jl")
-
-nothing
+    nothing
 end
 
 # ╔═╡ b673b551-c196-4ddf-8721-ff105f411695
@@ -87,9 +86,9 @@ A convenient way to visualize a Markov process is with a directed graph in which
 
 # ╔═╡ 70cfae83-39bc-4115-9e41-afb7325673a3
 let
-	url = "https://i.imgur.com/lzsimm2.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/png"(), data)
+    url = "https://i.imgur.com/lzsimm2.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/png"(), data)
 end
 
 # ╔═╡ 6723b48b-a9fc-4fd0-bc52-c9f704d6bc00
@@ -113,9 +112,9 @@ After encoding the stimulus into chunk $\mathbf{c}_{s,\textrm{imaginal}}$, the M
 
 # ╔═╡ 2fd9d27b-a772-415a-8aaf-968642df84af
 let
-	url = "https://i.imgur.com/1ngDi58.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/png"(), data)
+    url = "https://i.imgur.com/1ngDi58.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/png"(), data)
 end
 
 # ╔═╡ 065b0e77-120d-446d-bbc3-83e34532feff
@@ -129,9 +128,9 @@ The probabilities of transiting from state to state is organized into a matrix. 
 
 # ╔═╡ 7fd6cb36-c23c-43e9-8723-ea732a2ad0aa
 let
-	url = "https://i.imgur.com/wwkoObW.png"
-	data = read(download(url))
-	PlutoUI.Show(MIME"image/png"(), data)
+    url = "https://i.imgur.com/wwkoObW.png"
+    data = read(download(url))
+    PlutoUI.Show(MIME"image/png"(), data)
 end
 
 # ╔═╡ 4deed156-3b61-4934-b079-8f66a44c942f
@@ -243,32 +242,31 @@ If the a retrieval failure occurs, `k` remains zero indicating a no response, `r
 
 # ╔═╡ 16cac118-284c-4e72-8f71-e2136817dce8
 begin
-	"""
-	Answer yes via direct verification if retrieved chunk matches
-	probe on the object slot, the attribute slot equals category and the 
-	value slot matches the value of the probe's category slot
-	"""
-	function direct_verify(chunk, probe)
-	    return match(chunk, object=probe.object,
-	        value=probe.category, attribute=:category)
-	end
-	
-	"""
-	Chain category if retrieved chunk matches
-	probe on the object slot, the attribute slot equals category and the 
-	value slot does not match the value of the probe's category slot
-	"""
-	function chain_category(chunk, probe)
-	    return match(chunk, ==, !=, ==, object=probe.object,
-	        value=probe.category, attribute=:category)
-	end
-	
-	function initial_state(blc)
-	    s0 = zeros(typeof(blc), 5)
-	    s0[1] = 1
-	    return s0
-	end
-	
+    """
+    Answer yes via direct verification if retrieved chunk matches
+    probe on the object slot, the attribute slot equals category and the 
+    value slot matches the value of the probe's category slot
+    """
+    function direct_verify(chunk, probe)
+        return match(chunk, object = probe.object,
+            value = probe.category, attribute = :category)
+    end
+
+    """
+    Chain category if retrieved chunk matches
+    probe on the object slot, the attribute slot equals category and the 
+    value slot does not match the value of the probe's category slot
+    """
+    function chain_category(chunk, probe)
+        return match(chunk, ==, !=, ==, object = probe.object,
+            value = probe.category, attribute = :category)
+    end
+
+    function initial_state(blc)
+        s0 = zeros(typeof(blc), 5)
+        s0[1] = 1
+        return s0
+    end
 end
 
 # ╔═╡ 6e165ee1-40bc-4b0e-a5e2-fe374593876e
@@ -316,9 +314,9 @@ function computeLL(fixed_parms, data; blc)
     # populate declarative memory
     chunks = populate_memory(act)
     # create declarative memory object
-    memory = Declarative(;memory=chunks)
+    memory = Declarative(; memory = chunks)
     # create act-r object
-    actr = ACTR(;declarative=memory, fixed_parms..., blc)
+    actr = ACTR(; declarative = memory, fixed_parms..., blc)
     # create initial state vector
     s0 = initial_state(blc)
     LL = 0.0
@@ -333,129 +331,130 @@ end
 
 # ╔═╡ 76ddfc13-1e2f-4de6-a9ed-941998a76809
 begin
-	import Distributions: logpdf, loglikelihood
-	
-	struct Semantic{T1,T2} <: ContinuousUnivariateDistribution
-	    blc::T1
-	    parms::T2
-	end
-	
-	loglikelihood(d::Semantic, data::Array{<:NamedTuple,1}) = logpdf(d, data)
-	
-	Semantic(;blc, parms) = Semantic(blc, parms)
+    import Distributions: logpdf, loglikelihood
 
-	function logpdf(d::Semantic, data::Array{<:NamedTuple,1})
-    	LL = computeLL(d.parms, data; blc=d.blc)
-    	return LL
-	end
+    struct Semantic{T1, T2} <: ContinuousUnivariateDistribution
+        blc::T1
+        parms::T2
+    end
+
+    loglikelihood(d::Semantic, data::Array{<:NamedTuple, 1}) = logpdf(d, data)
+
+    Semantic(; blc, parms) = Semantic(blc, parms)
+
+    function logpdf(d::Semantic, data::Array{<:NamedTuple, 1})
+        LL = computeLL(d.parms, data; blc = d.blc)
+        return LL
+    end
 end
 
 # ╔═╡ c302a661-14e9-4fd0-b163-682f3ad5ad97
 begin
-	function populate_memory(act=0.0)
-	    chunks = [
-	        Chunk(object=:shark, attribute=:dangerous, value=:True, act=act),
-	        Chunk(object=:shark, attribute=:locomotion, value=:swimming, act=act),
-	        Chunk(object=:shark, attribute=:category, value=:fish, act=act),
-	        Chunk(object=:salmon, attribute=:edible, value=:True, act=act),
-	        Chunk(object=:salmon, attribute=:locomotion, value=:swimming, act=act),
-	        Chunk(object=:salmon, attribute=:category, value=:fish, act=act),
-	        Chunk(object=:fish, attribute=:breath, value=:gills, act=act),
-	        Chunk(object=:fish, attribute=:locomotion, value=:swimming, act=act),
-	        Chunk(object=:fish, attribute=:category, value=:animal, act=act),
-	        Chunk(object=:animal, attribute=:moves, value=:True, act=act),
-	        Chunk(object=:animal, attribute=:skin, value=:True, act=act),
-	        Chunk(object=:canary, attribute=:color, value=:yellow, act=act),
-	        Chunk(object=:canary, attribute=:sings, value=:True, act=act),
-	        Chunk(object=:canary, attribute=:category, value=:bird, act=act),
-	        Chunk(object=:ostritch, attribute=:flies, value=:False, act=act),
-	        Chunk(object=:ostritch, attribute=:height, value=:tall, act=act),
-	        Chunk(object=:ostritch, attribute=:category, value=:bird, act=act),
-	        Chunk(object=:bird, attribute=:wings, value=:True, act=act),
-	        Chunk(object=:bird, attribute=:locomotion, value=:flying, act=act),
-	        Chunk(object=:bird, attribute=:category, value=:animal, act=act),
-	    ]
-	    return chunks
-	end
-	
-	function get_stimuli()
-	    stim = NamedTuple[]
-	    push!(stim, (object = :canary, category = :bird, ans = :yes))
-	    push!(stim, (object = :canary, category = :animal, ans = :yes))
-	    return vcat(stim...)
-	end
+    function populate_memory(act = 0.0)
+        chunks = [
+            Chunk(object = :shark, attribute = :dangerous, value = :True, act = act),
+            Chunk(object = :shark, attribute = :locomotion, value = :swimming, act = act),
+            Chunk(object = :shark, attribute = :category, value = :fish, act = act),
+            Chunk(object = :salmon, attribute = :edible, value = :True, act = act),
+            Chunk(object = :salmon, attribute = :locomotion, value = :swimming, act = act),
+            Chunk(object = :salmon, attribute = :category, value = :fish, act = act),
+            Chunk(object = :fish, attribute = :breath, value = :gills, act = act),
+            Chunk(object = :fish, attribute = :locomotion, value = :swimming, act = act),
+            Chunk(object = :fish, attribute = :category, value = :animal, act = act),
+            Chunk(object = :animal, attribute = :moves, value = :True, act = act),
+            Chunk(object = :animal, attribute = :skin, value = :True, act = act),
+            Chunk(object = :canary, attribute = :color, value = :yellow, act = act),
+            Chunk(object = :canary, attribute = :sings, value = :True, act = act),
+            Chunk(object = :canary, attribute = :category, value = :bird, act = act),
+            Chunk(object = :ostritch, attribute = :flies, value = :False, act = act),
+            Chunk(object = :ostritch, attribute = :height, value = :tall, act = act),
+            Chunk(object = :ostritch, attribute = :category, value = :bird, act = act),
+            Chunk(object = :bird, attribute = :wings, value = :True, act = act),
+            Chunk(object = :bird, attribute = :locomotion, value = :flying, act = act),
+            Chunk(object = :bird, attribute = :category, value = :animal, act = act)
+        ]
+        return chunks
+    end
 
-	get_object(x) = x.object
-	get_category(x) = x.category
-	get_chunk_value(x) = x.slots.value
-	
-	function hit_rate(parms, stimulus, n_reps; blc)
-	    data = simulate(parms, stimulus, n_reps; blc=blc)
-	    return data.k / data.N
-	end
+    function get_stimuli()
+        stim = NamedTuple[]
+        push!(stim, (object = :canary, category = :bird, ans = :yes))
+        push!(stim, (object = :canary, category = :animal, ans = :yes))
+        return vcat(stim...)
+    end
 
-	function probability_yes(tmat, s0, d)
-    	z = s0' * tmat^3; θ = z[4]
-	    # sometimes θ is nan because of exponentiation of activation
-    	return isnan(θ) ? (return -Inf) : logpdf(Binomial(d.N, θ), d.k)
-	end
+    get_object(x) = x.object
+    get_category(x) = x.category
+    get_chunk_value(x) = x.slots.value
 
-	nothing
+    function hit_rate(parms, stimulus, n_reps; blc)
+        data = simulate(parms, stimulus, n_reps; blc = blc)
+        return data.k / data.N
+    end
+
+    function probability_yes(tmat, s0, d)
+        z = s0' * tmat^3
+        θ = z[4]
+        # sometimes θ is nan because of exponentiation of activation
+        return isnan(θ) ? (return -Inf) : logpdf(Binomial(d.N, θ), d.k)
+    end
+
+    nothing
 end
 
 # ╔═╡ e793c67d-1466-42d8-96f3-84e4b41e47c1
 begin
-	function simulate(fixed_parms, stimulus, n_reps; blc)
-	    # populate declarative memory
-	    chunks = populate_memory()
-	    # generate declarative memory object
-	    memory = Declarative(;memory=chunks)
-	    # generate ACTR object
-	    actr = ACTR(;declarative=memory, fixed_parms..., blc)
-	    # the number of correct responses
-	    k = 0
-	    # count the number of correct answers, k
-	    for rep in 1:n_reps
-	        k += simulate_trial(actr, stimulus)
-	    end
-	    # return data that constains stimulus information, number of trials, 
-	    # and correct answers
-	    return (stimulus..., N = n_reps, k = k)
-	end
-	
-	function simulate_trial(actr, stimulus)
-	    retrieving = true
-	    # create memory probe or retrieval request
-	    probe = stimulus
-	    chunks = actr.declarative.memory
-	    # k = 1 if answer is "yes", 0 otherwise
-	    k = 0
-	    while retrieving
-	        # generate retrieval probabilities
-	        p,_ = retrieval_probs(actr; object=probe.object, attribute=:category)
-	        # sample a chunk index proportional to retrieval probabilities
-	        idx = sample(1:length(p), weights(p))
-	        # Last element corresponds to a retrieval failure
-	        # stop retrieval processes
-	        if idx == length(p)
-	            retrieving = false
-	        # retrieved chunk matches retrieval request, stop retrieving
-	        # and set k = 1 for "yes" response
-	        elseif direct_verify(chunks[idx], probe)
-	            retrieving = false
-	            k += 1
-	        # perform another retrieval with category chaining
-	        # modify the retrieval request based on the retrieved chunk
-	        elseif chain_category(chunks[idx], probe)
-	            probe = delete(probe, :object)
-	            probe = (object = chunks[idx].slots.value, probe...)
-	        # no chunks match, stop retrieving and respond "no" with k = 0
-	        else
-	            retrieving = false
-	        end
-	    end
-	    return k
-	end
+    function simulate(fixed_parms, stimulus, n_reps; blc)
+        # populate declarative memory
+        chunks = populate_memory()
+        # generate declarative memory object
+        memory = Declarative(; memory = chunks)
+        # generate ACTR object
+        actr = ACTR(; declarative = memory, fixed_parms..., blc)
+        # the number of correct responses
+        k = 0
+        # count the number of correct answers, k
+        for rep = 1:n_reps
+            k += simulate_trial(actr, stimulus)
+        end
+        # return data that constains stimulus information, number of trials, 
+        # and correct answers
+        return (stimulus..., N = n_reps, k = k)
+    end
+
+    function simulate_trial(actr, stimulus)
+        retrieving = true
+        # create memory probe or retrieval request
+        probe = stimulus
+        chunks = actr.declarative.memory
+        # k = 1 if answer is "yes", 0 otherwise
+        k = 0
+        while retrieving
+            # generate retrieval probabilities
+            p, _ = retrieval_probs(actr; object = probe.object, attribute = :category)
+            # sample a chunk index proportional to retrieval probabilities
+            idx = sample(1:length(p), weights(p))
+            # Last element corresponds to a retrieval failure
+            # stop retrieval processes
+            if idx == length(p)
+                retrieving = false
+                # retrieved chunk matches retrieval request, stop retrieving
+                # and set k = 1 for "yes" response
+            elseif direct_verify(chunks[idx], probe)
+                retrieving = false
+                k += 1
+                # perform another retrieval with category chaining
+                # modify the retrieval request based on the retrieved chunk
+            elseif chain_category(chunks[idx], probe)
+                probe = delete(probe, :object)
+                probe = (object = chunks[idx].slots.value, probe...)
+                # no chunks match, stop retrieving and respond "no" with k = 0
+            else
+                retrieving = false
+            end
+        end
+        return k
+    end
 end
 
 # ╔═╡ 8fbfcbb4-8bae-4d16-b543-80aa4cd562e3
@@ -468,65 +467,83 @@ function transition_matrix(actr, stim, blc)
     # populate transition matrix
     tmat = zeros(typeof(blc), N, N)
     # compute retrieval probabilities, p
-    p,_ = retrieval_probs(actr; object=get_object(probe), attribute=:category)
+    p, _ = retrieval_probs(actr; object = get_object(probe), attribute = :category)
     # find indices of chunks associated with direct verification, category chaining and mismatching conditions
-    direct_indices = find_indices(actr, object=get_object(probe), value=get_category(probe))
-    chain_indices = find_indices(actr, ==, !=, ==, object=get_object(probe), value=get_category(probe), attribute=:category)
+    direct_indices =
+        find_indices(actr, object = get_object(probe), value = get_category(probe))
+    chain_indices = find_indices(
+        actr,
+        ==,
+        !=,
+        ==,
+        object = get_object(probe),
+        value = get_category(probe),
+        attribute = :category
+    )
     mismatch_indices = setdiff(1:Nc, direct_indices, chain_indices)
     # use indices to compute probability of category chain, direct verification (yes), and mismatch (no)
-    tmat[1,2] = sum(p[chain_indices])
-    tmat[1,4] = sum(p[direct_indices])
-    tmat[1,5] = sum(p[mismatch_indices])
+    tmat[1, 2] = sum(p[chain_indices])
+    tmat[1, 4] = sum(p[direct_indices])
+    tmat[1, 5] = sum(p[mismatch_indices])
     # attempt to extract chunk associated with category chaining
-    chain_chunk = get_chunks(actr,==,!=,==, object = get_object(probe),
-    value = get_category(probe), attribute=:category)
+    chain_chunk = get_chunks(actr, ==, !=, ==, object = get_object(probe),
+        value = get_category(probe), attribute = :category)
     cnt = 1
     # continue the process above as long as category chaining can be performed.
     while !isempty(chain_chunk)
         cnt += 1
         probe = (object = get_chunk_value(chain_chunk[1]), delete(probe, :object)...)
-        p,_ = retrieval_probs(actr; object=get_object(probe), attribute=:category)
-        direct_indices = find_indices(actr, object=get_object(probe), value=get_category(probe))
-        chain_indices = find_indices(actr, ==, !=, ==, object=get_object(probe), value=get_category(probe), attribute=:category)
+        p, _ = retrieval_probs(actr; object = get_object(probe), attribute = :category)
+        direct_indices =
+            find_indices(actr, object = get_object(probe), value = get_category(probe))
+        chain_indices = find_indices(
+            actr,
+            ==,
+            !=,
+            ==,
+            object = get_object(probe),
+            value = get_category(probe),
+            attribute = :category
+        )
         mismatch_indices = setdiff(1:Nc, direct_indices, chain_indices)
-        tmat[cnt,2] = sum(p[chain_indices])
-        tmat[cnt,4] = sum(p[direct_indices])
-        tmat[cnt,5] = sum(p[mismatch_indices])
-        chain_chunk = get_chunks(actr,==,!=,==, object = get_object(probe),
-        value = get_category(probe), attribute=:category)
+        tmat[cnt, 2] = sum(p[chain_indices])
+        tmat[cnt, 4] = sum(p[direct_indices])
+        tmat[cnt, 5] = sum(p[mismatch_indices])
+        chain_chunk = get_chunks(actr, ==, !=, ==, object = get_object(probe),
+            value = get_category(probe), attribute = :category)
     end
     # set self-transitions to 1 if row i sums to 0.0
-    map(i -> sum(tmat[i,:]) == 0.0 ? (tmat[i,i] = 1.0) : nothing, 1:size(tmat, 2))
+    map(i -> sum(tmat[i, :]) == 0.0 ? (tmat[i, i] = 1.0) : nothing, 1:size(tmat, 2))
     return tmat
 end
 
 # ╔═╡ 8d04808c-d165-4370-86d8-193599b8e89e
 let
-	blc = 1.0
-	parms = (noise = true, τ = 0.0, s = 0.2, mmp = true, δ = 1.0)
-	stimulus = (object = :canary, category = :animal, ans = :yes)
-	# populate declarative memory
-	chunks = populate_memory()
-	# create declarative memory object
-	memory = Declarative(;memory=chunks)
-	# create act-r object
-	actr = ACTR(;declarative=memory, parms..., blc)
-	# generate transition matrix
-	tmat = transition_matrix(actr, stimulus, blc)
-	# states: initial retrieval, category chain 1, category chain 2, respond yes and 
+    blc = 1.0
+    parms = (noise = true, τ = 0.0, s = 0.2, mmp = true, δ = 1.0)
+    stimulus = (object = :canary, category = :animal, ans = :yes)
+    # populate declarative memory
+    chunks = populate_memory()
+    # create declarative memory object
+    memory = Declarative(; memory = chunks)
+    # create act-r object
+    actr = ACTR(; declarative = memory, parms..., blc)
+    # generate transition matrix
+    tmat = transition_matrix(actr, stimulus, blc)
+    # states: initial retrieval, category chain 1, category chain 2, respond yes and 
     #respond no
-	states = ["Sir", "Scc1", "Scc2", "Syes", "Sno"]
-	# name the rows and columns
-	NamedArray(tmat, (states, states), ("t","t+1")) |> x->round.(x, digits=2)
+    states = ["Sir", "Scc1", "Scc2", "Syes", "Sno"]
+    # name the rows and columns
+    NamedArray(tmat, (states, states), ("t", "t+1")) |> x -> round.(x, digits = 2)
 end
 
 # ╔═╡ 0105afe5-9ac5-466f-8faf-346a594e5097
 begin
-	blc = 1.0
-	parms = (noise = true, τ = 0.0, s = 0.2, mmp = true, δ = 1.0)
-	stimuli = get_stimuli()
-	n_reps = 10
-	data = map(x -> simulate(parms, x, n_reps; blc), stimuli)
+    blc = 1.0
+    parms = (noise = true, τ = 0.0, s = 0.2, mmp = true, δ = 1.0)
+    stimuli = get_stimuli()
+    n_reps = 10
+    data = map(x -> simulate(parms, x, n_reps; blc), stimuli)
 end
 
 # ╔═╡ a6b6b7a3-f354-492d-831f-252e50f174e0
@@ -565,19 +582,19 @@ Now that the priors, likelihood and Turing model have been specified, we can now
 
 # ╔═╡ 94d3e1d4-e488-4afa-81dd-e15c52f6b3bc
 begin
-	# Settings of the NUTS sampler.
-	n_samples = 1500
-	n_adapt = 1500
-	specs = NUTS(n_adapt, 0.65)
-	n_chains = 4
-	chain = sample(
-		model(data, parms),
-		specs,
-		MCMCThreads(), 
-		n_samples, 
-		n_chains, progress=true
-	)
-	describe(chain)
+    # Settings of the NUTS sampler.
+    n_samples = 1500
+    n_adapt = 1500
+    specs = NUTS(n_adapt, 0.65)
+    n_chains = 4
+    chain = sample(
+        model(data, parms),
+        specs,
+        MCMCThreads(),
+        n_samples,
+        n_chains, progress = true
+    )
+    describe(chain)
 end
 
 # ╔═╡ 0a647e2d-7e9b-4d5a-813b-b85664ca3946
@@ -591,18 +608,21 @@ The autocorrelation plot in the second pannel shows low autocorrelation, indicat
 
 # ╔═╡ 179bfc32-083d-423e-84d3-62296257c520
 begin
-	font_size = 12
-	
-	let
-		ch = group(chain, :blc)
-		p1 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:traceplot),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		p2 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:autocorplot),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		p3 = plot(ch, xaxis=font(font_size), yaxis=font(font_size), seriestype=(:mixeddensity),
-		  grid=false, size=(250,100), titlefont=font(font_size))
-		pcτ = plot(p1, p2, p3, layout=(3,1), size=(600,600))
-	end
+    font_size = 12
+
+    let
+        ch = group(chain, :blc)
+        p1 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:traceplot),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        p2 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:autocorplot),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        p3 = plot(ch, xaxis = font(font_size), yaxis = font(font_size),
+            seriestype = (:mixeddensity),
+            grid = false, size = (250, 100), titlefont = font(font_size))
+        pcτ = plot(p1, p2, p3, layout = (3, 1), size = (600, 600))
+    end
 end
 
 # ╔═╡ 797b975e-7d2a-4430-9226-a4ab6f8fa8fc
@@ -614,12 +634,15 @@ The plots below show the posterior predictive distributions for percent correct 
 
 # ╔═╡ 6af23751-3a98-4537-9120-ad109a9bc3ba
 let
-	font_size = 12
-hit_rates(s) = posterior_predictive(x -> hit_rate(parms, s, n_reps; x...), chain, 1000)
-preds = map(s -> hit_rates(s), stimuli)
-predictive_plot = histogram(preds, xlabel="% Correct" ,ylabel="Probability", xaxis=font(font_size), yaxis=font(font_size),
-    grid=false, color=:grey, leg=false, titlefont=font(font_size), xlims=(0,1.1),
-    layout=(2,1), ylims=(0,0.4), normalize=:probability, size=(600,600), title=["Is a canary a bird?" "Is a canary an animal?"])
+    font_size = 12
+    hit_rates(s) = posterior_predictive(x -> hit_rate(parms, s, n_reps; x...), chain, 1000)
+    preds = map(s -> hit_rates(s), stimuli)
+    predictive_plot = histogram(preds, xlabel = "% Correct", ylabel = "Probability",
+        xaxis = font(font_size), yaxis = font(font_size),
+        grid = false, color = :grey, leg = false, titlefont = font(font_size),
+        xlims = (0, 1.1),
+        layout = (2, 1), ylims = (0, 0.4), normalize = :probability, size = (600, 600),
+        title = ["Is a canary a bird?" "Is a canary an animal?"])
 end
 
 # ╔═╡ 27e20173-e088-4c9b-8f65-6cfb98336419
@@ -628,7 +651,6 @@ md"
 
 Weaver, R. (2008). Parameters, predictions, and evidence in computational modeling: A statistical view informed by ACT–R. Cognitive Science, 32(8), 1349-1375.
 "
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

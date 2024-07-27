@@ -7,7 +7,14 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(
+                Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
+                "AbstractPlutoDingetjes"
+            )].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,29 +23,29 @@ end
 
 # ╔═╡ c40c7ada-454a-4fa3-a71a-4d85e92fec03
 begin
-	using ACTRModels
-	using Distributions, Plots, Random, PlutoUI
-	using CommonMark, HypertextLiteral, Optim
-	# seed random number generator
-	Random.seed!(2050)
-	TableOfContents()
+    using ACTRModels
+    using Distributions, Plots, Random, PlutoUI
+    using CommonMark, HypertextLiteral, Optim
+    # seed random number generator
+    Random.seed!(2050)
+    TableOfContents()
 end
 
 # ╔═╡ 54f6975f-c30b-4e1a-aba6-4e77b6a36ce6
 begin
-	hint(text) = Markdown.MD(Markdown.Admonition("hint", "Hint", [text]))
-	
-	details(x; summary="Show more") = @htl("""
-		<details>
-			<summary>$(summary)</summary>
-			$(x)
-		</details>
-		""")
-	nothing
+    hint(text) = Markdown.MD(Markdown.Admonition("hint", "Hint", [text]))
+
+    details(x; summary = "Show more") = @htl("""
+       <details>
+       	<summary>$(summary)</summary>
+       	$(x)
+       </details>
+       """)
+    nothing
 end
 
 # ╔═╡ 1055d000-35bf-11ec-2497-55c5e64198c4
- Markdown.parse("
+Markdown.parse("
 # Introduction
 
 In this introductory tutorial, we will demonstrate how to use various methods to express ACT-R models in analytic form. Analytic models are similar to computational or simulation based models in that they formally describe the mapping between stimulus inputs and behavioral outputs through a function that describes internal cognitive processes. However, analytic and computational models differ along several dimensions, including mathematical formulation, speed and ease of development, model run-time, mathematical tractability and the array of tools and techniques available for each approach. Each of these points of difference will be discussed in more detail in subsequent sections.  
@@ -100,37 +107,37 @@ In the cell below, the a simulation of 10 coin flips is repeated 1,000 times and
 
 # ╔═╡ 61c395db-5b3d-4ab1-a827-e5307fce3eec
 begin
-	# the number of simulations
-	n_sim = 1_000
-	# true probability of heads
-	θ = 0.5
-	# number of trials per simulation
-	n = 10
-	# initialize counts (0-10 heads) at zero
-	sim_data = fill(0, n+1)
-	# execute the simulation n_sim times
-	map(_ -> simulate!(θ, n, sim_data), 1:n_sim)
-	nothing
+    # the number of simulations
+    n_sim = 1_000
+    # true probability of heads
+    θ = 0.5
+    # number of trials per simulation
+    n = 10
+    # initialize counts (0-10 heads) at zero
+    sim_data = fill(0, n + 1)
+    # execute the simulation n_sim times
+    map(_ -> simulate!(θ, n, sim_data), 1:n_sim)
+    nothing
 end
 
 # ╔═╡ 5080f6fd-fab5-4515-b186-52a517e34365
 begin
-	sim_probs =  sim_data/n_sim
-data = fill(0, n + 1)
-bar(
-	0:n, 
-	sim_probs, 
-	xticks=0:n, 
-	grid=false, 
-	color=:grey, 
-	alpha=.7, 
-	xlabel="H=h heads", 
-	ylabel="Probability",
-    xaxis=font(12),
-	yaxis=font(12),
-	leg = false,
-	ylims = (0,.3)
-)
+    sim_probs = sim_data / n_sim
+    data = fill(0, n + 1)
+    bar(
+        0:n,
+        sim_probs,
+        xticks = 0:n,
+        grid = false,
+        color = :grey,
+        alpha = 0.7,
+        xlabel = "H=h heads",
+        ylabel = "Probability",
+        xaxis = font(12),
+        yaxis = font(12),
+        leg = false,
+        ylims = (0, 0.3)
+    )
 end
 
 # ╔═╡ e3da61f9-0640-4b43-bceb-867459218c2f
@@ -161,21 +168,28 @@ As a frame of reference, we will plot the second simulation against the true pro
 
 # ╔═╡ 3d52f0b9-5098-4e2f-a858-e4a916c22b61
 begin
-	bar(
-		0:n, 
-		sim_probs, 
-		xticks = 0:n, 
-		color = :grey, 
-		alpha = 0.7, 
-		grid = false, 
-		label = "Simulation", 
-		xlabel = "H=h heads", 
-		ylabel = "Probability",
-	    xaxis = font(12), 
-		yaxis = font(12)
-	)
-	prob_mass = map(h -> pdf(Binomial(n, θ), h), 0:n)
-	bar!(0:n, prob_mass, xticks=0:n, color=:darkred, alpha=0.7, label="Probability Mass")
+    bar(
+        0:n,
+        sim_probs,
+        xticks = 0:n,
+        color = :grey,
+        alpha = 0.7,
+        grid = false,
+        label = "Simulation",
+        xlabel = "H=h heads",
+        ylabel = "Probability",
+        xaxis = font(12),
+        yaxis = font(12)
+    )
+    prob_mass = map(h -> pdf(Binomial(n, θ), h), 0:n)
+    bar!(
+        0:n,
+        prob_mass,
+        xticks = 0:n,
+        color = :darkred,
+        alpha = 0.7,
+        label = "Probability Mass"
+    )
 end
 
 # ╔═╡ 4d34e7a0-a9bd-4ddd-80df-cca58091c1ad
@@ -222,63 +236,77 @@ As an example, suppose that you are building a model of recognition memory. A ty
 "
 
 # ╔═╡ 5927a78e-6234-4b51-a1ce-9df2ca57e862
-let	
-	Random.seed!(87545)
-	# create chunks of declarative knowledge
-	chunks = [
-	    Chunk(;name=:Bob, department=:accounting),
-	    Chunk(;name=:Alice, department=:HR)
-	    ]
-	
-	# initialize declarative memory
-	declarative = Declarative(memory=chunks)
-	
-	# specify model parameters: partial matching, noise, mismatch penalty, activation noise
-	Θ = (mmp=true, noise=true, δ=.5, s=.2)  
-	
-	# create an ACT-R object with activation noise and partial matching
-	actr = ACTR(;declarative, Θ...)
-	
-	# compute activation for each chunk
-	compute_activation!(actr; department=:accounting)
-	# get mean activation
-	μ = get_mean_activations(actr)
-	# standard deviation 
-	σ = Θ.s * pi / sqrt(3)
-	# lognormal race distribution object
-	dist = LNR(;μ=-μ, σ, ϕ=0.0)
-	
-	
-	# index for accounting
-	idx = find_index(actr; department=:accounting)
-	# generate retrieval times
-	rts = rand(dist, 10^5)
-	# extract rts for accounting
-	acc_rts = filter(x->x[1] == idx, rts) .|> x-> x[2]
-	# probability of retrieving accounting
-	p_acc = length(acc_rts)/length(rts)
-	
-	font_size = 12
-	plots = plot(color=:grey, grid=false, legend=true,
-	    bins = 100, xlabel="Mean Reaction Time", ylabel="", xlims=(.5,2), 
-	    layout=(2,1), linewidth=2, xaxis=font(font_size), yaxis=font(font_size), legendfontsize=10)
-	plot!(subplot=1, title="Old")
-	means = [mean(acc_rts), mean(acc_rts)+.1]
-	vline!([means[1]], color=:darkred, label="model", linewidth=2)
-	vline!([means[2]], color=:black, label="data", linewidth=2)
-	plot!(means, [2,2], linestyle=:dash, color=:grey, subplot=1, label="Difference", linewidth=2)
-	
-	# index for HR
-	idx = find_index(actr; department=:HR)
-	# extract rts for accounting
-	hr_rts = filter(x->x[1] == idx, rts) .|> x-> x[2]
-	plot!(subplot=2, title="New")
-	means = [mean(hr_rts), mean(hr_rts)+.1]
-	vline!([means[1]], color=:darkred, label="model", subplot=2, linewidth=2)
-	vline!([means[2]], color=:black, label="data", subplot=2, linewidth=2)
-	plot!(means, [2,2], linestyle=:dash, color=:grey, subplot=2, label="Difference", linewidth=2)
-	
-	
+let
+    Random.seed!(87545)
+    # create chunks of declarative knowledge
+    chunks = [
+        Chunk(; name = :Bob, department = :accounting),
+        Chunk(; name = :Alice, department = :HR)
+    ]
+
+    # initialize declarative memory
+    declarative = Declarative(memory = chunks)
+
+    # specify model parameters: partial matching, noise, mismatch penalty, activation noise
+    Θ = (mmp = true, noise = true, δ = 0.5, s = 0.2)
+
+    # create an ACT-R object with activation noise and partial matching
+    actr = ACTR(; declarative, Θ...)
+
+    # compute activation for each chunk
+    compute_activation!(actr; department = :accounting)
+    # get mean activation
+    μ = get_mean_activations(actr)
+    # standard deviation 
+    σ = Θ.s * pi / sqrt(3)
+    # lognormal race distribution object
+    dist = LNR(; μ = -μ, σ, ϕ = 0.0)
+
+    # index for accounting
+    idx = find_index(actr; department = :accounting)
+    # generate retrieval times
+    rts = rand(dist, 10^5)
+    # extract rts for accounting
+    acc_rts = filter(x -> x[1] == idx, rts) .|> x -> x[2]
+    # probability of retrieving accounting
+    p_acc = length(acc_rts) / length(rts)
+
+    font_size = 12
+    plots = plot(color = :grey, grid = false, legend = true,
+        bins = 100, xlabel = "Mean Reaction Time", ylabel = "", xlims = (0.5, 2),
+        layout = (2, 1), linewidth = 2, xaxis = font(font_size),
+        yaxis = font(font_size), legendfontsize = 10)
+    plot!(subplot = 1, title = "Old")
+    means = [mean(acc_rts), mean(acc_rts) + 0.1]
+    vline!([means[1]], color = :darkred, label = "model", linewidth = 2)
+    vline!([means[2]], color = :black, label = "data", linewidth = 2)
+    plot!(
+        means,
+        [2, 2],
+        linestyle = :dash,
+        color = :grey,
+        subplot = 1,
+        label = "Difference",
+        linewidth = 2
+    )
+
+    # index for HR
+    idx = find_index(actr; department = :HR)
+    # extract rts for accounting
+    hr_rts = filter(x -> x[1] == idx, rts) .|> x -> x[2]
+    plot!(subplot = 2, title = "New")
+    means = [mean(hr_rts), mean(hr_rts) + 0.1]
+    vline!([means[1]], color = :darkred, label = "model", subplot = 2, linewidth = 2)
+    vline!([means[2]], color = :black, label = "data", subplot = 2, linewidth = 2)
+    plot!(
+        means,
+        [2, 2],
+        linestyle = :dash,
+        color = :grey,
+        subplot = 2,
+        label = "Difference",
+        linewidth = 2
+    )
 end
 
 # ╔═╡ 742b2209-5991-48f6-813a-3d2908496291
@@ -308,102 +336,108 @@ What we need is a method that takes into account the shape of the distribution a
 "
 
 # ╔═╡ a3b54d77-450e-4c10-885a-dcc4ba193063
-blc = @bind blc Slider(-1:.1:2, default=0, show_value=true)
+blc = @bind blc Slider(-1:0.1:2, default = 0, show_value = true)
 
 # ╔═╡ d389e329-99b9-413e-8263-ca77ec582e6d
 let
-	
-	font_size = 14
-	# create chunks of declarative knowledge
-	chunks = [
-	    Chunk(;name=:Bob, department=:accounting),
-	    Chunk(;name=:Alice, department=:HR)
-	    ]
-	
-	# initialize declarative memory
-	declarative = Declarative(memory=chunks)
-	
-	# specify model parameters: partial matching, noise, mismatch penalty, activation noise
-	Θ = (;blc, mmp=true, noise=true, δ=.5, s=.2)  
-	
-	# create an ACT-R object with activation noise and partial matching
-	actr = ACTR(;declarative, Θ...)
-	
-	# compute activation for each chunk
-	compute_activation!(actr; department=:accounting)
-	# get mean activation
-	μ = get_mean_activations(actr)
-	# standard deviation 
-	σ = Θ.s * pi / sqrt(3)
-	# lognormal race distribution object
-	dist = LNR(;μ=-μ, σ, ϕ=0.0)
-	
-	
-	# index for accounting
-	idx = find_index(actr; department=:accounting)
-	# generate retrieval times
-	rts = rand(dist, 10^5)
-	# extract rts for accounting
-	acc_rts = filter(x->x[1] == idx, rts) .|> x-> x[2]
-	# probability of retrieving accounting
-	p_acc = length(acc_rts)/length(rts)
-	# histogram of retrieval times
-	hist = plot(layout=(2,1))
-	histogram!(
-		hist, 
-		acc_rts, 
-		xlims = (0,3),
-		ylims = (0,5),
-		color=:grey, 
-		leg=false, 
-		grid=false,
-	    bins = 100, 
-		norm=true, 
-		xlabel="Reaction Time", 
-		ylabel="Density",
-	    title="Old", 
-		linewidth=1.5, 
-		xaxis=font(font_size), 
-		yaxis=font(font_size), 
-		legendfontsize=10
-	)
-	# weight histogram according to retrieval probability
-	hist[1][1][:y] *= p_acc
-	# collection of retrieval time values
-	x = 0:.01:2.5
-	# density for each x value
-	dens = pdf.(dist, idx, x)
-	# overlay PDF on histogram
-	plot!(hist, x, dens, color=:darkorange, linewidth=2.5, xlims=(0,2.5))
-	
-	# index for accounting
-	idx = find_index(actr; department=:HR)
-	# extract rts for HR
-	hr_rts = filter(x->x[1] == idx, rts) .|> x-> x[2]
-	
-	histogram!(
-		hist, 
-		hr_rts, 
-		color=:grey, 
-		leg=false, 
-		grid=false,
-	    bins = 100, 
-		norm=true, 
-		xlabel="Reaction Time", 
-		ylabel="Density", 
-		subplot=2,
-	    title="New", 
-		linewidth=1.5, 
-		xaxis=font(font_size), 
-		yaxis=font(font_size), 
-		legendfontsize=10
-	)
-	# weight histogram according to retrieval probability
-	hist[2][1][:y] *= (1 - p_acc)
-	# density for each x value
-	dens = pdf.(dist, idx, x)
-	# overlay PDF on histogram
-	plot!(hist, x, dens, color=:darkorange, linewidth=2.5, xlims=(0,2.5), subplot=2)
+    font_size = 14
+    # create chunks of declarative knowledge
+    chunks = [
+        Chunk(; name = :Bob, department = :accounting),
+        Chunk(; name = :Alice, department = :HR)
+    ]
+
+    # initialize declarative memory
+    declarative = Declarative(memory = chunks)
+
+    # specify model parameters: partial matching, noise, mismatch penalty, activation noise
+    Θ = (; blc, mmp = true, noise = true, δ = 0.5, s = 0.2)
+
+    # create an ACT-R object with activation noise and partial matching
+    actr = ACTR(; declarative, Θ...)
+
+    # compute activation for each chunk
+    compute_activation!(actr; department = :accounting)
+    # get mean activation
+    μ = get_mean_activations(actr)
+    # standard deviation 
+    σ = Θ.s * pi / sqrt(3)
+    # lognormal race distribution object
+    dist = LNR(; μ = -μ, σ, ϕ = 0.0)
+
+    # index for accounting
+    idx = find_index(actr; department = :accounting)
+    # generate retrieval times
+    rts = rand(dist, 10^5)
+    # extract rts for accounting
+    acc_rts = filter(x -> x[1] == idx, rts) .|> x -> x[2]
+    # probability of retrieving accounting
+    p_acc = length(acc_rts) / length(rts)
+    # histogram of retrieval times
+    hist = plot(layout = (2, 1))
+    histogram!(
+        hist,
+        acc_rts,
+        xlims = (0, 3),
+        ylims = (0, 5),
+        color = :grey,
+        leg = false,
+        grid = false,
+        bins = 100,
+        norm = true,
+        xlabel = "Reaction Time",
+        ylabel = "Density",
+        title = "Old",
+        linewidth = 1.5,
+        xaxis = font(font_size),
+        yaxis = font(font_size),
+        legendfontsize = 10
+    )
+    # weight histogram according to retrieval probability
+    hist[1][1][:y] *= p_acc
+    # collection of retrieval time values
+    x = 0:0.01:2.5
+    # density for each x value
+    dens = pdf.(dist, idx, x)
+    # overlay PDF on histogram
+    plot!(hist, x, dens, color = :darkorange, linewidth = 2.5, xlims = (0, 2.5))
+
+    # index for accounting
+    idx = find_index(actr; department = :HR)
+    # extract rts for HR
+    hr_rts = filter(x -> x[1] == idx, rts) .|> x -> x[2]
+
+    histogram!(
+        hist,
+        hr_rts,
+        color = :grey,
+        leg = false,
+        grid = false,
+        bins = 100,
+        norm = true,
+        xlabel = "Reaction Time",
+        ylabel = "Density",
+        subplot = 2,
+        title = "New",
+        linewidth = 1.5,
+        xaxis = font(font_size),
+        yaxis = font(font_size),
+        legendfontsize = 10
+    )
+    # weight histogram according to retrieval probability
+    hist[2][1][:y] *= (1 - p_acc)
+    # density for each x value
+    dens = pdf.(dist, idx, x)
+    # overlay PDF on histogram
+    plot!(
+        hist,
+        x,
+        dens,
+        color = :darkorange,
+        linewidth = 2.5,
+        xlims = (0, 2.5),
+        subplot = 2
+    )
 end
 
 # ╔═╡ fa7a8997-0d57-43c6-93c7-54a8fede4692
@@ -421,127 +455,124 @@ Using the sliders below, you can adjust the base level constant `blc1` and activ
 "
 
 # ╔═╡ 94a21c75-f0c2-42e8-92e8-fd112adf3a00
-blc1 = @bind blc1 Slider(0:.05:2, default=.4, show_value=true)
+blc1 = @bind blc1 Slider(0:0.05:2, default = 0.4, show_value = true)
 
 # ╔═╡ 697be78b-11cb-48d1-a846-dc690dfab5d7
-s1 = @bind s1 Slider(0:.01:.3, default=.15, show_value=true)
+s1 = @bind s1 Slider(0:0.01:0.3, default = 0.15, show_value = true)
 
 # ╔═╡ a8bc022d-00f3-45ab-ac19-05d29731e93a
 begin
-	# create chunks of declarative knowledge
-	chunks = [
-	    Chunk(;name=:Bob, department=:accounting),
-	    Chunk(;name=:Alice, department=:HR)
-	    ]
-	
-	# initialize declarative memory
-	declarative = Declarative(memory=chunks)
-	
-	# specify model parameters: partial matching, noise, mismatch penalty, activation noise
-	Θ = (blc=blc1, mmp=true, noise=true, δ=.3, s=s1)  
-	
-	# create an ACT-R object with activation noise and partial matching
-	actr = ACTR(;declarative, Θ...)
-	
-	# compute activation for each chunk
-	compute_activation!(actr; department=:accounting)
-	# get mean activation
-	μ = get_mean_activations(actr)
-	# standard deviation 
-	σ = Θ.s * pi / sqrt(3)
-	# lognormal race distribution object
-	dist = LNR(;μ=-μ, σ, ϕ=0.0)
-	
-	
-	# index for accounting
-	idx = find_index(actr; department=:accounting)
-	# generate retrieval times
-	rts = rand(dist, 10^5)
-	# extract rts for accounting
-	acc_rts = filter(x->x[1] == idx, rts) .|> x-> x[2]
-	# probability of retrieving accounting
-	p_acc = length(acc_rts) / length(rts)
-	# histogram of retrieval times
-	hist = plot(layout=(2,1))
-	x = 0:.01:3
-	# density for each x value
-	dens = pdf.(dist, idx, x)
-	# overlay PDF on histogram
-	font_size = 12
-	
-	plot!(
-		hist, 
-		x, 
-		dens, 
-		color=:darkorange, 
-		linewidth = 2, 
-		xlims = (0,1.5), 
-		leg = false,
-	    title = "Old", 
-		grid = false, 
-		ylims = (0,5), 
-		xlabel="RT (seconds)", 
-		ylabel="Density", 
-		xaxis=font(font_size), 
-		yaxis=font(font_size), 
-		legendfontsize=10
-	)
-	
-	# index for accounting
-	idx = find_index(actr; department=:HR)
-	# generate retrieval times
-	# extract rts for accounting
-	hr_rts = filter(x->x[1] == idx, rts) .|> x-> x[2]
-	# density for each x value
-	dens = pdf.(dist, idx, x)
-	# overlay PDF on histogram
-	plot!(
-		hist, 
-		x, 
-		dens, 
-		color=:darkorange, 
-		linewidth=2, 
-		subplot=2,
-	    grid=false, 
-		leg=false, 
-		xlabel="RT (seconds)", 
-		ylabel="Density",
-	    title="New", 
-		xaxis=font(font_size), 
-		yaxis=font(font_size), 
-		legendfontsize=10
-	)
-	
-	# add density lines to correct distribution
-	x_line1 = [.3,.6,.4,.7]
-	density_max1 = pdf.(dist, 1, x_line1)
-	density_min1 = fill(0.0, length(x_line1))
-	# log likelihood correct
-	LLo = logpdf.(dist, 1, x_line1) |> sum
+    # create chunks of declarative knowledge
+    chunks = [
+        Chunk(; name = :Bob, department = :accounting),
+        Chunk(; name = :Alice, department = :HR)
+    ]
 
-	plot!(
-		[x_line1';x_line1'],
-		[density_min1';density_max1'], 
-		color=:black, 
-		subplot=1,
-	    linestyle=:dash
-	)
-	
-	
-	# add density lines to incorrect distribution
-	x_line2 = [.4]
-	density_max2 = pdf.(dist, 2, x_line2)
-	density_min2 = fill(0.0, length(x_line2))
-	# log likelihood incorrect
-	LLn = logpdf.(dist, 1, x_line2) |> sum
-	plot!(
-		[x_line2'; x_line2'], 
-		[density_min2';density_max2'], 
-		color=:black,
-		subplot=2,
-	    linestyle=:dash
-	)
+    # initialize declarative memory
+    declarative = Declarative(memory = chunks)
 
+    # specify model parameters: partial matching, noise, mismatch penalty, activation noise
+    Θ = (blc = blc1, mmp = true, noise = true, δ = 0.3, s = s1)
+
+    # create an ACT-R object with activation noise and partial matching
+    actr = ACTR(; declarative, Θ...)
+
+    # compute activation for each chunk
+    compute_activation!(actr; department = :accounting)
+    # get mean activation
+    μ = get_mean_activations(actr)
+    # standard deviation 
+    σ = Θ.s * pi / sqrt(3)
+    # lognormal race distribution object
+    dist = LNR(; μ = -μ, σ, ϕ = 0.0)
+
+    # index for accounting
+    idx = find_index(actr; department = :accounting)
+    # generate retrieval times
+    rts = rand(dist, 10^5)
+    # extract rts for accounting
+    acc_rts = filter(x -> x[1] == idx, rts) .|> x -> x[2]
+    # probability of retrieving accounting
+    p_acc = length(acc_rts) / length(rts)
+    # histogram of retrieval times
+    hist = plot(layout = (2, 1))
+    x = 0:0.01:3
+    # density for each x value
+    dens = pdf.(dist, idx, x)
+    # overlay PDF on histogram
+    font_size = 12
+
+    plot!(
+        hist,
+        x,
+        dens,
+        color = :darkorange,
+        linewidth = 2,
+        xlims = (0, 1.5),
+        leg = false,
+        title = "Old",
+        grid = false,
+        ylims = (0, 5),
+        xlabel = "RT (seconds)",
+        ylabel = "Density",
+        xaxis = font(font_size),
+        yaxis = font(font_size),
+        legendfontsize = 10
+    )
+
+    # index for accounting
+    idx = find_index(actr; department = :HR)
+    # generate retrieval times
+    # extract rts for accounting
+    hr_rts = filter(x -> x[1] == idx, rts) .|> x -> x[2]
+    # density for each x value
+    dens = pdf.(dist, idx, x)
+    # overlay PDF on histogram
+    plot!(
+        hist,
+        x,
+        dens,
+        color = :darkorange,
+        linewidth = 2,
+        subplot = 2,
+        grid = false,
+        leg = false,
+        xlabel = "RT (seconds)",
+        ylabel = "Density",
+        title = "New",
+        xaxis = font(font_size),
+        yaxis = font(font_size),
+        legendfontsize = 10
+    )
+
+    # add density lines to correct distribution
+    x_line1 = [0.3, 0.6, 0.4, 0.7]
+    density_max1 = pdf.(dist, 1, x_line1)
+    density_min1 = fill(0.0, length(x_line1))
+    # log likelihood correct
+    LLo = logpdf.(dist, 1, x_line1) |> sum
+
+    plot!(
+        [x_line1'; x_line1'],
+        [density_min1'; density_max1'],
+        color = :black,
+        subplot = 1,
+        linestyle = :dash
+    )
+
+    # add density lines to incorrect distribution
+    x_line2 = [0.4]
+    density_max2 = pdf.(dist, 2, x_line2)
+    density_min2 = fill(0.0, length(x_line2))
+    # log likelihood incorrect
+    LLn = logpdf.(dist, 1, x_line2) |> sum
+    plot!(
+        [x_line2'; x_line2'],
+        [density_min2'; density_max2'],
+        color = :black,
+        subplot = 2,
+        linestyle = :dash
+    )
 end
 
 # ╔═╡ 9d683975-24b5-4078-9982-95bd82ed5526
@@ -563,7 +594,7 @@ Can you find the parameters that maximize LL?
 "
 
 # ╔═╡ 55a1fceb-d4ca-40ea-ac61-bf250d079b9d
-	hint(md"Try setting `blc1` near .70 and then adjust `s1`")
+hint(md"Try setting `blc1` near .70 and then adjust `s1`")
 
 # ╔═╡ 00845607-4291-492a-a29d-9994bee25b78
 md"
@@ -573,40 +604,40 @@ Additional detail on finding the maximum can be found below:
 
 # ╔═╡ 5b9e6c29-9c4d-409b-9332-d963560f687d
 let
-	text = md"""
+    text = md"""
 
-For those who are curious, the code for finding the parameters that maximize LL is given below. 
-```julia
-begin
-using Optim
+   For those who are curious, the code for finding the parameters that maximize LL is given below. 
+   ```julia
+   begin
+   using Optim
 
-function f(x)
-		Θ = (blc=x[1], mmp=true, noise=true, δ=.3, s=x[2])  
-		# create an ACT-R object with activation noise and partial matching
-		actr = ACTR(;declarative, Θ...)
-		# compute activation for each chunk
-		compute_activation!(actr; department=:accounting)
-		# get mean activation
-		μ = get_mean_activations(actr)
-		# standard deviation 
-		σ = Θ.s * pi / sqrt(3)
-		# lognormal race distribution object
-		dist = LNR(;μ=-μ, σ, ϕ=0.0)
-		x_line1 = [.3,.6,.4,.7]
-		# log likelihood correct
-		LLc = logpdf.(dist, 1, x_line1) |> sum
-		x_line2 = [.4]
-		# log likelihood incorrect
-		LLi = logpdf.(dist, 1, x_line2) |> sum
-		return -(LLc + LLi)
-end
+   function f(x)
+   		Θ = (blc=x[1], mmp=true, noise=true, δ=.3, s=x[2])  
+   		# create an ACT-R object with activation noise and partial matching
+   		actr = ACTR(;declarative, Θ...)
+   		# compute activation for each chunk
+   		compute_activation!(actr; department=:accounting)
+   		# get mean activation
+   		μ = get_mean_activations(actr)
+   		# standard deviation 
+   		σ = Θ.s * pi / sqrt(3)
+   		# lognormal race distribution object
+   		dist = LNR(;μ=-μ, σ, ϕ=0.0)
+   		x_line1 = [.3,.6,.4,.7]
+   		# log likelihood correct
+   		LLc = logpdf.(dist, 1, x_line1) |> sum
+   		x_line2 = [.4]
+   		# log likelihood incorrect
+   		LLi = logpdf.(dist, 1, x_line2) |> sum
+   		return -(LLc + LLi)
+   end
 
-results = optimize(f, [.6,.2], NelderMead())
-Optim.minimizer(results)
-end
-```
-	"""
-	details(text)
+   results = optimize(f, [.6,.2], NelderMead())
+   Optim.minimizer(results)
+   end
+   ```
+   	"""
+    details(text)
 end
 
 # ╔═╡ 18875fed-49cf-42a1-bba0-f33d6dd91a91
@@ -627,41 +658,41 @@ The interactive plot below shows the relationship between the prior distribution
 "
 
 # ╔═╡ 2e64eb26-8b5e-4eba-a891-668da418c817
-θp = @bind θp Slider(.01:.01:.99, default=.5, show_value = true)
+θp = @bind θp Slider(0.01:0.01:0.99, default = 0.5, show_value = true)
 
 # ╔═╡ 5ee3af0c-fe5b-45fa-8f2a-483f6d9c0c32
-np = @bind np Slider(1:100, default=2, show_value = true)
+np = @bind np Slider(1:100, default = 2, show_value = true)
 
 # ╔═╡ 7647aecd-745d-4e29-a7e9-7af9a74f86f5
 let
-	n = 20
-	h = 10
-	θ = .5
-	α = θp * np
-	β = (1 - θp) * np
-	θs = range(0, 1, length=150)
-	y_prior = pdf.(Beta.(α, β), θs)
-	
-	plot(
-		θs, 
-		y_prior, 
-		grid = false, 
-		xlabel = "θ", 
-		ylabel = "density", 
-		linewidth = 2.5,
-		xlims = (0, 1),
-		ylims = (0,10),
-		label = "prior",
-		title = "Prior vs. Posterior Distribution of θ"
-	)
+    n = 20
+    h = 10
+    θ = 0.5
+    α = θp * np
+    β = (1 - θp) * np
+    θs = range(0, 1, length = 150)
+    y_prior = pdf.(Beta.(α, β), θs)
 
-	y_posterior = pdf.(Beta.(α + h, β + n - h), θs)
-	plot!(
-		θs, 
-		y_posterior, 
-		linewidth = 2.5,
-		label = "posterior"
-	)
+    plot(
+        θs,
+        y_prior,
+        grid = false,
+        xlabel = "θ",
+        ylabel = "density",
+        linewidth = 2.5,
+        xlims = (0, 1),
+        ylims = (0, 10),
+        label = "prior",
+        title = "Prior vs. Posterior Distribution of θ"
+    )
+
+    y_posterior = pdf.(Beta.(α + h, β + n - h), θs)
+    plot!(
+        θs,
+        y_posterior,
+        linewidth = 2.5,
+        label = "posterior"
+    )
 end
 
 # ╔═╡ ad5e7c5f-7b3b-41b4-b7c7-3c85931718f1
@@ -671,48 +702,48 @@ Another important feature of Bayesian parameter estimation is the ability to inc
 
 # ╔═╡ 8e30281e-6535-49f2-b48b-b4e0dce50df1
 let
-	n = 20
-	θ = .5
-	α = θp * np
-	β = (1 - θp) * np
-	n_sim = 10000
-	h_vals = 0:20
-	pmf_1 = pdf.(Binomial(n, θ), h_vals)
-	h1 = bar(
-		h_vals,
-		pmf_1, 
-		xlims = (0, 20),
-		ylims = (0, .3),
-		norm = true, 
-		grid = false,
-		leg = false,
-		title = "sampling distribution",
-		xlabel = "H = h",
-		ylabel = "density",
-	)
+    n = 20
+    θ = 0.5
+    α = θp * np
+    β = (1 - θp) * np
+    n_sim = 10000
+    h_vals = 0:20
+    pmf_1 = pdf.(Binomial(n, θ), h_vals)
+    h1 = bar(
+        h_vals,
+        pmf_1,
+        xlims = (0, 20),
+        ylims = (0, 0.3),
+        norm = true,
+        grid = false,
+        leg = false,
+        title = "sampling distribution",
+        xlabel = "H = h",
+        ylabel = "density"
+    )
 
-	sd_sd = std(Binomial(n, θ))
-	annotate!(h1, 16, .25, text("sd = $(round(sd_sd, digits=2))", :black, 12))
+    sd_sd = std(Binomial(n, θ))
+    annotate!(h1, 16, 0.25, text("sd = $(round(sd_sd, digits=2))", :black, 12))
 
-	pmf_2 = pdf.(BetaBinomial(n, α + θ * n, β + (1 - θ) * n), h_vals)
-	
-	h2 = bar(
-		h_vals,
-		pmf_2,
-		xlims = (0, 20),
-		ylims = (0, .3),
-		norm = true, 
-		grid = false,
-		leg = false,
-		title = "posterior predictive distribution",
-		xlabel = "H = h",
-		ylabel = "density",
-	)
-	
-	sd_pd = std(BetaBinomial(n, α + θ * n, β + (1 - θ) * n))
-	annotate!(h2, 16, .25, text("sd = $(round(sd_pd, digits=2))", :black, 12))
-	
-	plot(h1, h2, layout = (2,1))
+    pmf_2 = pdf.(BetaBinomial(n, α + θ * n, β + (1 - θ) * n), h_vals)
+
+    h2 = bar(
+        h_vals,
+        pmf_2,
+        xlims = (0, 20),
+        ylims = (0, 0.3),
+        norm = true,
+        grid = false,
+        leg = false,
+        title = "posterior predictive distribution",
+        xlabel = "H = h",
+        ylabel = "density"
+    )
+
+    sd_pd = std(BetaBinomial(n, α + θ * n, β + (1 - θ) * n))
+    annotate!(h2, 16, 0.25, text("sd = $(round(sd_pd, digits=2))", :black, 12))
+
+    plot(h1, h2, layout = (2, 1))
 end
 
 # ╔═╡ f6643ef4-10ed-447f-81ea-6eda5b4b6cf8
@@ -760,57 +791,57 @@ In the following cell, we will run a benchmark to illustrate the relationship be
 
 # ╔═╡ 297ee779-76d6-4227-8470-105714e766f3
 let
-	function simulate!(θ, n, sim_data)
-	    # number of successes
-	    h = 0
-	    # simulate n trials
-	    for t ∈ 1:n
-	        # increment h if successfull
-	        h += rand() ≤ θ ? 1 : 0
-	    end
-	    # update distribution count vector
-	    sim_data[h + 1] += 1
-	    return nothing
-	end
-	
-	function computational(data, θ, n, n_sim)
-	    sim_data = fill(0, n + 1)
-	    map(x -> simulate!(.5, n, sim_data), 1:n_sim)
-	    sim_data /= n_sim
-	    LL = 0.0
-	    for d in data
-	        LL += log(sim_data[d + 1])
-	    end
-	    return LL
-	end
-	
-	function analytic(data, n, θ)
-	    LL = 0.0
-	    for d in data
-	        LL += logpdf(Binomial(n, θ), d)
-	    end
-	    return LL
-	end
+    function simulate!(θ, n, sim_data)
+        # number of successes
+        h = 0
+        # simulate n trials
+        for t ∈ 1:n
+            # increment h if successfull
+            h += rand() ≤ θ ? 1 : 0
+        end
+        # update distribution count vector
+        sim_data[h + 1] += 1
+        return nothing
+    end
 
+    function computational(data, θ, n, n_sim)
+        sim_data = fill(0, n + 1)
+        map(x -> simulate!(0.5, n, sim_data), 1:n_sim)
+        sim_data /= n_sim
+        LL = 0.0
+        for d in data
+            LL += log(sim_data[d + 1])
+        end
+        return LL
+    end
 
-	n_reps = 10^4
-	n = 10
-	θ = .5
-	
-	data = rand(Binomial(10, .5), 100)
-	
-	time_analytic = @elapsed map(x -> analytic(data, n, θ), 1:n_reps)
-	time_analytic /= n_reps
-	time_computational = fill(0.0, 2)
-	time_computational[1] = @elapsed map(x -> computational(data, θ, n, 1_000), 1:n_reps)
-	time_computational[1] /= n_reps
-	time_computational[2] = @elapsed map(x -> computational(data, θ, n, 10_000), 1:n_reps)
-	time_computational[2] /= n_reps
-	
-	
-	bar(["analytic"  "1k simulations"  "10k simulations"], [time_analytic  time_computational...], 
-	     fillcolor=[:darkred :grey :darkgreen], fillrange=1e-5, alpha=.7,grid=false, xaxis=font(10), yaxis=font(10), 
-	     leg=false, yscale=:log10, ylabel="Seconds (log10)", xrotation=20)
+    function analytic(data, n, θ)
+        LL = 0.0
+        for d in data
+            LL += logpdf(Binomial(n, θ), d)
+        end
+        return LL
+    end
+
+    n_reps = 10^4
+    n = 10
+    θ = 0.5
+
+    data = rand(Binomial(10, 0.5), 100)
+
+    time_analytic = @elapsed map(x -> analytic(data, n, θ), 1:n_reps)
+    time_analytic /= n_reps
+    time_computational = fill(0.0, 2)
+    time_computational[1] = @elapsed map(x -> computational(data, θ, n, 1_000), 1:n_reps)
+    time_computational[1] /= n_reps
+    time_computational[2] = @elapsed map(x -> computational(data, θ, n, 10_000), 1:n_reps)
+    time_computational[2] /= n_reps
+
+    bar(["analytic" "1k simulations" "10k simulations"],
+        [time_analytic time_computational...],
+        fillcolor = [:darkred :grey :darkgreen], fillrange = 1e-5, alpha = 0.7,
+        grid = false, xaxis = font(10), yaxis = font(10),
+        leg = false, yscale = :log10, ylabel = "Seconds (log10)", xrotation = 20)
 end
 
 # ╔═╡ 04535867-baa9-4790-a126-b8e22bf02f1a
